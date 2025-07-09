@@ -10,15 +10,19 @@ const IS_PREVIEW = process.env.VERCEL_ENV === "preview" || process.env.NODE_ENV 
  * 2. NewsAPI.org (free tier)
  * 3. Fallback to enhanced demo data
  */
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const symbolsParam = searchParams.get("symbols")
+  const symbols = symbolsParam ? symbolsParam.split(",").filter(Boolean) : []
+
   /* ⏩  Preview / dev – use demo immediately */
   if (IS_PREVIEW) {
-    return NextResponse.json(buildEnhancedDemoNews())
+    return NextResponse.json(buildEnhancedDemoNews(symbols))
   }
 
   // Try Alpha Vantage News API first (free tier, no key required for basic news)
   try {
-    const news = await fetchAlphaVantageNews()
+    const news = await fetchAlphaVantageNews(symbols)
     if (news.length > 0) {
       return NextResponse.json({
         success: true,
@@ -49,14 +53,15 @@ export async function GET() {
   }
 
   // Fallback to enhanced demo data
-  return NextResponse.json(buildEnhancedDemoNews())
+  return NextResponse.json(buildEnhancedDemoNews(symbols))
 }
 
 /**
  * Fetch news from Alpha Vantage (free tier)
  */
-async function fetchAlphaVantageNews() {
-  const url = "https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=financial_markets&limit=20&apikey=demo"
+async function fetchAlphaVantageNews(symbols: string[] = []) {
+  const symbolQuery = symbols.length > 0 ? `&tickers=${symbols.join(",")}` : ""
+  const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=financial_markets&limit=20${symbolQuery}&apikey=demo`
 
   try {
     const res = await fetch(url, {
@@ -68,7 +73,7 @@ async function fetchAlphaVantageNews() {
 
     const data = await res.json().catch(() => ({}))
 
-    /* If the response isn’t the expected shape, just return [] */
+    /* If the response isn't the expected shape, just return [] */
     if (!Array.isArray(data.feed)) return []
 
     return data.feed.slice(0, 15).map((item: any, i: number) => ({
@@ -79,7 +84,7 @@ async function fetchAlphaVantageNews() {
       source: item.source ?? "Alpha Vantage",
       publishedAt: item.time_published ? new Date(item.time_published).toISOString() : new Date().toISOString(),
       sentiment: mapSentiment(item.overall_sentiment_label),
-      relatedSymbols: extractTickersFromText(`${item.title} ${item.summary ?? ""}`),
+      relatedSymbols: symbols.length > 0 ? symbols : extractTickersFromText(`${item.title} ${item.summary ?? ""}`),
     }))
   } catch (err) {
     console.error("[News API] Alpha Vantage fetch failed:", err)
@@ -246,60 +251,47 @@ function determineSentiment(text: string): "positive" | "negative" | "neutral" {
 /**
  * Enhanced demo news with realistic market content
  */
-function buildEnhancedDemoNews() {
+function buildEnhancedDemoNews(symbols: string[] = []) {
   const now = Date.now()
-  const newsItems = [
+
+  // Create news items relevant to the provided symbols
+  const relevantNews =
+    symbols.length > 0
+      ? symbols.map((symbol, index) => ({
+          title: `${symbol} Shows Strong Momentum in Pre-Market Trading`,
+          summary: `${symbol} demonstrates significant volume surge and price movement, indicating potential breakout opportunity for gap traders.`,
+          relatedSymbols: [symbol],
+          sentiment: "positive" as const,
+        }))
+      : []
+
+  // Add some general market news
+  const generalNews = [
     {
-      title: "Federal Reserve Signals Potential Rate Cut in Next Meeting",
+      title: "Small-Cap Stocks See Increased Volatility",
       summary:
-        "Fed officials hint at possible interest rate reduction following recent inflation data, potentially boosting equity markets and growth stocks.",
-      relatedSymbols: ["SPY", "QQQ", "IWM"],
-      sentiment: "positive" as const,
-    },
-    {
-      title: "Tech Sector Rallies on AI Infrastructure Spending Surge",
-      summary:
-        "Major technology companies report increased capital expenditure on AI infrastructure, driving semiconductor and cloud computing stocks higher.",
-      relatedSymbols: ["NVDA", "AMD", "MSFT"],
-      sentiment: "positive" as const,
-    },
-    {
-      title: "Energy Stocks Decline Amid Oil Price Volatility",
-      summary:
-        "Crude oil prices fluctuate on global supply concerns, impacting energy sector performance and related equity valuations.",
-      relatedSymbols: ["XOM", "CVX", "COP"],
-      sentiment: "negative" as const,
-    },
-    {
-      title: "Small-Cap Biotech Stocks See Increased M&A Activity",
-      summary:
-        "Several biotech companies announce acquisition deals, highlighting increased consolidation activity in the pharmaceutical sector.",
-      relatedSymbols: ["XBI", "IBB", "ARKG"],
-      sentiment: "positive" as const,
-    },
-    {
-      title: "Market Volatility Increases Ahead of Earnings Season",
-      summary:
-        "Options activity surges as investors position for quarterly earnings reports from major corporations, increasing overall market volatility.",
-      relatedSymbols: ["VIX", "SPY", "QQQ"],
+        "Market makers report higher than average volume in small-cap securities, creating opportunities for gap trading strategies.",
+      relatedSymbols: symbols.slice(0, 3),
       sentiment: "neutral" as const,
     },
     {
-      title: "Electric Vehicle Stocks Rally on Infrastructure Bill Progress",
+      title: "Pre-Market Gappers Attract Day Trader Interest",
       summary:
-        "EV manufacturers gain momentum following congressional progress on infrastructure spending that includes charging station expansion.",
-      relatedSymbols: ["TSLA", "RIVN", "LCID"],
+        "Several stocks showing significant pre-market gaps are drawing attention from momentum traders and technical analysts.",
+      relatedSymbols: symbols.slice(0, 2),
       sentiment: "positive" as const,
     },
   ]
 
-  const data = newsItems.map((item, index) => ({
+  const allNews = [...relevantNews, ...generalNews].slice(0, 8)
+
+  const data = allNews.map((item, index) => ({
     id: `demo_${index + 1}`,
     title: item.title,
     summary: item.summary,
     url: "#",
     source: "Market Wire",
-    publishedAt: new Date(now - (index + 1) * 12 * 60 * 1000).toISOString(), // Spread over last few hours
+    publishedAt: new Date(now - (index + 1) * 8 * 60 * 1000).toISOString(),
     sentiment: item.sentiment,
     relatedSymbols: item.relatedSymbols,
   }))

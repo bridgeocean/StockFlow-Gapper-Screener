@@ -54,9 +54,10 @@ export default function PublicDashboard() {
     }
   }
 
-  const fetchNews = async () => {
+  const fetchNews = async (stockSymbols: string[] = []) => {
     try {
-      const response = await fetch("/api/news")
+      const symbolsQuery = stockSymbols.length > 0 ? `?symbols=${stockSymbols.join(",")}` : ""
+      const response = await fetch(`/api/news${symbolsQuery}`)
       if (!response.ok) {
         console.warn(`News API returned ${response.status}`)
         return
@@ -77,7 +78,7 @@ export default function PublicDashboard() {
 
   const fetchData = async () => {
     setIsLoading(true)
-    await Promise.all([fetchStocks(), fetchNews()])
+    await Promise.all([fetchStocks()])
     setLastUpdate(new Date())
     setIsLoading(false)
   }
@@ -112,6 +113,12 @@ export default function PublicDashboard() {
 
     console.log("✅ Filtered stocks:", filtered.length, "out of", stocks.length)
     setFilteredStocks(filtered)
+
+    // Fetch news relevant to filtered stocks
+    const topSymbols = filtered.slice(0, 10).map((stock) => stock.symbol)
+    if (topSymbols.length > 0) {
+      fetchNews(topSymbols)
+    }
   }
 
   useEffect(() => {
@@ -119,7 +126,10 @@ export default function PublicDashboard() {
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       fetchStocks()
-      fetchNews()
+      const topSymbols = filteredStocks.slice(0, 10).map((stock) => stock.symbol)
+      if (topSymbols.length > 0) {
+        fetchNews(topSymbols)
+      }
       setLastUpdate(new Date())
     }, 30000)
     return () => clearInterval(interval)
@@ -339,30 +349,38 @@ export default function PublicDashboard() {
                     {filteredStocks.slice(0, 10).map((stock) => {
                       const volumeRatio = stock.avgVolume > 0 ? stock.volume / stock.avgVolume : 1
                       return (
-                        <div key={stock.symbol} className="border border-white/10 rounded p-3 hover:bg-white/5">
+                        <div
+                          key={stock.symbol}
+                          className="border border-white/20 rounded p-4 hover:bg-white/10 bg-white/5"
+                        >
                           <div className="flex items-center justify-between">
                             <div>
-                              <div className="font-bold text-white">{stock.symbol}</div>
-                              <div className="text-sm text-gray-400">{stock.company}</div>
+                              <div className="font-bold text-white text-lg">{stock.symbol}</div>
+                              <div className="text-sm text-gray-300 font-medium">{stock.company}</div>
                             </div>
                             <div className="text-right">
-                              <div className="font-bold text-white">{formatCurrency(stock.price)}</div>
-                              <div className={`text-sm ${stock.change >= 0 ? "text-green-400" : "text-red-400"}`}>
+                              <div className="font-bold text-white text-lg">{formatCurrency(stock.price)}</div>
+                              <div
+                                className={`text-sm font-semibold ${stock.change >= 0 ? "text-green-400" : "text-red-400"}`}
+                              >
                                 {formatPercentage(stock.changePercent)}
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center justify-between mt-3">
                             <div className="flex items-center space-x-2">
                               {stock.indicators.map((indicator, idx) => (
-                                <span key={idx} className="text-sm">
+                                <span
+                                  key={idx}
+                                  className="text-sm bg-white/20 text-white px-2 py-1 rounded font-medium"
+                                >
                                   {indicator.icon} {indicator.label}
                                 </span>
                               ))}
                             </div>
                             <div className="text-right">
-                              <div className="text-xs text-gray-400">Gap: {stock.gap.toFixed(1)}%</div>
-                              <div className="text-xs text-gray-400">
+                              <div className="text-sm text-yellow-300 font-semibold">Gap: {stock.gap.toFixed(1)}%</div>
+                              <div className="text-xs text-blue-300">
                                 Vol: {formatNumber(stock.volume)} ({volumeRatio.toFixed(1)}x)
                               </div>
                             </div>
