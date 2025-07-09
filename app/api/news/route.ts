@@ -80,7 +80,7 @@ async function fetchAlphaVantageNews(symbols: string[] = []) {
       id: `av_${i + 1}`,
       title: item.title ?? "Market update",
       summary: item.summary ?? item.title ?? "Market news update",
-      url: item.url ?? "#",
+      url: item.url ?? `https://finviz.com/news.ashx?t=${symbols[0] || "SPY"}`, // Use real URL or fallback to Finviz news
       source: item.source ?? "Alpha Vantage",
       publishedAt: item.time_published ? new Date(item.time_published).toISOString() : new Date().toISOString(),
       sentiment: mapSentiment(item.overall_sentiment_label),
@@ -254,44 +254,44 @@ function determineSentiment(text: string): "positive" | "negative" | "neutral" {
 function buildEnhancedDemoNews(symbols: string[] = []) {
   const now = Date.now()
 
-  // Create news items relevant to the provided symbols
-  const relevantNews =
+  // Create catalyst news items relevant to the provided symbols
+  const catalystNews =
     symbols.length > 0
-      ? symbols.map((symbol, index) => ({
-          title: `${symbol} Shows Strong Momentum in Pre-Market Trading`,
-          summary: `${symbol} demonstrates significant volume surge and price movement, indicating potential breakout opportunity for gap traders.`,
-          relatedSymbols: [symbol],
-          sentiment: "positive" as const,
-        }))
+      ? symbols.slice(0, 6).map((symbol, index) => {
+          const catalystTypes = [
+            "breakthrough announcement",
+            "strong quarterly results",
+            "strategic partnership",
+            "FDA approval news",
+            "acquisition rumors",
+            "earnings beat",
+          ]
+
+          const gains = [12, 18, 24, 32, 26, 14, 19, 28, 35, 22]
+          const sources = ["MarketWatch", "Financial Times", "Reuters", "Bloomberg", "Yahoo Finance"]
+
+          const catalystType = catalystTypes[index % catalystTypes.length]
+          const gain = gains[index % gains.length]
+          const source = sources[index % sources.length]
+
+          return {
+            title: `${symbol} surges ${gain}% on ${catalystType}`,
+            summary: `${symbol} shows strong momentum with ${gain}% gain on increased volume and positive market sentiment.`,
+            relatedSymbols: [symbol],
+            sentiment: "positive",
+            source,
+            timeOffset: (index + 1) * 15,
+          }
+        })
       : []
 
-  // Add some general market news
-  const generalNews = [
-    {
-      title: "Small-Cap Stocks See Increased Volatility",
-      summary:
-        "Market makers report higher than average volume in small-cap securities, creating opportunities for gap trading strategies.",
-      relatedSymbols: symbols.slice(0, 3),
-      sentiment: "neutral" as const,
-    },
-    {
-      title: "Pre-Market Gappers Attract Day Trader Interest",
-      summary:
-        "Several stocks showing significant pre-market gaps are drawing attention from momentum traders and technical analysts.",
-      relatedSymbols: symbols.slice(0, 2),
-      sentiment: "positive" as const,
-    },
-  ]
-
-  const allNews = [...relevantNews, ...generalNews].slice(0, 8)
-
-  const data = allNews.map((item, index) => ({
-    id: `demo_${index + 1}`,
+  const data = catalystNews.map((item, index) => ({
+    id: `catalyst_${index + 1}`,
     title: item.title,
     summary: item.summary,
-    url: "#",
-    source: "Market Wire",
-    publishedAt: new Date(now - (index + 1) * 8 * 60 * 1000).toISOString(),
+    url: `https://finviz.com/news.ashx?t=${item.relatedSymbols[0] || "SPY"}`, // Link to Finviz news page for symbol
+    source: item.source,
+    publishedAt: new Date(now - item.timeOffset * 60 * 1000).toISOString(),
     sentiment: item.sentiment,
     relatedSymbols: item.relatedSymbols,
   }))
@@ -299,8 +299,8 @@ function buildEnhancedDemoNews(symbols: string[] = []) {
   return {
     success: true,
     fallback: true,
-    reason: "using_enhanced_demo_news",
-    source: "enhanced_demo_data",
+    reason: "using_catalyst_demo_news",
+    source: "catalyst_demo_data",
     count: data.length,
     data,
     timestamp: new Date().toISOString(),
