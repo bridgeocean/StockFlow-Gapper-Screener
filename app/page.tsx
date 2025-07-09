@@ -160,7 +160,7 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-          <Card className="bg-gradient-to-r from-green-600/20 to-blue-600/20 border-white/10 backdrop-blur-sm">
+          <Card className="bg-gradient-to-r from-green-900/80 to-blue-900/80 border-white/20 backdrop-blur-sm">
             <CardContent className="p-12 text-center">
               <h2 className="text-4xl font-bold text-white mb-4">Ready to Find Your Next Gap Play?</h2>
               <p className="text-xl text-gray-300 mb-8">

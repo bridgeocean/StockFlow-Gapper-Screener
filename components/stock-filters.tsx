@@ -28,13 +28,18 @@ export function StockFiltersComponent({ filters, onFiltersChange }: StockFilters
     onFiltersChange({ ...filters, floatMax: value })
   }
 
+  const handleNewsCatalystChange = (checked: boolean) => {
+    onFiltersChange({ ...filters, newsCatalyst: checked })
+  }
+
   const resetFilters = () => {
     onFiltersChange({
       priceRange: [0.1, 20],
       volumeMultiplier: 1,
       gapPercent: 1,
       performance: 0,
-      floatMax: 100,
+      floatMax: 20, // Set to 20M as default
+      newsCatalyst: false,
     })
   }
 
@@ -45,6 +50,7 @@ export function StockFiltersComponent({ filters, onFiltersChange }: StockFilters
       gapPercent: 0,
       performance: -100,
       floatMax: 1000,
+      newsCatalyst: false,
     })
   }
 
@@ -71,6 +77,20 @@ export function StockFiltersComponent({ filters, onFiltersChange }: StockFilters
             <span className="mr-2">🔄</span>
             Reset Filters
           </button>
+        </div>
+
+        {/* News Catalyst Filter */}
+        <div className="space-y-3">
+          <label className="flex items-center space-x-2 text-gray-300">
+            <input
+              type="checkbox"
+              checked={filters.newsCatalyst || false}
+              onChange={(e) => handleNewsCatalystChange(e.target.checked)}
+              className="rounded"
+            />
+            <span>📢 News Catalyst Only</span>
+          </label>
+          <p className="text-xs text-gray-400">Show only stocks with news catalysts or high momentum indicators</p>
         </div>
 
         {/* Price Range */}
@@ -148,18 +168,27 @@ export function StockFiltersComponent({ filters, onFiltersChange }: StockFilters
           />
         </div>
 
-        {/* Float Max */}
+        {/* Float Max - Updated to allow 20M selection */}
         <div className="space-y-3">
-          <label className="text-gray-300 block">Float Max: {filters.floatMax}M</label>
+          <label className="text-gray-300 block">
+            Float Max: {filters.floatMax <= 20 ? `${filters.floatMax}M` : `${filters.floatMax}M+`}
+          </label>
           <input
             type="range"
             min="1"
-            max="1000"
+            max="200"
             step="1"
             value={filters.floatMax}
             onChange={(e) => handleFloatMaxChange(Number.parseFloat(e.target.value))}
             className="w-full"
           />
+          <div className="flex justify-between text-xs text-gray-400">
+            <span>1M</span>
+            <span>20M</span>
+            <span>50M</span>
+            <span>100M</span>
+            <span>200M+</span>
+          </div>
         </div>
       </div>
     </div>

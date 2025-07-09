@@ -40,4 +40,5 @@ export interface StockFilters {
   gapPercent: number
   performance: number
   floatMax: number
+  newsCatalyst?: boolean // Add news catalyst filter
 }

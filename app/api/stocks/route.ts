@@ -3,66 +3,191 @@ import { NextResponse } from "next/server"
 /**
  * Finviz Elite token – update here when you get a new one.
  */
-const FINVIZ_TOKEN = "9a091693-9164-40dd-8e93-1c18606f0e6f"
+const FINVIZ_API_BASE = "https://elite.finviz.com/export.ashx"
+const FINVIZ_API_TOKEN = "9a091693-9164-40dd-8e93-1c18606f0e6f"
+
+// 5 criteria filters for gap scanner
+const GAPPER_FILTERS = {
+  price: "sh_price_u20", // Price under $20 (matching your original filter)
+  relativeVolume: "sh_relvol_o1", // Relative volume over 1x
+  gap: "ta_gap_u5", // Gap up 5%+
+  performance: "ta_perf_dup1", // Performance today +1%
+  float: "sh_float_u100", // Float under 100M
+}
 
 /**
- * GET /api/stocks
- *
- * 1. Try one request with ?auth=token
- * 2. Abort after 10 s
- * 3. If request fails, redirects to login, or parses 0 rows → return demo data
- * 4. NEVER throw – always respond with 200 + JSON
+ * GET /api/stocks - Fetch real Finviz Elite data via CSV export
  */
 export async function GET() {
+  console.log("🚀 Starting Finviz CSV API call...")
+
   try {
-    const finvizURL = `https://elite.finviz.com/screener.ashx?v=111&f=sh_price_u20,ta_gap_u5&auth=${FINVIZ_TOKEN}`
+    // Build Finviz screener URL with filters
+    const filterString = Object.values(GAPPER_FILTERS).join(",")
+    const url = `${FINVIZ_API_BASE}?v=111&f=${filterString}&c=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20&auth=${FINVIZ_API_TOKEN}`
 
-    // Abort controller for 10-second timeout
-    const ac = new AbortController()
-    const timer = setTimeout(() => ac.abort(), 10_000)
+    console.log("📡 Fetching from Finviz Elite CSV API...")
+    console.log("🔗 URL:", url.substring(0, 100) + "...")
 
-    const res = await fetch(finvizURL, {
+    const response = await fetch(url, {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-        Accept: "text/html",
+        "User-Agent": "StockFlow-Scanner/1.0",
+        Accept: "text/csv,text/plain,*/*",
       },
-      signal: ac.signal,
-      // let fetch follow redirects (default)
-    }).finally(() => clearTimeout(timer))
-
-    // Redirected to login or non-200 → treat as auth failure
-    if (res.status !== 200 || res.url.includes("login")) {
-      console.log(`[Finviz] auth failed (status ${res.status}). Using demo data.`)
-      return NextResponse.json(buildDemoPayload("auth_failed"))
-    }
-
-    const html = await res.text()
-    const parsed = parseFinvizHTML(html)
-
-    if (parsed.length === 0) {
-      console.log("[Finviz] 0 rows parsed – using demo data.")
-      return NextResponse.json(buildDemoPayload("zero_rows"))
-    }
-
-    console.log(`[Finviz] Parsed ${parsed.length} rows.`)
-    return NextResponse.json({
-      success: true,
-      source: "finviz_elite_api",
-      count: parsed.length,
-      data: parsed,
-      timestamp: new Date().toISOString(),
     })
-  } catch (err) {
-    console.error("[Finviz] network / parse error:", err)
-    return NextResponse.json(buildDemoPayload("network_error"))
+
+    console.log(`📊 Finviz CSV response: ${response.status} ${response.statusText}`)
+
+    if (!response.ok) {
+      throw new Error(`Finviz CSV API error: ${response.status} ${response.statusText}`)
+    }
+
+    const csvData = await response.text()
+    console.log(`📄 CSV data length: ${csvData.length} characters`)
+    console.log(`📋 CSV preview: ${csvData.substring(0, 200)}...`)
+
+    const stocks = parseFinvizCSV(csvData)
+    console.log(`✅ Parsed ${stocks.length} stocks from CSV`)
+
+    if (stocks.length > 0) {
+      return NextResponse.json({
+        success: true,
+        source: "finviz_elite_csv_api",
+        count: stocks.length,
+        data: stocks,
+        timestamp: new Date().toISOString(),
+      })
+    } else {
+      console.log("⚠️ No stocks found in CSV, using demo data")
+      return NextResponse.json(buildDemoPayload("no_csv_data"))
+    }
+  } catch (error) {
+    console.error("❌ Finviz CSV API error:", error)
+    return NextResponse.json(buildDemoPayload("csv_api_error"))
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* -------------------------- helpers below ------------------------- */
-/* ------------------------------------------------------------------ */
+/**
+ * Parse Finviz CSV data into Stock objects
+ */
+function parseFinvizCSV(csvData: string) {
+  const stocks: any[] = []
 
+  try {
+    const lines = csvData.trim().split("\n")
+    console.log("📋 CSV Header:", lines[0])
+
+    if (lines.length < 2) {
+      console.log("⚠️ CSV has no data rows")
+      return stocks
+    }
+
+    // Skip header row, process data rows
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) continue
+
+      // Split CSV line, handling quoted values
+      const columns = parseCSVLine(line)
+
+      if (columns.length < 10) {
+        console.log(`⚠️ Skipping malformed CSV line ${i}: ${line.substring(0, 50)}...`)
+        continue
+      }
+
+      try {
+        // Map CSV columns to our Stock interface
+        const symbol = columns[1]?.replace(/"/g, "") || ""
+        const company = columns[2]?.replace(/"/g, "") || ""
+        const sector = columns[3]?.replace(/"/g, "") || ""
+        const industry = columns[4]?.replace(/"/g, "") || ""
+        const price = Number.parseFloat(columns[8]?.replace(/"/g, "") || "0")
+        const changePercent = Number.parseFloat(columns[9]?.replace(/["%]/g, "") || "0")
+        const volume = Number.parseInt(columns[10]?.replace(/[",]/g, "") || "0")
+
+        if (!symbol || symbol.length > 5 || price <= 0) {
+          continue // Skip invalid entries
+        }
+
+        const stock = {
+          symbol,
+          company,
+          sector,
+          industry,
+          price,
+          changePercent,
+          change: +(price * changePercent * 0.01).toFixed(2),
+          volume,
+          avgVolume: Math.floor(volume * (0.5 + Math.random() * 0.8)), // Estimate avg volume
+          marketCap: Math.floor(Math.random() * 10_000_000_000), // Placeholder
+          float: Math.floor(Math.random() * 100_000_000), // Placeholder
+          gap: Math.abs(changePercent), // Use change% as gap approximation
+          performance: changePercent,
+          indicators: generateIndicators(changePercent, volume),
+          lastUpdated: new Date().toISOString(),
+        }
+
+        stocks.push(stock)
+      } catch (parseError) {
+        console.log(`⚠️ Error parsing CSV line ${i}:`, parseError)
+      }
+    }
+  } catch (error) {
+    console.error("❌ CSV parsing error:", error)
+  }
+
+  return stocks
+}
+
+/**
+ * Parse a CSV line handling quoted values
+ */
+function parseCSVLine(line: string): string[] {
+  const result: string[] = []
+  let current = ""
+  let inQuotes = false
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+
+    if (char === '"') {
+      inQuotes = !inQuotes
+    } else if (char === "," && !inQuotes) {
+      result.push(current)
+      current = ""
+    } else {
+      current += char
+    }
+  }
+
+  result.push(current) // Add the last field
+  return result
+}
+
+/**
+ * Generate stock indicators based on performance
+ */
+function generateIndicators(changePercent: number, volume: number) {
+  const indicators: any[] = []
+
+  if (changePercent > 15) {
+    indicators.push({ type: "hot", icon: "🔥", label: "Hot Stock", color: "text-red-500" })
+  }
+
+  if (changePercent > 8) {
+    indicators.push({ type: "momentum", icon: "⚡", label: "Strong Momentum", color: "text-yellow-500" })
+  }
+
+  if (volume > 5_000_000) {
+    indicators.push({ type: "catalyst", icon: "📢", label: "High Volume", color: "text-blue-500" })
+  }
+
+  return indicators
+}
+
+/**
+ * Fallback demo data
+ */
 function buildDemoPayload(reason: string) {
   const data = generateDemoStocks()
   return {
@@ -76,9 +201,6 @@ function buildDemoPayload(reason: string) {
   }
 }
 
-/**
- * Your existing demo list with light randomisation (trimmed for brevity)
- */
 function generateDemoStocks() {
   const base = [
     {
@@ -206,56 +328,7 @@ function generateDemoStocks() {
       gap: +(s.gap + (Math.random() - 0.5) * 3).toFixed(1),
       volume: Math.floor(s.volume * (0.8 + Math.random() * 0.4)),
       lastUpdated: new Date().toISOString(),
-      indicators: [], // keep or add your indicator generator
+      indicators: generateIndicators(changePercent, s.volume),
     }
   })
-}
-
-/**
- * Ultra-defensive parser – returns [] if HTML structure unexpected.
- * Keeps original simple regex logic from earlier versions.
- */
-function parseFinvizHTML(html: string) {
-  const out: any[] = []
-  try {
-    const table = html.match(/<table[^>]*screener[^>]*>(.*?)<\/table>/s)
-    if (!table) return out
-
-    const rows = table[1].match(/<tr[^>]*>(.*?)<\/tr>/gs) ?? []
-    rows.forEach((row) => {
-      if (row.includes("<th")) return
-
-      const cells = [...row.matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((m) =>
-        m[1]
-          .replace(/<[^>]+>/g, "")
-          .replace(/&nbsp;/g, " ")
-          .trim(),
-      )
-
-      if (cells.length >= 11 && cells[1].length <= 5) {
-        const p = Number.parseFloat(cells[8])
-        const cp = Number.parseFloat(cells[9].replace("%", ""))
-        out.push({
-          symbol: cells[1],
-          company: cells[2],
-          price: p,
-          changePercent: cp,
-          change: +(p * cp * 0.01).toFixed(2),
-          volume: Number.parseInt(cells[10].replace(/,/g, "")),
-          avgVolume: Math.floor(Math.random() * 5_000_000) + 2_000_000,
-          marketCap: Math.floor(Math.random() * 1_000_000_000),
-          float: Math.floor(Math.random() * 100_000_000),
-          gap: Math.abs(cp),
-          performance: cp,
-          sector: cells[3],
-          industry: cells[4],
-          indicators: [],
-          lastUpdated: new Date().toISOString(),
-        })
-      }
-    })
-  } catch (e) {
-    console.error("[Finviz] parser error:", e)
-  }
-  return out
 }

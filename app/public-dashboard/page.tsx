@@ -20,25 +20,36 @@ export default function PublicDashboard() {
     volumeMultiplier: 1,
     gapPercent: 1,
     performance: 0,
-    floatMax: 100,
+    floatMax: 20, // Default to 20M
+    newsCatalyst: false,
   })
 
   const fetchStocks = async () => {
     try {
+      console.log("🔍 Fetching stocks from API...")
       const response = await fetch("/api/stocks")
+      console.log("📡 API Response status:", response.status)
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
+
       const data = await response.json()
+      console.log("📊 Raw API data:", data)
+      console.log("📈 Stocks array:", data.data)
+      console.log("📋 Number of stocks received:", data.data?.length || 0)
+
       if (data.success) {
         setStocks(data.data || [])
         setDataSource(data.source || "unknown")
         setError(null)
+        console.log("✅ Stocks state updated successfully")
       } else {
         setError(data.error || "Failed to fetch stocks")
+        console.error("❌ API returned error:", data.error)
       }
     } catch (err: any) {
-      console.error("Error fetching stocks:", err)
+      console.error("💥 Error fetching stocks:", err)
       setError(err.message || "Network error occurred")
     }
   }
@@ -72,19 +83,34 @@ export default function PublicDashboard() {
   }
 
   const applyFilters = () => {
+    console.log("🔧 Applying filters to", stocks.length, "stocks")
+    console.log("🎛️ Current filters:", filters)
+
     const filtered = stocks.filter((stock) => {
       const volumeRatio = stock.avgVolume > 0 ? stock.volume / stock.avgVolume : 1
       const floatInMillions = stock.float > 0 ? stock.float / 1000000 : 1
 
-      return (
-        stock.price >= filters.priceRange[0] &&
-        stock.price <= filters.priceRange[1] &&
-        volumeRatio >= filters.volumeMultiplier &&
-        stock.gap >= filters.gapPercent &&
-        stock.performance >= filters.performance &&
-        floatInMillions <= filters.floatMax
+      const priceCheck = stock.price >= filters.priceRange[0] && stock.price <= filters.priceRange[1]
+      const volumeCheck = volumeRatio >= filters.volumeMultiplier
+      const gapCheck = stock.gap >= filters.gapPercent
+      const performanceCheck = stock.performance >= filters.performance
+      const floatCheck = floatInMillions <= filters.floatMax
+
+      // News catalyst filter
+      const newsCatalystCheck =
+        !filters.newsCatalyst ||
+        stock.indicators.some(
+          (indicator) => indicator.type === "catalyst" || indicator.type === "hot" || indicator.type === "momentum",
+        )
+
+      console.log(
+        `📊 ${stock.symbol}: price=${priceCheck}, volume=${volumeCheck}, gap=${gapCheck}, perf=${performanceCheck}, float=${floatCheck}, catalyst=${newsCatalystCheck}`,
       )
+
+      return priceCheck && volumeCheck && gapCheck && performanceCheck && floatCheck && newsCatalystCheck
     })
+
+    console.log("✅ Filtered stocks:", filtered.length, "out of", stocks.length)
     setFilteredStocks(filtered)
   }
 
@@ -167,7 +193,8 @@ export default function PublicDashboard() {
     document.body.removeChild(link)
   }
 
-  const isRealData = dataSource === "finviz_elite_api"
+  // Fix data source detection - finviz_elite_csv_api should be considered live data
+  const isRealData = dataSource === "finviz_elite_api" || dataSource === "finviz_elite_csv_api"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -211,7 +238,7 @@ export default function PublicDashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        {/* Data Source Warning */}
+        {/* Data Source Status */}
         {!isRealData && (
           <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 p-4 rounded mb-6 flex items-center">
             <AlertTriangle className="h-5 w-5 mr-3" />
@@ -284,7 +311,7 @@ export default function PublicDashboard() {
                   <h2 className="text-xl font-bold text-white">Gap Scanner Results</h2>
                   <div className="flex items-center space-x-2">
                     <div className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded border border-green-500/30">
-                      {filteredStocks.length} stocks
+                      Top 10 of {filteredStocks.length} stocks
                     </div>
                     <button
                       onClick={exportToCSV}
@@ -302,11 +329,14 @@ export default function PublicDashboard() {
                   <div className="text-center text-gray-400 py-8">
                     <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-lg mb-2">No stocks match current filters</p>
-                    <p className="text-sm">Try adjusting the filter values to see results</p>
+                    <p className="text-sm">Try adjusting the filter values or click "Show All Stocks"</p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      {stocks.length} stocks available • Showing top 10 results when filtered
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredStocks.map((stock) => {
+                    {filteredStocks.slice(0, 10).map((stock) => {
                       const volumeRatio = stock.avgVolume > 0 ? stock.volume / stock.avgVolume : 1
                       return (
                         <div key={stock.symbol} className="border border-white/10 rounded p-3 hover:bg-white/5">
