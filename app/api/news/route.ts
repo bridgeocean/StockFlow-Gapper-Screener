@@ -1,171 +1,180 @@
 import { NextResponse } from "next/server"
 
-const demoNews = [
-  {
-    id: "1",
-    title: "NVIDIA Reports Record Q4 Earnings, Beats Expectations by Wide Margin",
-    summary:
-      "NVIDIA exceeded analyst expectations with strong data center revenue growth driven by AI chip demand. The company reported earnings of $5.16 per share versus expected $4.64, with revenue up 22% year-over-year.",
-    url: "#",
-    source: "MarketWatch",
-    publishedAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-    sentiment: "positive",
-    relatedSymbols: ["NVDA"],
-  },
-  {
-    id: "2",
-    title: "Tesla Announces Major Gigafactory Expansion in Mexico, Stock Surges",
-    summary:
-      "Tesla reveals plans for a new $5 billion manufacturing facility in Monterrey, Mexico, expected to produce 2 million vehicles annually. The announcement comes amid strong Q4 delivery numbers.",
-    url: "#",
-    source: "Reuters",
-    publishedAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    sentiment: "positive",
-    relatedSymbols: ["TSLA"],
-  },
-  {
-    id: "3",
-    title: "Apple Stock Rises on Strong iPhone 15 Sales in China Market",
-    summary:
-      "Apple sees increased demand for latest iPhone models in key Chinese markets, with sales up 15% quarter-over-quarter. Analysts raise price targets following strong holiday season performance.",
-    url: "#",
-    source: "Bloomberg",
-    publishedAt: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-    sentiment: "positive",
-    relatedSymbols: ["AAPL"],
-  },
-  {
-    id: "4",
-    title: "SOXL Surges 15% on Semiconductor Rally Amid AI Chip Demand Surge",
-    summary:
-      "Direxion Daily Semiconductor Bull 3X Shares sees massive volume as chip stocks rally on increased AI demand and positive earnings outlook from major semiconductor companies.",
-    url: "#",
-    source: "MarketWatch",
-    publishedAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-    sentiment: "positive",
-    relatedSymbols: ["SOXL"],
-  },
-  {
-    id: "5",
-    title: "BBIG Announces Strategic Partnership with Major Streaming Platform",
-    summary:
-      "Vinco Ventures reveals new partnership deal with leading streaming service that could significantly boost revenue and expand market reach in the digital content space.",
-    url: "#",
-    source: "Yahoo Finance",
-    publishedAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
-    sentiment: "positive",
-    relatedSymbols: ["BBIG"],
-  },
-  {
-    id: "6",
-    title: "Electric Vehicle Stocks Rally on New Federal Tax Incentive Program",
-    summary:
-      "EV manufacturers including Mullen Automotive see increased investor interest following announcement of expanded government incentives and $50B infrastructure spending bill.",
-    url: "#",
-    source: "Reuters",
-    publishedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-    sentiment: "positive",
-    relatedSymbols: ["MULN"],
-  },
-  {
-    id: "7",
-    title: "Market Volatility Increases as Fed Signals Potential Rate Changes",
-    summary:
-      "Federal Reserve hints at potential rate adjustments in upcoming meeting, causing increased volatility across growth stocks and tech sector. Traders advised caution.",
-    url: "#",
-    source: "Bloomberg",
-    publishedAt: new Date(Date.now() - 1000 * 60 * 50).toISOString(),
-    sentiment: "neutral",
-    relatedSymbols: ["SPY", "QQQ"],
-  },
-  {
-    id: "8",
-    title: "Support.com Receives Takeover Bid, Stock Jumps 40% in Pre-Market",
-    summary:
-      "Support.com receives unsolicited acquisition offer from private equity firm at $4.50 per share, representing 45% premium to previous close. Board to review offer.",
-    url: "#",
-    source: "MarketWatch",
-    publishedAt: new Date(Date.now() - 1000 * 60 * 65).toISOString(),
-    sentiment: "positive",
-    relatedSymbols: ["SPRT"],
-  },
-]
+/**
+ * Finviz Elite token – same as stocks API
+ */
+const FINVIZ_TOKEN = "9a091693-9164-40dd-8e93-1c18606f0e6f"
 
+/**
+ * GET /api/news
+ *
+ * 1. Try one request with ?auth=token
+ * 2. Abort after 10 s
+ * 3. If request fails, redirects to login, or parses 0 items → return demo data
+ * 4. NEVER throw – always respond with 200 + JSON
+ */
 export async function GET() {
   try {
-    const finvizToken = "9a091693-9164-40dd-8e93-1c18606f0e6f"
+    const finvizURL = `https://elite.finviz.com/news.ashx?auth=${FINVIZ_TOKEN}`
 
-    if (finvizToken) {
-      console.log("Fetching real news from Finviz Elite API (server-side) with new token...")
+    // Abort controller for 10-second timeout
+    const ac = new AbortController()
+    const timer = setTimeout(() => ac.abort(), 10_000)
 
-      const response = await fetch(`https://elite.finviz.com/news.ashx?auth=${finvizToken}`, {
-        method: "GET",
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
-          Referer: "https://elite.finviz.com/",
-          "Sec-Fetch-Dest": "document",
-          "Sec-Fetch-Mode": "navigate",
-          "Sec-Fetch-Site": "same-origin",
-          "Upgrade-Insecure-Requests": "1",
-        },
-      })
+    const res = await fetch(finvizURL, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        Accept: "text/html",
+        Referer: "https://elite.finviz.com/",
+      },
+      signal: ac.signal,
+    }).finally(() => clearTimeout(timer))
 
-      console.log(`Finviz News API response status: ${response.status}`)
-
-      if (response.ok) {
-        const htmlData = await response.text()
-        console.log(`Received news HTML data: ${htmlData.length} characters`)
-
-        const newsData = parseFinvizNewsHTML(htmlData)
-
-        if (newsData.length > 0) {
-          console.log(`Successfully parsed ${newsData.length} real news items from Finviz`)
-          return NextResponse.json({
-            success: true,
-            data: newsData,
-            timestamp: new Date().toISOString(),
-            source: "finviz_elite_api",
-            count: newsData.length,
-          })
-        } else {
-          console.log("No news found in Finviz response, using demo data")
-        }
-      } else {
-        const errorText = await response.text()
-        console.log(`Finviz News API failed: ${response.status} ${response.statusText}`)
-        console.log(`Error response: ${errorText.substring(0, 500)}...`)
-      }
+    // Redirected to login or non-200 → treat as auth failure
+    if (res.status !== 200 || res.url.includes("login")) {
+      console.log(`[Finviz News] auth failed (status ${res.status}). Using demo data.`)
+      return NextResponse.json(buildDemoNewsPayload("auth_failed"))
     }
-  } catch (apiError) {
-    console.error("Finviz News API error:", apiError)
+
+    const html = await res.text()
+    const parsed = parseFinvizNewsHTML(html)
+
+    if (parsed.length === 0) {
+      console.log("[Finviz News] 0 items parsed – using demo data.")
+      return NextResponse.json(buildDemoNewsPayload("zero_items"))
+    }
+
+    console.log(`[Finviz News] Parsed ${parsed.length} items.`)
+    return NextResponse.json({
+      success: true,
+      source: "finviz_elite_api",
+      count: parsed.length,
+      data: parsed,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.error("[Finviz News] network / parse error:", err)
+    return NextResponse.json(buildDemoNewsPayload("network_error"))
   }
+}
 
-  // Enhanced demo news as fallback
-  console.log("Using enhanced demo news data as fallback")
+/* ------------------------------------------------------------------ */
+/* -------------------------- helpers below ------------------------- */
+/* ------------------------------------------------------------------ */
 
-  const liveNews = demoNews.map((item, index) => ({
+function buildDemoNewsPayload(reason: string) {
+  const data = generateDemoNews()
+  return {
+    success: true,
+    fallback: true,
+    reason,
+    source: "enhanced_demo_data",
+    count: data.length,
+    data,
+    timestamp: new Date().toISOString(),
+  }
+}
+
+/**
+ * Enhanced demo news with realistic timestamps
+ */
+function generateDemoNews() {
+  const baseNews = [
+    {
+      id: "1",
+      title: "NVIDIA Reports Record Q4 Earnings, Beats Expectations by Wide Margin",
+      summary:
+        "NVIDIA exceeded analyst expectations with strong data center revenue growth driven by AI chip demand. The company reported earnings of $5.16 per share versus expected $4.64, with revenue up 22% year-over-year.",
+      url: "#",
+      source: "MarketWatch",
+      sentiment: "positive",
+      relatedSymbols: ["NVDA"],
+    },
+    {
+      id: "2",
+      title: "Tesla Announces Major Gigafactory Expansion in Mexico, Stock Surges",
+      summary:
+        "Tesla reveals plans for a new $5 billion manufacturing facility in Monterrey, Mexico, expected to produce 2 million vehicles annually. The announcement comes amid strong Q4 delivery numbers.",
+      url: "#",
+      source: "Reuters",
+      sentiment: "positive",
+      relatedSymbols: ["TSLA"],
+    },
+    {
+      id: "3",
+      title: "Apple Stock Rises on Strong iPhone 15 Sales in China Market",
+      summary:
+        "Apple sees increased demand for latest iPhone models in key Chinese markets, with sales up 15% quarter-over-quarter. Analysts raise price targets following strong holiday season performance.",
+      url: "#",
+      source: "Bloomberg",
+      sentiment: "positive",
+      relatedSymbols: ["AAPL"],
+    },
+    {
+      id: "4",
+      title: "SOXL Surges 15% on Semiconductor Rally Amid AI Chip Demand Surge",
+      summary:
+        "Direxion Daily Semiconductor Bull 3X Shares sees massive volume as chip stocks rally on increased AI demand and positive earnings outlook from major semiconductor companies.",
+      url: "#",
+      source: "MarketWatch",
+      sentiment: "positive",
+      relatedSymbols: ["SOXL"],
+    },
+    {
+      id: "5",
+      title: "BBIG Announces Strategic Partnership with Major Streaming Platform",
+      summary:
+        "Vinco Ventures reveals new partnership deal with leading streaming service that could significantly boost revenue and expand market reach in the digital content space.",
+      url: "#",
+      source: "Yahoo Finance",
+      sentiment: "positive",
+      relatedSymbols: ["BBIG"],
+    },
+    {
+      id: "6",
+      title: "Electric Vehicle Stocks Rally on New Federal Tax Incentive Program",
+      summary:
+        "EV manufacturers including Mullen Automotive see increased investor interest following announcement of expanded government incentives and $50B infrastructure spending bill.",
+      url: "#",
+      source: "Reuters",
+      sentiment: "positive",
+      relatedSymbols: ["MULN"],
+    },
+    {
+      id: "7",
+      title: "Market Volatility Increases as Fed Signals Potential Rate Changes",
+      summary:
+        "Federal Reserve hints at potential rate adjustments in upcoming meeting, causing increased volatility across growth stocks and tech sector. Traders advised caution.",
+      url: "#",
+      source: "Bloomberg",
+      sentiment: "neutral",
+      relatedSymbols: ["SPY", "QQQ"],
+    },
+    {
+      id: "8",
+      title: "Support.com Receives Takeover Bid, Stock Jumps 40% in Pre-Market",
+      summary:
+        "Support.com receives unsolicited acquisition offer from private equity firm at $4.50 per share, representing 45% premium to previous close. Board to review offer.",
+      url: "#",
+      source: "MarketWatch",
+      sentiment: "positive",
+      relatedSymbols: ["SPRT"],
+    },
+  ]
+
+  // Add realistic timestamps (spread over last few hours)
+  return baseNews.map((item, index) => ({
     ...item,
     publishedAt: new Date(Date.now() - (index + 1) * 8 * 60 * 1000).toISOString(),
   }))
-
-  return NextResponse.json({
-    success: true,
-    data: liveNews,
-    timestamp: new Date().toISOString(),
-    source: "enhanced_demo_data",
-    count: liveNews.length,
-  })
 }
 
+/**
+ * Ultra-defensive news parser – returns [] if HTML structure unexpected
+ */
 function parseFinvizNewsHTML(html: string) {
-  const news = []
-
+  const news: any[] = []
   try {
     // Look for news table or news container in the HTML
     const newsRegex = /<tr[^>]*class="[^"]*news[^"]*"[^>]*>(.*?)<\/tr>/gs
@@ -212,7 +221,6 @@ function parseFinvizNewsHTML(html: string) {
           id: newsId.toString(),
           title: title,
           summary: generateSummary(title),
-          symbol: extractSymbolFromTitle(title),
           sentiment: determineSentiment(title),
           source: "Finviz Elite",
           publishedAt,
@@ -226,7 +234,7 @@ function parseFinvizNewsHTML(html: string) {
       }
     }
   } catch (parseError) {
-    console.error("Error parsing Finviz news HTML:", parseError)
+    console.error("[Finviz News] parser error:", parseError)
   }
 
   return news
