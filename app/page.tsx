@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, BarChart3, Zap, Shield, ArrowRight, DollarSign, Target } from "lucide-react"
+import { TrendingUp, BarChart3, Zap, Shield, ArrowRight, DollarSign, Target, Lock } from "lucide-react"
 
 export default function Home() {
   return (
@@ -16,12 +16,20 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-white">StockFlow Initiative</h1>
               <span className="text-sm text-gray-400">by ThePhDPush</span>
             </div>
-            <Link href="/public-dashboard">
-              <button className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded flex items-center">
-                Launch Scanner
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </button>
-            </Link>
+            <div className="flex items-center space-x-3">
+              <Link href="/login">
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 bg-transparent">
+                  <Lock className="h-4 w-4 mr-2" />
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/request-access">
+                <Button className="bg-green-600 hover:bg-green-700 text-white">
+                  Request Access
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -30,7 +38,7 @@ export default function Home() {
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
           <Badge variant="secondary" className="mb-4 bg-green-500/20 text-green-400">
-            Professional Gap Scanner
+            Professional Gap Scanner - Access Required
           </Badge>
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
             Find Gap Opportunities
@@ -40,11 +48,56 @@ export default function Home() {
             Advanced stock scanner powered by real-time Finviz Elite data to identify gap-up opportunities with
             institutional-grade filtering and analysis tools.
           </p>
-          <Link href="/public-dashboard">
-            <button className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white text-lg rounded">
-              Start Scanning
-            </button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/request-access">
+              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-lg px-8 py-3">
+                Request Access
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10 text-lg px-8 py-3 bg-transparent"
+              >
+                <Lock className="h-5 w-5 mr-2" />
+                Sign In
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Access Notice */}
+      <section className="py-12">
+        <div className="container mx-auto px-4">
+          <Card className="bg-yellow-500/10 border-yellow-500/30 backdrop-blur-sm max-w-4xl mx-auto">
+            <CardContent className="p-8 text-center">
+              <Lock className="h-12 w-12 text-yellow-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-4">Professional Access Required</h2>
+              <p className="text-gray-300 mb-6">
+                StockFlow Initiative is a professional-grade gap scanner designed for experienced traders and
+                institutions. Access is granted on an approval basis to ensure responsible use of our real-time market
+                data and advanced tools.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="bg-white/5 rounded-lg p-4">
+                  <h3 className="font-semibold text-white mb-2">✅ Who Gets Access</h3>
+                  <p className="text-gray-400">
+                    Professional traders, institutions, and experienced investors with proven track records
+                  </p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4">
+                  <h3 className="font-semibold text-white mb-2">⚡ Review Process</h3>
+                  <p className="text-gray-400">Applications reviewed within 24-48 hours by our team</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-4">
+                  <h3 className="font-semibold text-white mb-2">🔒 Secure Platform</h3>
+                  <p className="text-gray-400">Enterprise-grade security with real-time Finviz Elite integration</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -162,16 +215,28 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <Card className="bg-gradient-to-r from-green-900/80 to-blue-900/80 border-white/20 backdrop-blur-sm">
             <CardContent className="p-12 text-center">
-              <h2 className="text-4xl font-bold text-white mb-4">Ready to Find Your Next Gap Play?</h2>
+              <h2 className="text-4xl font-bold text-white mb-4">Ready to Access Professional Gap Scanning?</h2>
               <p className="text-xl text-gray-300 mb-8">
-                Join thousands of traders using our professional-grade gap scanner powered by Finviz Elite
+                Join experienced traders using our professional-grade gap scanner powered by Finviz Elite
               </p>
-              <Link href="/public-dashboard">
-                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-lg px-8 py-3">
-                  <TrendingUp className="mr-2 h-5 w-5" />
-                  Launch Gap Scanner
-                </Button>
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/request-access">
+                  <Button size="lg" className="bg-green-600 hover:bg-green-700 text-lg px-8 py-3">
+                    <TrendingUp className="mr-2 h-5 w-5" />
+                    Request Access
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white/20 text-white hover:bg-white/10 text-lg px-8 py-3 bg-transparent"
+                  >
+                    <Lock className="mr-2 h-5 w-5" />
+                    Sign In
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </div>
