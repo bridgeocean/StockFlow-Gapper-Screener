@@ -123,7 +123,7 @@ export default function PublicDashboard() {
 
   useEffect(() => {
     fetchData()
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 1 minute
     const interval = setInterval(() => {
       fetchStocks()
       const topSymbols = filteredStocks.slice(0, 10).map((stock) => stock.symbol)
@@ -131,7 +131,7 @@ export default function PublicDashboard() {
         fetchNews(topSymbols)
       }
       setLastUpdate(new Date())
-    }, 30000)
+    }, 60000)
     return () => clearInterval(interval)
   }, [])
 
