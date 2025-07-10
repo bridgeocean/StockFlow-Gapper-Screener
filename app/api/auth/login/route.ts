@@ -1,11 +1,25 @@
 import { NextResponse } from "next/server"
-import { authOperations } from "@/lib/auth"
+
+// Simple demo users - in production, this would be a database
+const DEMO_USERS = [
+  {
+    email: "admin@thephdpush.com",
+    password: "admin123",
+    role: "admin",
+  },
+  {
+    email: "demo@example.com",
+    password: "demo123",
+    role: "user",
+  },
+]
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json()
+    const body = await request.json()
+    console.log("Login attempt:", { email: body.email, hasPassword: !!body.password })
 
-    console.log("🔐 Login attempt for:", email)
+    const { email, password } = body
 
     if (!email || !password) {
       return NextResponse.json({
@@ -14,30 +28,31 @@ export async function POST(request: Request) {
       })
     }
 
-    // Authenticate user against DynamoDB
-    const user = await authOperations.authenticateUser(email, password)
+    // Find user
+    const user = DEMO_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
+    console.log("User found:", !!user)
 
     if (!user) {
-      console.log("❌ Authentication failed for:", email)
       return NextResponse.json({
         success: false,
         message: "Invalid email or password",
       })
     }
 
-    console.log("✅ Authentication successful for:", email)
-
-    // Generate JWT token
-    const token = authOperations.generateToken(user)
+    // Create simple session token
+    const token = Buffer.from(`${user.email}:${Date.now()}`).toString("base64")
 
     // Create response with cookie
     const response = NextResponse.json({
       success: true,
       token,
-      user,
+      user: {
+        email: user.email,
+        role: user.role,
+      },
     })
 
-    // Set secure cookie
+    // Set cookie for session
     response.cookies.set("stockflow_session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -47,10 +62,10 @@ export async function POST(request: Request) {
 
     return response
   } catch (error) {
-    console.error("❌ Login error:", error)
+    console.error("Login error:", error)
     return NextResponse.json({
       success: false,
-      message: "Server error occurred",
+      message: "Server error",
     })
   }
 }

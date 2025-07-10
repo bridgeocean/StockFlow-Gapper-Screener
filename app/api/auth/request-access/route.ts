@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
-import { accessRequestOperations } from "@/lib/dynamodb"
 
 export async function POST(request: Request) {
   try {
     const { name, email, company, reason, experience } = await request.json()
 
-    console.log("📝 New access request:", { name, email, company })
+    console.log("📧 Access request received:", { name, email, company })
 
     // Validate required fields
     if (!name || !email || !reason || !experience) {
@@ -15,22 +14,10 @@ export async function POST(request: Request) {
       })
     }
 
-    // Save to DynamoDB
-    const requestId = await accessRequestOperations.createAccessRequest({
-      name,
-      email: email.toLowerCase(),
-      company,
-      reason,
-      experience,
-    })
-
-    console.log("✅ Access request saved with ID:", requestId)
-
     // Email content that would be sent
     const emailContent = `
 🚨 NEW STOCKFLOW ACCESS REQUEST 🚨
 
-Request ID: ${requestId}
 Name: ${name}
 Email: ${email}
 Company: ${company || "Not provided"}
@@ -39,7 +26,8 @@ Reason: ${reason}
 
 Submitted: ${new Date().toLocaleString()}
 
-Review at: [Your Admin Panel URL]
+---
+This request needs manual approval.
     `
 
     console.log("📧 EMAIL TO info@thephdpush.com:")
@@ -52,7 +40,10 @@ Review at: [Your Admin Panel URL]
     return NextResponse.json({
       success: true,
       message: "Access request submitted successfully",
-      requestId,
+      debug: {
+        emailWouldBeSentTo: "info@thephdpush.com",
+        timestamp: new Date().toISOString(),
+      },
     })
   } catch (error) {
     console.error("❌ Access request error:", error)
