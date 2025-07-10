@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import type { Stock, NewsItem, StockFilters } from "@/types/stock"
 import { StockFiltersComponent } from "@/components/stock-filters"
+import { AlertSystem } from "@/components/alert-system"
+import { MobileNav } from "@/components/mobile-nav"
 import { formatCurrency, formatPercentage, formatNumber } from "@/lib/utils"
-import { TrendingUp, RefreshCw, Home, AlertTriangle } from "lucide-react"
+import { TrendingUp, RefreshCw, Home, AlertTriangle, ExternalLink } from "lucide-react"
 import Link from "next/link"
 
 export default function PublicDashboard() {
@@ -213,9 +215,9 @@ export default function PublicDashboard() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <TrendingUp className="h-8 w-8 text-green-400" />
-              <h1 className="text-2xl font-bold text-white">StockFlow Initiative</h1>
-              <span className="text-sm text-gray-400">by ThePhDPush</span>
+              <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-green-400" />
+              <h1 className="text-lg md:text-2xl font-bold text-white">StockFlow Initiative</h1>
+              <span className="hidden sm:block text-sm text-gray-400">by ThePhDPush</span>
               <div
                 className={`px-2 py-1 text-xs rounded border ${
                   isRealData
@@ -223,10 +225,12 @@ export default function PublicDashboard() {
                     : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
                 }`}
               >
-                {isRealData ? "🟢 LIVE DATA" : "⚠️ DEMO DATA"}
+                {isRealData ? "🟢 LIVE" : "⚠️ DEMO"}
               </div>
             </div>
-            <div className="flex items-center space-x-2">
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-2">
               <div className="text-xs text-gray-400">Last updated: {lastUpdate.toLocaleTimeString()}</div>
               <Link href="/">
                 <button className="px-4 py-2 text-white hover:text-green-400 flex items-center">
@@ -243,25 +247,37 @@ export default function PublicDashboard() {
                 Refresh
               </button>
             </div>
+
+            {/* Mobile Navigation */}
+            <div className="flex md:hidden items-center space-x-2">
+              <button
+                onClick={fetchData}
+                disabled={isLoading}
+                className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded flex items-center disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              </button>
+              <MobileNav />
+            </div>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mx-auto px-2 md:px-4 py-4 md:py-6">
         {/* Data Source Status */}
         {!isRealData && (
-          <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 p-4 rounded mb-6 flex items-center">
-            <AlertTriangle className="h-5 w-5 mr-3" />
+          <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 p-3 md:p-4 rounded mb-4 md:mb-6 flex items-center text-sm">
+            <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3 flex-shrink-0" />
             <div>
               <strong>Demo Mode:</strong> Currently using simulated data. The system attempted to connect to Finviz
-              Elite API but fell back to demo data. Check server logs for connection details.
+              Elite API but fell back to demo data.
             </div>
           </div>
         )}
 
         {isRealData && (
-          <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-4 rounded mb-6 flex items-center">
-            <div className="h-2 w-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
+          <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 md:p-4 rounded mb-4 md:mb-6 flex items-center text-sm">
+            <div className="h-2 w-2 bg-green-400 rounded-full mr-2 md:mr-3 animate-pulse flex-shrink-0"></div>
             <div>
               <strong>Live Data:</strong> Successfully connected to Finviz Elite API. Data is being updated in real-time
               from professional market sources.
@@ -269,37 +285,41 @@ export default function PublicDashboard() {
           </div>
         )}
 
-        {error && <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-4 rounded mb-6">{error}</div>}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-3 md:p-4 rounded mb-4 md:mb-6 text-sm">
+            {error}
+          </div>
+        )}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-            <h3 className="text-gray-400 text-sm">Filtered Stocks</h3>
-            <div className="text-2xl font-bold text-white">{stats.totalStocks}</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
+          <div className="bg-black/40 border border-white/10 rounded-lg p-3 md:p-4">
+            <h3 className="text-gray-400 text-xs md:text-sm">Filtered Stocks</h3>
+            <div className="text-lg md:text-2xl font-bold text-white">{stats.totalStocks}</div>
             <div className="text-xs text-green-400 flex items-center">
-              <TrendingUp className="h-3 w-3 mr-1" />
+              <TrendingUp className="h-2 w-2 md:h-3 md:w-3 mr-1" />
               Active scanners
             </div>
           </div>
-          <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-            <h3 className="text-gray-400 text-sm">Average Gap</h3>
-            <div className="text-2xl font-bold text-white">{stats.avgGap.toFixed(1)}%</div>
+          <div className="bg-black/40 border border-white/10 rounded-lg p-3 md:p-4">
+            <h3 className="text-gray-400 text-xs md:text-sm">Average Gap</h3>
+            <div className="text-lg md:text-2xl font-bold text-white">{stats.avgGap.toFixed(1)}%</div>
             <div className="text-xs text-yellow-400 flex items-center">
               <span className="mr-1">📊</span>
               Gap percentage
             </div>
           </div>
-          <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-            <h3 className="text-gray-400 text-sm">Total Volume</h3>
-            <div className="text-2xl font-bold text-white">{formatNumber(stats.totalVolume)}</div>
+          <div className="bg-black/40 border border-white/10 rounded-lg p-3 md:p-4">
+            <h3 className="text-gray-400 text-xs md:text-sm">Total Volume</h3>
+            <div className="text-lg md:text-2xl font-bold text-white">{formatNumber(stats.totalVolume)}</div>
             <div className="text-xs text-blue-400 flex items-center">
               <span className="mr-1">💰</span>
               Combined volume
             </div>
           </div>
-          <div className="bg-black/40 border border-white/10 rounded-lg p-4">
-            <h3 className="text-gray-400 text-sm">Hot Stocks</h3>
-            <div className="text-2xl font-bold text-white">{stats.hotStocks}</div>
+          <div className="bg-black/40 border border-white/10 rounded-lg p-3 md:p-4">
+            <h3 className="text-gray-400 text-xs md:text-sm">Hot Stocks</h3>
+            <div className="text-lg md:text-2xl font-bold text-white">{stats.hotStocks}</div>
             <div className="text-xs text-red-400 flex items-center">
               <span className="mr-1">🔥</span>
               High momentum
@@ -307,7 +327,151 @@ export default function PublicDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Mobile Layout */}
+        <div className="block lg:hidden space-y-4">
+          {/* Alerts - Mobile */}
+          <AlertSystem stocks={filteredStocks} />
+
+          {/* Filters - Mobile */}
+          <StockFiltersComponent filters={filters} onFiltersChange={setFilters} />
+
+          {/* Stocks Table - Mobile */}
+          <div className="bg-black/40 border border-white/10 rounded-lg">
+            <div className="p-3 md:p-4 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg md:text-xl font-bold text-white">Gap Scanner Results</h2>
+                <div className="flex items-center space-x-2">
+                  <div className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded border border-green-500/30">
+                    Top 10 of {filteredStocks.length}
+                  </div>
+                  <button
+                    onClick={exportToCSV}
+                    disabled={filteredStocks.length === 0}
+                    className="px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:opacity-50 text-white text-xs rounded flex items-center"
+                  >
+                    <span className="mr-1">📥</span>
+                    CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="p-3 md:p-4">
+              {filteredStocks.length === 0 ? (
+                <div className="text-center text-gray-400 py-8">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg mb-2">No stocks match current filters</p>
+                  <p className="text-sm">Try adjusting the filter values or click "Show All Stocks"</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {stocks.length} stocks available • Showing top 10 results when filtered
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredStocks.slice(0, 10).map((stock) => {
+                    const volumeRatio = stock.avgVolume > 0 ? stock.volume / stock.avgVolume : 1
+                    return (
+                      <div
+                        key={stock.symbol}
+                        className="border border-white/20 rounded p-3 md:p-4 hover:bg-white/10 bg-white/5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-white text-base md:text-lg">{stock.symbol}</div>
+                            <div className="text-xs md:text-sm text-gray-300 font-medium truncate max-w-[200px]">
+                              {stock.company}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-white text-base md:text-lg">
+                              {formatCurrency(stock.price)}
+                            </div>
+                            <div
+                              className={`text-xs md:text-sm font-semibold ${stock.change >= 0 ? "text-green-400" : "text-red-400"}`}
+                            >
+                              {formatPercentage(stock.changePercent)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center space-x-1 md:space-x-2 flex-wrap">
+                            {stock.indicators.slice(0, 2).map((indicator, idx) => (
+                              <span key={idx} className="text-xs bg-white/20 text-white px-2 py-1 rounded font-medium">
+                                {indicator.icon} <span className="hidden sm:inline">{indicator.label}</span>
+                              </span>
+                            ))}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs md:text-sm text-yellow-300 font-semibold">
+                              Gap: {stock.gap.toFixed(1)}%
+                            </div>
+                            <div className="text-xs text-blue-300">
+                              Vol: {formatNumber(stock.volume)} ({volumeRatio.toFixed(1)}x)
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* News Feed - Mobile */}
+          <div className="bg-black/40 border border-white/10 rounded-lg">
+            <div className="p-3 md:p-4 border-b border-white/10">
+              <h2 className="text-lg md:text-xl font-bold text-white flex items-center">
+                <span className="mr-2">📰</span>
+                Market News
+              </h2>
+            </div>
+            <div className="p-3 md:p-4">
+              {news.length === 0 ? (
+                <div className="text-center text-gray-400 py-8">
+                  <span className="text-4xl mb-4 block">📰</span>
+                  <p>No news available</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {news.slice(0, 5).map((item) => (
+                    <div key={item.id} className="border-b border-white/10 pb-4 last:border-b-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex space-x-2 flex-wrap">
+                          {(item.relatedSymbols ?? []).slice(0, 2).map((symbol: string) => (
+                            <span key={symbol} className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">
+                              {symbol}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+                          {new Date(item.publishedAt).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <h3 className="text-white font-semibold mb-2 text-sm">{item.title}</h3>
+                      <p className="text-gray-400 text-xs line-clamp-2">{item.summary}</p>
+                      <div className="text-xs text-gray-500 mt-2">Source: {item.source}</div>
+                      <button
+                        className="text-blue-400 hover:text-blue-300 text-xs flex items-center mt-2"
+                        onClick={() => {
+                          const symbol = item.relatedSymbols[0] || "SPY"
+                          // Direct link to Finviz quote page for the stock
+                          const finvizUrl = `https://finviz.com/quote.ashx?t=${symbol}`
+                          window.open(finvizUrl, "_blank", "noopener,noreferrer")
+                        }}
+                      >
+                        Full Story →
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden lg:grid lg:grid-cols-5 gap-6">
           {/* Filters */}
           <div className="lg:col-span-1">
             <StockFiltersComponent filters={filters} onFiltersChange={setFilters} />
@@ -394,8 +558,12 @@ export default function PublicDashboard() {
             </div>
           </div>
 
-          {/* News Feed */}
-          <div className="lg:col-span-1">
+          {/* Right Column - Alerts and News */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Alerts */}
+            <AlertSystem stocks={filteredStocks} />
+
+            {/* News Feed */}
             <div className="bg-black/40 border border-white/10 rounded-lg">
               <div className="p-4 border-b border-white/10">
                 <h2 className="text-xl font-bold text-white flex items-center">
@@ -428,6 +596,18 @@ export default function PublicDashboard() {
                         <h3 className="text-white font-semibold mb-2 text-sm">{item.title}</h3>
                         <p className="text-gray-400 text-xs">{item.summary}</p>
                         <div className="text-xs text-gray-500 mt-2">Source: {item.source}</div>
+                        <button
+                          className="text-blue-400 hover:text-blue-300 text-xs flex items-center mt-2"
+                          onClick={() => {
+                            const symbol = item.relatedSymbols[0] || "SPY"
+                            // Direct link to Finviz quote page for the stock
+                            const finvizUrl = `https://finviz.com/quote.ashx?t=${symbol}`
+                            window.open(finvizUrl, "_blank", "noopener,noreferrer")
+                          }}
+                        >
+                          Full Story →
+                          <ExternalLink className="h-3 w-3 ml-1" />
+                        </button>
                       </div>
                     ))}
                   </div>
