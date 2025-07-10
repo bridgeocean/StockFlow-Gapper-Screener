@@ -34,11 +34,11 @@ export function StockFiltersComponent({ filters, onFiltersChange }: StockFilters
 
   const resetFilters = () => {
     onFiltersChange({
-      priceRange: [0.1, 20],
-      volumeMultiplier: 1,
-      gapPercent: 1,
-      performance: 0,
-      floatMax: 20, // Set to 20M as default
+      priceRange: [1, 5], // Changed from [0.1, 20] to [1, 5] - focus on $1-$5 range
+      volumeMultiplier: 5, // Changed from 1 to 5x - require 5x average volume
+      gapPercent: 5, // Changed from 1 to 5% - focus on significant gaps
+      performance: 10, // Changed from 0 to 10% - require strong positive performance
+      floatMax: 20, // Keep at 20M as default
       newsCatalyst: false,
     })
   }
