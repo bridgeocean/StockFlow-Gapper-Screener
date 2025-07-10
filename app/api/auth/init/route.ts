@@ -1,32 +1,29 @@
+/* Optional GET handler so hitting the URL in a browser works */
 import { NextResponse } from "next/server"
 
-// Simple GET handler for browser testing
 export async function GET() {
   return NextResponse.json({
     success: true,
-    message: "Init endpoint is working! Send POST to create admin user.",
-    timestamp: new Date().toISOString(),
+    message: "Init endpoint is alive — send a POST request to create the default admin user.",
   })
 }
 
-// POST handler to create admin user
+import { authOperations } from "@/lib/auth"
+
 export async function POST() {
   try {
-    console.log("🚀 Creating default admin user...")
+    console.log("🚀 Initializing default admin user...")
+    await authOperations.createDefaultAdmin()
 
-    // For now, just return success - we'll add real DB logic after we confirm the endpoint works
     return NextResponse.json({
       success: true,
-      message: "Admin user creation endpoint is working!",
-      note: "Database integration will be added next",
-      timestamp: new Date().toISOString(),
+      message: "Default admin user initialized",
     })
   } catch (error) {
     console.error("❌ Init error:", error)
     return NextResponse.json({
       success: false,
       message: "Failed to initialize admin user",
-      error: error instanceof Error ? error.message : "Unknown error",
     })
   }
 }
