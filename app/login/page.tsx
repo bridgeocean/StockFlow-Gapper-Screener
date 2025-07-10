@@ -29,22 +29,18 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
-        credentials: "include", // Important for cookies
       })
 
       const data = await response.json()
-      console.log("Login response:", data)
 
       if (data.success) {
-        // Store session in localStorage as backup
+        // Store session and redirect
         localStorage.setItem("stockflow_session", data.token)
-        // Redirect to dashboard
-        window.location.href = "/public-dashboard"
+        router.push("/public-dashboard")
       } else {
         setError(data.message || "Login failed")
       }
-    } catch (err: any) {
-      console.error("Login error:", err)
+    } catch (err) {
       setError("Network error. Please try again.")
     } finally {
       setIsLoading(false)

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server"
 const DEMO_USERS = [
   {
     email: "admin@thephdpush.com",
-    password: "admin123",
+    password: "admin123", // In production, this would be hashed
     role: "admin",
   },
   {
@@ -16,21 +16,10 @@ const DEMO_USERS = [
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    console.log("Login attempt:", { email: body.email, hasPassword: !!body.password })
-
-    const { email, password } = body
-
-    if (!email || !password) {
-      return NextResponse.json({
-        success: false,
-        message: "Email and password are required",
-      })
-    }
+    const { email, password } = await request.json()
 
     // Find user
-    const user = DEMO_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password)
-    console.log("User found:", !!user)
+    const user = DEMO_USERS.find((u) => u.email === email && u.password === password)
 
     if (!user) {
       return NextResponse.json({
@@ -39,11 +28,10 @@ export async function POST(request: Request) {
       })
     }
 
-    // Create simple session token
+    // Create simple session token (in production, use JWT or proper session management)
     const token = Buffer.from(`${user.email}:${Date.now()}`).toString("base64")
 
-    // Create response with cookie
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
       token,
       user: {
@@ -51,18 +39,7 @@ export async function POST(request: Request) {
         role: user.role,
       },
     })
-
-    // Set cookie for session
-    response.cookies.set("stockflow_session", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    })
-
-    return response
   } catch (error) {
-    console.error("Login error:", error)
     return NextResponse.json({
       success: false,
       message: "Server error",

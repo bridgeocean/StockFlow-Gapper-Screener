@@ -4,8 +4,6 @@ export async function POST(request: Request) {
   try {
     const { name, email, company, reason, experience } = await request.json()
 
-    console.log("📧 Access request received:", { name, email, company })
-
     // Validate required fields
     if (!name || !email || !reason || !experience) {
       return NextResponse.json({
@@ -14,9 +12,14 @@ export async function POST(request: Request) {
       })
     }
 
-    // Email content that would be sent
+    // In production, you would:
+    // 1. Save to database
+    // 2. Send email to info@thephdpush.com
+    // 3. Send confirmation email to user
+
+    // For now, we'll simulate the email sending
     const emailContent = `
-🚨 NEW STOCKFLOW ACCESS REQUEST 🚨
+New StockFlow Access Request:
 
 Name: ${name}
 Email: ${email}
@@ -24,29 +27,25 @@ Company: ${company || "Not provided"}
 Experience: ${experience}
 Reason: ${reason}
 
-Submitted: ${new Date().toLocaleString()}
-
----
-This request needs manual approval.
+Submitted: ${new Date().toISOString()}
     `
 
-    console.log("📧 EMAIL TO info@thephdpush.com:")
+    console.log("📧 Email would be sent to info@thephdpush.com:")
     console.log(emailContent)
-    console.log("📧 EMAIL END")
 
-    // Simulate email delay
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // TODO: Integrate with email service (Resend, SendGrid, etc.)
+    // await sendEmail({
+    //   to: "info@thephdpush.com",
+    //   subject: `StockFlow Access Request - ${name}`,
+    //   text: emailContent
+    // })
 
     return NextResponse.json({
       success: true,
       message: "Access request submitted successfully",
-      debug: {
-        emailWouldBeSentTo: "info@thephdpush.com",
-        timestamp: new Date().toISOString(),
-      },
     })
   } catch (error) {
-    console.error("❌ Access request error:", error)
+    console.error("Access request error:", error)
     return NextResponse.json({
       success: false,
       message: "Server error. Please try again.",
