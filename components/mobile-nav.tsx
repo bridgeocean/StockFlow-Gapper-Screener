@@ -37,7 +37,7 @@ export function MobileNav({ alertCount = 0, onLogout, isAuthenticated = false }:
 
             <nav className="p-4 space-y-2">
               <Link href="/" onClick={() => setIsOpen(false)}>
-                <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white bg-white/5">
+                <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white bg-black/60">
                   <Home className="h-5 w-5" />
                   <span>Home</span>
                 </div>
@@ -49,7 +49,7 @@ export function MobileNav({ alertCount = 0, onLogout, isAuthenticated = false }:
                     onLogout()
                     setIsOpen(false)
                   }}
-                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white w-full text-left bg-white/5"
+                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white w-full text-left bg-black/60"
                 >
                   <span className="text-red-400">🚪</span>
                   <span>Logout</span>
