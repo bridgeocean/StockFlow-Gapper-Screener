@@ -12,6 +12,10 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { TrendingUp, Lock, Mail } from "lucide-react"
 
+// Dev credentials for preview mode
+const DEV_EMAIL = "bridgeocean@cyberservices.com"
+const DEV_PASSWORD = "admin123"
+
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -24,7 +28,34 @@ export default function LoginPage() {
     setIsLoading(true)
     setError("")
 
+    console.log("🔐 Login attempt:", { email, password: password.length + " chars" })
+
+    // Check if we're in preview mode (no real API)
+    const isPreview =
+      window.location.hostname.includes("vusercontent.net") ||
+      window.location.hostname.includes("localhost") ||
+      process.env.NODE_ENV === "development"
+
+    if (isPreview) {
+      console.log("🔧 Preview mode - checking dev credentials")
+
+      // Direct credential check in preview
+      if (email === DEV_EMAIL && password === DEV_PASSWORD) {
+        console.log("✅ Dev login successful")
+        localStorage.setItem("stockflow_session", "dev-token-" + Date.now())
+        router.push("/public-dashboard")
+        return
+      } else {
+        console.log("❌ Invalid dev credentials")
+        setError("Invalid credentials (Preview mode: use bridgeocean@cyberservices.com / admin123)")
+        setIsLoading(false)
+        return
+      }
+    }
+
+    // Production API call
     try {
+      console.log("🏭 Production mode - calling API")
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -34,13 +65,13 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (data.success) {
-        // Store session and redirect
         localStorage.setItem("stockflow_session", data.token)
         router.push("/public-dashboard")
       } else {
         setError(data.message || "Login failed")
       }
     } catch (err) {
+      console.error("Network error:", err)
       setError("Network error. Please try again.")
     } finally {
       setIsLoading(false)
@@ -73,6 +104,11 @@ export default function LoginPage() {
               </Alert>
             )}
 
+            {/* Preview Mode Notice */}
+            <div className="bg-blue-500/10 border border-blue-500/30 text-blue-400 p-3 rounded text-sm">
+              <strong>Preview Mode:</strong> Use bridgeocean@cyberservices.com / admin123
+            </div>
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-gray-300">
@@ -84,7 +120,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                  placeholder="your@email.com"
+                  placeholder="bridgeocean@cyberservices.com"
                   required
                 />
               </div>
@@ -99,7 +135,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                  placeholder="Enter your password"
+                  placeholder="admin123"
                   required
                 />
               </div>

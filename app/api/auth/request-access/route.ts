@@ -1,4 +1,17 @@
 import { NextResponse } from "next/server"
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb"
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb"
+
+// Initialize DynamoDB client
+const client = new DynamoDBClient({
+  region: process.env.AWS_REGION || "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+})
+
+const docClient = DynamoDBDocumentClient.from(client)
 
 export async function POST(request: Request) {
   try {
@@ -12,33 +25,34 @@ export async function POST(request: Request) {
       })
     }
 
-    // In production, you would:
-    // 1. Save to database
-    // 2. Send email to info@thephdpush.com
-    // 3. Send confirmation email to user
+    // Auto-add user to DynamoDB as pending
+    const command = new PutCommand({
+      TableName: process.env.DYNAMODB_USERS_TABLE,
+      Item: {
+        email: email,
+        name: name,
+        company: company || "",
+        password: "temp123", // Temporary password, admin can change
+        role: "user",
+        status: "pending",
+        requestReason: reason,
+        experience: experience,
+        createdAt: new Date().toISOString(),
+      },
+      ConditionExpression: "attribute_not_exists(email)", // Prevent duplicates
+    })
 
-    // For now, we'll simulate the email sending
-    const emailContent = `
-New StockFlow Access Request:
+    await docClient.send(command)
 
-Name: ${name}
-Email: ${email}
-Company: ${company || "Not provided"}
-Experience: ${experience}
-Reason: ${reason}
-
-Submitted: ${new Date().toISOString()}
-    `
-
-    console.log("📧 Email would be sent to info@thephdpush.com:")
-    console.log(emailContent)
-
-    // TODO: Integrate with email service (Resend, SendGrid, etc.)
-    // await sendEmail({
-    //   to: "info@thephdpush.com",
-    //   subject: `StockFlow Access Request - ${name}`,
-    //   text: emailContent
-    // })
+    // Console log for admin notification (hybrid approach)
+    console.log("🔔 NEW ACCESS REQUEST:")
+    console.log(`Name: ${name}`)
+    console.log(`Email: ${email}`)
+    console.log(`Company: ${company || "Not provided"}`)
+    console.log(`Experience: ${experience}`)
+    console.log(`Reason: ${reason}`)
+    console.log(`Submitted: ${new Date().toISOString()}`)
+    console.log(`Admin should visit /admin to approve`)
 
     return NextResponse.json({
       success: true,
@@ -46,6 +60,14 @@ Submitted: ${new Date().toISOString()}
     })
   } catch (error) {
     console.error("Access request error:", error)
+
+    if (error.name === "ConditionalCheckFailedException") {
+      return NextResponse.json({
+        success: false,
+        message: "An access request with this email already exists",
+      })
+    }
+
     return NextResponse.json({
       success: false,
       message: "Server error. Please try again.",

@@ -1,45 +1,42 @@
 import { NextResponse } from "next/server"
 
-// Simple demo users - in production, this would be a database
-const DEMO_USERS = [
-  {
-    email: "admin@thephdpush.com",
-    password: "admin123", // In production, this would be hashed
-    role: "admin",
-  },
-  {
-    email: "demo@example.com",
-    password: "demo123",
-    role: "user",
-  },
-]
+// Simple dev credentials for preview
+const DEV_EMAIL = "bridgeocean@cyberservices.com"
+const DEV_PASSWORD = "admin123"
 
 export async function POST(request: Request) {
+  console.log("🔐 Login API called")
+
   try {
-    const { email, password } = await request.json()
+    const body = await request.json()
+    const { email, password } = body
 
-    // Find user
-    const user = DEMO_USERS.find((u) => u.email === email && u.password === password)
+    console.log("📨 Login attempt for:", email)
 
-    if (!user) {
+    // For now, just use dev credentials in preview
+    if (email === DEV_EMAIL && password === DEV_PASSWORD) {
+      console.log("✅ Login successful")
+
+      const token = Buffer.from(`${email}:${Date.now()}`).toString("base64")
+
       return NextResponse.json({
-        success: false,
-        message: "Invalid email or password",
+        success: true,
+        token,
+        user: {
+          email,
+          name: "Dev Admin",
+          role: "admin",
+        },
       })
     }
 
-    // Create simple session token (in production, use JWT or proper session management)
-    const token = Buffer.from(`${user.email}:${Date.now()}`).toString("base64")
-
+    console.log("❌ Invalid credentials")
     return NextResponse.json({
-      success: true,
-      token,
-      user: {
-        email: user.email,
-        role: user.role,
-      },
+      success: false,
+      message: "Invalid email or password",
     })
   } catch (error) {
+    console.error("💥 Login error:", error)
     return NextResponse.json({
       success: false,
       message: "Server error",
