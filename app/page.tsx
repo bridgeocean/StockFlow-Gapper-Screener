@@ -37,7 +37,7 @@ export default function Home() {
             <span className="block text-green-400">Before They Move</span>
           </h1>
           <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            Advanced stock scanner powered by real-time Finviz Elite data to identify gap-up opportunities with
+            Advanced stock scanner powered by real-time Live Feed data to identify gap-up opportunities with
             institutional-grade filtering and analysis tools.
           </p>
           <Link href="/public-dashboard">
@@ -96,12 +96,12 @@ export default function Home() {
                   <div className="p-2 bg-purple-500/20 rounded-lg">
                     <Zap className="h-6 w-6 text-purple-400" />
                   </div>
-                  <CardTitle className="text-white">Finviz Elite Integration</CardTitle>
+                  <CardTitle className="text-white">Live Feed Integration</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-gray-300">
-                  Direct integration with Finviz Elite API for real-time market data and professional-grade screening.
+                  Direct integration with Live Feed API for real-time market data and professional-grade screening.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -164,7 +164,7 @@ export default function Home() {
             <CardContent className="p-12 text-center">
               <h2 className="text-4xl font-bold text-white mb-4">Ready to Find Your Next Gap Play?</h2>
               <p className="text-xl text-gray-300 mb-8">
-                Join thousands of traders using our professional-grade gap scanner powered by Finviz Elite
+                Join thousands of traders using our professional-grade gap scanner powered by Live Feed
               </p>
               <Link href="/public-dashboard">
                 <Button size="lg" className="bg-green-600 hover:bg-green-700 text-lg px-8 py-3">

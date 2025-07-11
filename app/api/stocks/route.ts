@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 
 /**
- * Finviz Elite token – update here when you get a new one.
+ * Live Feed token – update here when you get a new one.
  */
-const FINVIZ_API_BASE = "https://elite.finviz.com/export.ashx"
-const FINVIZ_API_TOKEN = "9a091693-9164-40dd-8e93-1c18606f0e6f"
+const LIVE_FEED_API_BASE = "https://elite.finviz.com/export.ashx"
+const LIVE_FEED_API_TOKEN = "9a091693-9164-40dd-8e93-1c18606f0e6f"
 
 // 5 criteria filters for gap scanner
 const GAPPER_FILTERS = {
@@ -19,14 +19,14 @@ const GAPPER_FILTERS = {
  * GET /api/stocks - Fetch real Finviz Elite data via CSV export
  */
 export async function GET() {
-  console.log("🚀 Starting Finviz CSV API call...")
+  console.log("🚀 Starting Live Feed CSV API call...")
 
   try {
     // Build Finviz screener URL with filters
     const filterString = Object.values(GAPPER_FILTERS).join(",")
-    const url = `${FINVIZ_API_BASE}?v=111&f=${filterString}&c=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20&auth=${FINVIZ_API_TOKEN}`
+    const url = `${LIVE_FEED_API_BASE}?v=111&f=${filterString}&c=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20&auth=${LIVE_FEED_API_TOKEN}`
 
-    console.log("📡 Fetching from Finviz Elite CSV API...")
+    console.log("📡 Fetching from Live Feed CSV API...")
     console.log("🔗 URL:", url.substring(0, 100) + "...")
 
     const response = await fetch(url, {
@@ -36,23 +36,23 @@ export async function GET() {
       },
     })
 
-    console.log(`📊 Finviz CSV response: ${response.status} ${response.statusText}`)
+    console.log(`📊 Live Feed CSV response: ${response.status} ${response.statusText}`)
 
     if (!response.ok) {
-      throw new Error(`Finviz CSV API error: ${response.status} ${response.statusText}`)
+      throw new Error(`Live Feed CSV API error: ${response.status} ${response.statusText}`)
     }
 
     const csvData = await response.text()
     console.log(`📄 CSV data length: ${csvData.length} characters`)
     console.log(`📋 CSV preview: ${csvData.substring(0, 200)}...`)
 
-    const stocks = parseFinvizCSV(csvData)
+    const stocks = parseLiveFeedCSV(csvData)
     console.log(`✅ Parsed ${stocks.length} stocks from CSV`)
 
     if (stocks.length > 0) {
       return NextResponse.json({
         success: true,
-        source: "finviz_elite_csv_api",
+        source: "live_feed_csv_api",
         count: stocks.length,
         data: stocks,
         timestamp: new Date().toISOString(),
@@ -62,15 +62,15 @@ export async function GET() {
       return NextResponse.json(buildDemoPayload("no_csv_data"))
     }
   } catch (error) {
-    console.error("❌ Finviz CSV API error:", error)
+    console.error("❌ Live Feed CSV API error:", error)
     return NextResponse.json(buildDemoPayload("csv_api_error"))
   }
 }
 
 /**
- * Parse Finviz CSV data into Stock objects
+ * Parse Live Feed CSV data into Stock objects
  */
-function parseFinvizCSV(csvData: string) {
+function parseLiveFeedCSV(csvData: string) {
   const stocks: any[] = []
 
   try {

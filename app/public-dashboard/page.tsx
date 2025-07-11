@@ -206,7 +206,7 @@ export default function PublicDashboard() {
   }
 
   // Fix data source detection - finviz_elite_csv_api should be considered live data
-  const isRealData = dataSource === "finviz_elite_api" || dataSource === "finviz_elite_csv_api"
+  const isRealData = dataSource === "live_feed_api" || dataSource === "live_feed_csv_api"
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -269,8 +269,8 @@ export default function PublicDashboard() {
           <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 p-3 md:p-4 rounded mb-4 md:mb-6 flex items-center text-sm">
             <AlertTriangle className="h-4 w-4 md:h-5 md:w-5 mr-2 md:mr-3 flex-shrink-0" />
             <div>
-              <strong>Demo Mode:</strong> Currently using simulated data. The system attempted to connect to Finviz
-              Elite API but fell back to demo data.
+              <strong>Demo Mode:</strong> Currently using simulated data. The system attempted to connect to Live Feed
+              API but fell back to demo data.
             </div>
           </div>
         )}
@@ -279,7 +279,7 @@ export default function PublicDashboard() {
           <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-3 md:p-4 rounded mb-4 md:mb-6 flex items-center text-sm">
             <div className="h-2 w-2 bg-green-400 rounded-full mr-2 md:mr-3 animate-pulse flex-shrink-0"></div>
             <div>
-              <strong>Live Data:</strong> Successfully connected to Finviz Elite API. Data is being updated in real-time
+              <strong>Live Data:</strong> Successfully connected to Live Feed API. Data is being updated in real-time
               from professional market sources.
             </div>
           </div>
