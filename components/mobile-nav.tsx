@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Menu, X, TrendingUp, Home, Bell, Settings } from "lucide-react"
+import { Menu, X, TrendingUp, Home } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -37,31 +37,19 @@ export function MobileNav({ alertCount = 0, onLogout, isAuthenticated = false }:
 
             <nav className="p-4 space-y-2">
               <Link href="/" onClick={() => setIsOpen(false)}>
-                <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white">
+                <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white bg-white/5">
                   <Home className="h-5 w-5" />
                   <span>Home</span>
                 </div>
               </Link>
 
-              <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white">
-                <Bell className="h-5 w-5" />
-                <span>Alerts</span>
-                {alertCount > 0 && (
-                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">{alertCount}</span>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white">
-                <Settings className="h-5 w-5" />
-                <span>Settings</span>
-              </div>
               {isAuthenticated && onLogout && (
                 <button
                   onClick={() => {
                     onLogout()
                     setIsOpen(false)
                   }}
-                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white w-full text-left"
+                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white w-full text-left bg-white/5"
                 >
                   <span className="text-red-400">🚪</span>
                   <span>Logout</span>
