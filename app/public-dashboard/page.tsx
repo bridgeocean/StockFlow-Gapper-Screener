@@ -308,7 +308,7 @@ export default function PublicDashboard() {
               >
                 <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               </button>
-              <MobileNav />
+              <MobileNav onLogout={handleLogout} isAuthenticated={isAuthenticated} />
             </div>
           </div>
         </div>

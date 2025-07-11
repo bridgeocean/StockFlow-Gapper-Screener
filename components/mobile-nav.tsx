@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button"
 
 interface MobileNavProps {
   alertCount?: number
+  onLogout?: () => void
+  isAuthenticated?: boolean
 }
 
-export function MobileNav({ alertCount = 0 }: MobileNavProps) {
+export function MobileNav({ alertCount = 0, onLogout, isAuthenticated = false }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   return (
@@ -53,6 +55,18 @@ export function MobileNav({ alertCount = 0 }: MobileNavProps) {
                 <Settings className="h-5 w-5" />
                 <span>Settings</span>
               </div>
+              {isAuthenticated && onLogout && (
+                <button
+                  onClick={() => {
+                    onLogout()
+                    setIsOpen(false)
+                  }}
+                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/10 text-white w-full text-left"
+                >
+                  <span className="text-red-400">🚪</span>
+                  <span>Logout</span>
+                </button>
+              )}
             </nav>
           </div>
         </div>

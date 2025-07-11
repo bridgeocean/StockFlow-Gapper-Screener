@@ -104,11 +104,6 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            {/* Preview Mode Notice */}
-            <div className="bg-blue-500/10 border border-blue-500/30 text-blue-400 p-3 rounded text-sm">
-              <strong>Preview Mode:</strong> Use bridgeocean@cyberservices.com / admin123
-            </div>
-
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-gray-300">
@@ -120,7 +115,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                  placeholder="bridgeocean@cyberservices.com"
+                  placeholder="Enter your email address"
                   required
                 />
               </div>
@@ -135,7 +130,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
-                  placeholder="admin123"
+                  placeholder="Enter your password"
                   required
                 />
               </div>
