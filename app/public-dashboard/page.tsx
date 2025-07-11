@@ -1,15 +1,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import type { Stock, NewsItem, StockFilters } from "@/types/stock"
 import { StockFiltersComponent } from "@/components/stock-filters"
 import { AlertSystem } from "@/components/alert-system"
 import { MobileNav } from "@/components/mobile-nav"
 import { formatCurrency, formatPercentage, formatNumber } from "@/lib/utils"
-import { TrendingUp, RefreshCw, Home, AlertTriangle, ExternalLink } from "lucide-react"
+import { TrendingUp, RefreshCw, Home, AlertTriangle, ExternalLink, Lock } from "lucide-react"
 import Link from "next/link"
 
 export default function PublicDashboard() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [stocks, setStocks] = useState<Stock[]>([])
   const [news, setNews] = useState<NewsItem[]>([])
   const [filteredStocks, setFilteredStocks] = useState<Stock[]>([])
@@ -18,13 +22,32 @@ export default function PublicDashboard() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [dataSource, setDataSource] = useState<string>("unknown")
   const [filters, setFilters] = useState<StockFilters>({
-    priceRange: [1, 5], // Changed from [0.1, 20] to [1, 5] - focus on $1-$5 sweet spot
-    volumeMultiplier: 5, // Changed from 1 to 5x - require 5x average volume
-    gapPercent: 5, // Changed from 1 to 5% - focus on significant gaps
-    performance: 10, // Changed from 0 to 10% - require strong positive performance
-    floatMax: 20, // Keep at 20M as default
+    priceRange: [1, 5],
+    volumeMultiplier: 5,
+    gapPercent: 5,
+    performance: 10,
+    floatMax: 20,
     newsCatalyst: false,
   })
+
+  // Check authentication on component mount
+  useEffect(() => {
+    const checkAuth = () => {
+      const session = localStorage.getItem("stockflow_session")
+
+      if (!session) {
+        console.log("🔒 No session found, redirecting to login")
+        router.push("/login")
+        return
+      }
+
+      console.log("✅ Session found, user authenticated")
+      setIsAuthenticated(true)
+      setIsCheckingAuth(false)
+    }
+
+    checkAuth()
+  }, [router])
 
   const fetchStocks = async () => {
     try {
@@ -99,7 +122,6 @@ export default function PublicDashboard() {
       const performanceCheck = stock.performance >= filters.performance
       const floatCheck = floatInMillions <= filters.floatMax
 
-      // News catalyst filter
       const newsCatalystCheck =
         !filters.newsCatalyst ||
         stock.indicators.some(
@@ -116,30 +138,54 @@ export default function PublicDashboard() {
     console.log("✅ Filtered stocks:", filtered.length, "out of", stocks.length)
     setFilteredStocks(filtered)
 
-    // Fetch news relevant to filtered stocks
     const topSymbols = filtered.slice(0, 10).map((stock) => stock.symbol)
     if (topSymbols.length > 0) {
       fetchNews(topSymbols)
     }
   }
 
-  useEffect(() => {
-    fetchData()
-    // Auto-refresh every 1 minute
-    const interval = setInterval(() => {
-      fetchStocks()
-      const topSymbols = filteredStocks.slice(0, 10).map((stock) => stock.symbol)
-      if (topSymbols.length > 0) {
-        fetchNews(topSymbols)
-      }
-      setLastUpdate(new Date())
-    }, 60000)
-    return () => clearInterval(interval)
-  }, [])
+  const handleLogout = () => {
+    localStorage.removeItem("stockflow_session")
+    router.push("/")
+  }
 
   useEffect(() => {
-    applyFilters()
-  }, [stocks, filters])
+    if (isAuthenticated) {
+      fetchData()
+      const interval = setInterval(() => {
+        fetchStocks()
+        const topSymbols = filteredStocks.slice(0, 10).map((stock) => stock.symbol)
+        if (topSymbols.length > 0) {
+          fetchNews(topSymbols)
+        }
+        setLastUpdate(new Date())
+      }, 60000)
+      return () => clearInterval(interval)
+    }
+  }, [isAuthenticated])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      applyFilters()
+    }
+  }, [stocks, filters, isAuthenticated])
+
+  // Show loading screen while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <Lock className="h-12 w-12 text-green-400 mx-auto mb-4 animate-pulse" />
+          <div className="text-white text-xl">Checking authentication...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // If not authenticated, this shouldn't render (redirect should happen)
+  if (!isAuthenticated) {
+    return null
+  }
 
   if (isLoading && stocks.length === 0) {
     return (
@@ -205,7 +251,6 @@ export default function PublicDashboard() {
     document.body.removeChild(link)
   }
 
-  // Fix data source detection - finviz_elite_csv_api should be considered live data
   const isRealData = dataSource === "live_feed_api" || dataSource === "live_feed_csv_api"
 
   return (
@@ -245,6 +290,12 @@ export default function PublicDashboard() {
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
                 Refresh
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded flex items-center"
+              >
+                Logout
               </button>
             </div>
 
@@ -454,7 +505,6 @@ export default function PublicDashboard() {
                         className="text-blue-400 hover:text-blue-300 text-xs flex items-center mt-2"
                         onClick={() => {
                           const symbol = item.relatedSymbols[0] || "SPY"
-                          // Direct link to Finviz quote page for the stock
                           const finvizUrl = `https://finviz.com/quote.ashx?t=${symbol}`
                           window.open(finvizUrl, "_blank", "noopener,noreferrer")
                         }}
@@ -600,7 +650,6 @@ export default function PublicDashboard() {
                           className="text-blue-400 hover:text-blue-300 text-xs flex items-center mt-2"
                           onClick={() => {
                             const symbol = item.relatedSymbols[0] || "SPY"
-                            // Direct link to Finviz quote page for the stock
                             const finvizUrl = `https://finviz.com/quote.ashx?t=${symbol}`
                             window.open(finvizUrl, "_blank", "noopener,noreferrer")
                           }}
