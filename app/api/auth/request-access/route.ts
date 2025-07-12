@@ -1,36 +1,12 @@
 import { NextResponse } from "next/server"
 
 /* ------------------------------------------------------------------
-   1.  SHARED IN-MEMORY STORAGE FOR PREVIEW
-   ------------------------------------------------------------------ */
-// Use a more persistent global storage approach
-if (typeof globalThis !== "undefined" && !globalThis._previewStorage) {
-  globalThis._previewStorage = {
-    pendingUsers: [],
-    initialized: true,
-  }
-}
-
-const getPreviewStorage = () => {
-  if (typeof globalThis !== "undefined") {
-    if (!globalThis._previewStorage) {
-      globalThis._previewStorage = {
-        pendingUsers: [],
-        initialized: true,
-      }
-    }
-    return globalThis._previewStorage
-  }
-  return { pendingUsers: [], initialized: false }
-}
-
-/* ------------------------------------------------------------------
-   2.  ENV CHECK
+   1.  ENV
    ------------------------------------------------------------------ */
 const IS_PRODUCTION = process.env.VERCEL_ENV === "production"
 
 /* ------------------------------------------------------------------
-   3.  POST  /api/auth/request-access
+   2.  POST  /api/auth/request-access
    ------------------------------------------------------------------ */
 export async function POST(request: Request) {
   try {
@@ -42,22 +18,12 @@ export async function POST(request: Request) {
     }
 
     /* --------------------------------------------------------------
-       3A.  PREVIEW / DEV  –  **NO AWS SDK**
+       2A.  PREVIEW / DEV  –  **NO AWS SDK**
     ---------------------------------------------------------------- */
     if (!IS_PRODUCTION) {
-      const storage = getPreviewStorage()
-
-      // Check for duplicates
-      const existingUser = storage.pendingUsers.find((user: any) => user.email === email)
-      if (existingUser) {
-        return NextResponse.json({
-          success: false,
-          message: "An access request with this email already exists",
-        })
-      }
-
-      // Add new user
-      const newUser = {
+      // Persist in-memory so the Admin panel still works in preview
+      const store = (globalThis as any)._previewPending ?? []
+      store.push({
         email,
         name,
         company,
@@ -65,26 +31,15 @@ export async function POST(request: Request) {
         experience,
         status: "pending",
         createdAt: new Date().toISOString(),
-      }
-
-      storage.pendingUsers.push(newUser)
+      })
+      ;(globalThis as any)._previewPending = store
 
       console.log("🔔 [Preview] Access request stored:", email)
-      console.log("📊 [Preview] Total pending users:", storage.pendingUsers.length)
-      console.log("📋 [Preview] Storage contents:", storage.pendingUsers)
-
-      return NextResponse.json({
-        success: true,
-        message: "Access request stored (preview mode)",
-        debug: {
-          totalPending: storage.pendingUsers.length,
-          userAdded: email,
-        },
-      })
+      return NextResponse.json({ success: true, message: "Access request stored (preview mode)" })
     }
 
     /* --------------------------------------------------------------
-       3B.  PRODUCTION  –  **DYNAMIC AWS IMPORT**
+       2B.  PRODUCTION  –  **DYNAMIC AWS IMPORT**
     ---------------------------------------------------------------- */
     // Dynamically load the AWS SDK modules (avoids fs.readFile polyfill errors in preview)
     const [{ DynamoDBClient }, { DynamoDBDocumentClient, PutCommand }] = await Promise.all([
@@ -135,6 +90,6 @@ export async function POST(request: Request) {
 }
 
 /* ------------------------------------------------------------------
-   4.  FORCE STATIC IN PREVIEW (no AWS)
+   3.  FORCE STATIC IN PREVIEW (no AWS)
    ------------------------------------------------------------------ */
 export const dynamic = IS_PRODUCTION ? "auto" : "force-static"

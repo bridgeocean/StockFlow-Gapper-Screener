@@ -1,33 +1,17 @@
 import { NextResponse } from "next/server"
 
 /* ------------------------------------------------------------------
-   1.  SHARED IN-MEMORY STORAGE FOR PREVIEW
-   ------------------------------------------------------------------ */
-const getPreviewStorage = () => {
-  if (typeof globalThis !== "undefined") {
-    if (!globalThis._previewStorage) {
-      globalThis._previewStorage = {
-        pendingUsers: [],
-        initialized: true,
-      }
-    }
-    return globalThis._previewStorage
-  }
-  return { pendingUsers: [], initialized: false }
-}
-
-/* ------------------------------------------------------------------
-   2.  ENV CHECK
+   1.  ENV
    ------------------------------------------------------------------ */
 const IS_PRODUCTION = process.env.VERCEL_ENV === "production"
 
 /* ------------------------------------------------------------------
-   3.  GET  /api/admin/pending-users
+   2.  GET  /api/admin/pending-users
    ------------------------------------------------------------------ */
 export async function GET(request: Request) {
   try {
     /* ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-       3A.  SIMPLE AUTH CHECK
+       2A.  SIMPLE AUTH CHECK
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––– */
     const authHeader = request.headers.get("authorization")
     if (!authHeader) {
@@ -35,28 +19,15 @@ export async function GET(request: Request) {
     }
 
     /* ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-       3B.  PREVIEW / DEV  –  **NO AWS SDK**
+       2B.  PREVIEW / DEV  –  **NO AWS SDK**
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––– */
     if (!IS_PRODUCTION) {
-      const storage = getPreviewStorage()
-
-      console.log("🔍 [Preview] Fetching from storage...")
-      console.log("📊 [Preview] Storage contents:", storage.pendingUsers)
-      console.log("📈 [Preview] Total pending users:", storage.pendingUsers.length)
-
-      return NextResponse.json({
-        success: true,
-        data: storage.pendingUsers,
-        count: storage.pendingUsers.length,
-        debug: {
-          storageInitialized: storage.initialized,
-          timestamp: new Date().toISOString(),
-        },
-      })
+      const store = (globalThis as any)._previewPending ?? []
+      return NextResponse.json({ success: true, data: store, count: store.length })
     }
 
     /* ––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
-       3C.  PRODUCTION  –  **DYNAMIC AWS IMPORT**
+       2C.  PRODUCTION  –  **DYNAMIC AWS IMPORT**
     –––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––– */
     const [{ DynamoDBClient }, { DynamoDBDocumentClient, ScanCommand }] = await Promise.all([
       import("@aws-sdk/client-dynamodb"),
@@ -88,6 +59,6 @@ export async function GET(request: Request) {
 }
 
 /* ------------------------------------------------------------------
-   4.  FORCE STATIC IN PREVIEW (no AWS)
+   3.  FORCE STATIC IN PREVIEW (no AWS)
    ------------------------------------------------------------------ */
 export const dynamic = IS_PRODUCTION ? "auto" : "force-static"
