@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, Users, CheckCircle, XCircle, Clock } from "lucide-react"
+import { TrendingUp, Users, CheckCircle, XCircle, Clock, RefreshCw } from "lucide-react"
 
 interface PendingUser {
   email: string
@@ -13,29 +13,45 @@ interface PendingUser {
   requestReason: string
   experience: string
   createdAt: string
+  status?: string
 }
 
 export default function AdminPage() {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [debugInfo, setDebugInfo] = useState<any>(null)
 
   const fetchPendingUsers = async () => {
     try {
+      setError("")
+      console.log("🔍 Fetching pending users...")
+
       const response = await fetch("/api/admin/pending-users", {
         headers: {
           Authorization: "Bearer admin", // Simple auth for now
         },
       })
+
+      console.log("📡 Admin API Response status:", response.status)
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
       const data = await response.json()
+      console.log("📊 Admin API data:", data)
 
       if (data.success) {
-        setPendingUsers(data.data)
+        setPendingUsers(data.data || [])
+        setDebugInfo(data.debug)
+        console.log("✅ Pending users loaded:", data.data?.length || 0)
       } else {
-        setError(data.message)
+        setError(data.message || "Failed to fetch pending users")
       }
-    } catch (err) {
-      setError("Failed to fetch pending users")
+    } catch (err: any) {
+      console.error("💥 Error fetching pending users:", err)
+      setError(err.message || "Failed to fetch pending users")
     } finally {
       setIsLoading(false)
     }
@@ -43,6 +59,8 @@ export default function AdminPage() {
 
   const handleUserAction = async (email: string, action: "approve" | "reject") => {
     try {
+      console.log(`🔄 ${action}ing user:`, email)
+
       const response = await fetch("/api/admin/approve-user", {
         method: "POST",
         headers: {
@@ -52,15 +70,20 @@ export default function AdminPage() {
       })
 
       const data = await response.json()
+      console.log(`📊 ${action} response:`, data)
 
       if (data.success) {
-        // Remove user from pending list
+        // Remove user from pending list or update status
         setPendingUsers((prev) => prev.filter((user) => user.email !== email))
-        console.log(`User ${email} ${action}d successfully`)
+        console.log(`✅ User ${email} ${action}d successfully`)
+
+        // Refresh the list to get updated counts
+        await fetchPendingUsers()
       } else {
-        setError(data.message)
+        setError(data.message || `Failed to ${action} user`)
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error(`💥 Error ${action}ing user:`, err)
       setError(`Failed to ${action} user`)
     }
   }
@@ -73,12 +96,18 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
       {/* Header */}
       <div className="container mx-auto mb-8">
-        <div className="flex items-center space-x-3 mb-6">
-          <TrendingUp className="h-8 w-8 text-green-400" />
-          <h1 className="text-3xl font-bold text-white">StockFlow Admin</h1>
-          <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
-            ADMIN ONLY
-          </Badge>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <TrendingUp className="h-8 w-8 text-green-400" />
+            <h1 className="text-3xl font-bold text-white">StockFlow Admin</h1>
+            <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
+              ADMIN ONLY
+            </Badge>
+          </div>
+          <Button onClick={fetchPendingUsers} disabled={isLoading} className="bg-green-600 hover:bg-green-700">
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
         </div>
 
         {/* Stats */}
@@ -121,6 +150,22 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* Debug Info */}
+      <div className="container mx-auto mb-4">
+        <div className="bg-blue-500/10 border border-blue-500/30 text-blue-400 p-3 rounded text-sm">
+          <strong>Debug Info:</strong>
+          {typeof window !== "undefined" && window.location.hostname.includes("preview")
+            ? " Preview Mode (In-Memory Storage)"
+            : " Production Mode (DynamoDB)"}
+          • Pending Users: {pendingUsers.length}• Last Fetch: {new Date().toLocaleTimeString()}
+          {debugInfo && (
+            <>
+              • Storage Init: {debugInfo.storageInitialized ? "✅" : "❌"}• Timestamp: {debugInfo.timestamp}
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Pending Users */}
       <div className="container mx-auto">
         <Card className="bg-black/40 border-white/10">
@@ -136,11 +181,17 @@ export default function AdminPage() {
             )}
 
             {isLoading ? (
-              <div className="text-center text-gray-400 py-8">Loading...</div>
+              <div className="text-center text-gray-400 py-8">
+                <RefreshCw className="h-8 w-8 mx-auto mb-4 animate-spin" />
+                <p>Loading pending requests...</p>
+              </div>
             ) : pendingUsers.length === 0 ? (
               <div className="text-center text-gray-400 py-8">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No pending requests</p>
+                <p className="text-sm mt-2">
+                  Submit a test request at <code>/request-access</code> to see it here
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -151,7 +202,7 @@ export default function AdminPage() {
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-lg font-semibold text-white">{user.name}</h3>
                           <Badge variant="outline" className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                            PENDING
+                            {user.status?.toUpperCase() || "PENDING"}
                           </Badge>
                         </div>
                         <div className="space-y-1 text-sm text-gray-300">
