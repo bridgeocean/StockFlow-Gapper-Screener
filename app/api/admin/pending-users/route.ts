@@ -61,4 +61,4 @@ export async function GET(request: Request) {
 /* ------------------------------------------------------------------
    3.  FORCE STATIC IN PREVIEW (no AWS)
    ------------------------------------------------------------------ */
-export const dynamic = IS_PRODUCTION ? "auto" : "force-static"
+export const dynamic = "force-dynamic"
