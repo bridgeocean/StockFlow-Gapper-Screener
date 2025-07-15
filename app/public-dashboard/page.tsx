@@ -29,6 +29,7 @@ export default function PublicDashboard() {
     floatMax: 20,
     newsCatalyst: false,
   })
+  const [lastResetDate, setLastResetDate] = useState<string>("")
 
   // Check authentication on component mount
   useEffect(() => {
@@ -65,7 +66,40 @@ export default function PublicDashboard() {
       console.log("📋 Number of stocks received:", data.data?.length || 0)
 
       if (data.success) {
-        setStocks(data.data || [])
+        const newStocks = (data.data || []).map((stock) => ({
+          ...stock,
+          fetchedAt: new Date().toISOString(),
+          fetchedDate: new Date().toDateString(),
+        }))
+
+        // Check if it's a new day
+        const today = new Date().toDateString()
+        const shouldReset = lastResetDate && lastResetDate !== today
+
+        if (shouldReset || !lastResetDate) {
+          console.log("🔄 New trading day detected, resetting stocks")
+          setStocks(newStocks)
+          setLastResetDate(today)
+        } else {
+          // Append new stocks, removing duplicates (keep most recent)
+          setStocks((prevStocks) => {
+            const combined = [...prevStocks, ...newStocks]
+            const uniqueStocks = combined.reduce(
+              (acc, stock) => {
+                const existing = acc.find((s) => s.symbol === stock.symbol)
+                if (!existing || new Date(stock.fetchedAt) > new Date(existing.fetchedAt)) {
+                  return [...acc.filter((s) => s.symbol !== stock.symbol), stock]
+                }
+                return acc
+              },
+              [] as typeof combined,
+            )
+
+            console.log(`📈 Accumulated ${uniqueStocks.length} unique stocks for today`)
+            return uniqueStocks
+          })
+        }
+
         setDataSource(data.source || "unknown")
         setError(null)
         console.log("✅ Stocks state updated successfully")
@@ -112,7 +146,8 @@ export default function PublicDashboard() {
     console.log("🔧 Applying filters to", stocks.length, "stocks")
     console.log("🎛️ Current filters:", filters)
 
-    const filtered = stocks.filter((stock) => {
+    // Get newly filtered stocks from current batch
+    const newlyFiltered = stocks.filter((stock) => {
       const volumeRatio = stock.avgVolume > 0 ? stock.volume / stock.avgVolume : 1
       const floatInMillions = stock.float > 0 ? stock.float / 1000000 : 1
 
@@ -128,17 +163,46 @@ export default function PublicDashboard() {
           (indicator) => indicator.type === "catalyst" || indicator.type === "hot" || indicator.type === "momentum",
         )
 
-      console.log(
-        `📊 ${stock.symbol}: price=${priceCheck}, volume=${volumeCheck}, gap=${gapCheck}, perf=${performanceCheck}, float=${floatCheck}, catalyst=${newsCatalystCheck}`,
-      )
-
       return priceCheck && volumeCheck && gapCheck && performanceCheck && floatCheck && newsCatalystCheck
     })
 
-    console.log("✅ Filtered stocks:", filtered.length, "out of", stocks.length)
-    setFilteredStocks(filtered)
+    // Check if it's a new day to reset filtered stocks
+    const today = new Date().toDateString()
+    const shouldResetFiltered = lastResetDate && lastResetDate !== today
 
-    const topSymbols = filtered.slice(0, 10).map((stock) => stock.symbol)
+    if (shouldResetFiltered || filteredStocks.length === 0) {
+      console.log("🔄 New day or first load, resetting filtered stocks")
+      setFilteredStocks(newlyFiltered)
+    } else {
+      // Accumulate filtered stocks - add new ones, update existing ones
+      setFilteredStocks((prevFiltered) => {
+        const combined = [...prevFiltered, ...newlyFiltered]
+        const uniqueFiltered = combined.reduce(
+          (acc, stock) => {
+            const existing = acc.find((s) => s.symbol === stock.symbol)
+            if (!existing) {
+              // New stock - add firstDetectedAt timestamp
+              return [...acc, { ...stock, firstDetectedAt: new Date().toISOString() }]
+            } else if (
+              new Date(stock.fetchedAt || stock.lastUpdated) > new Date(existing.fetchedAt || existing.lastUpdated)
+            ) {
+              // Update existing stock but keep original firstDetectedAt
+              return [
+                ...acc.filter((s) => s.symbol !== stock.symbol),
+                { ...stock, firstDetectedAt: existing.firstDetectedAt },
+              ]
+            }
+            return acc
+          },
+          [] as typeof combined,
+        )
+
+        console.log(`✅ Accumulated ${uniqueFiltered.length} unique filtered stocks for today`)
+        return uniqueFiltered
+      })
+    }
+
+    const topSymbols = filteredStocks.slice(0, 10).map((stock) => stock.symbol)
     if (topSymbols.length > 0) {
       fetchNews(topSymbols)
     }
@@ -151,6 +215,8 @@ export default function PublicDashboard() {
 
   useEffect(() => {
     if (isAuthenticated) {
+      const today = new Date().toDateString()
+      setLastResetDate(today)
       fetchData()
       const interval = setInterval(() => {
         fetchStocks()
@@ -202,6 +268,12 @@ export default function PublicDashboard() {
     totalVolume: filteredStocks.reduce((sum, stock) => sum + stock.volume, 0),
     hotStocks: filteredStocks.filter((stock) => stock.indicators.some((indicator) => indicator.type === "hot")).length,
   }
+
+  const firstScanTime =
+    stocks.length > 0
+      ? new Date(Math.min(...stocks.map((s) => new Date(s.fetchedAt || s.lastUpdated).getTime())))
+      : null
+  const totalAccumulated = stocks.length
 
   const exportToCSV = () => {
     const headers = [
@@ -393,7 +465,7 @@ export default function PublicDashboard() {
                 <h2 className="text-lg md:text-xl font-bold text-white">Gap Scanner Results</h2>
                 <div className="flex items-center space-x-2">
                   <div className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded border border-green-500/30">
-                    Top 10 of {filteredStocks.length}
+                    Top 10 of {filteredStocks.length} ({totalAccumulated} found today)
                   </div>
                   <button
                     onClick={exportToCSV}
@@ -413,7 +485,7 @@ export default function PublicDashboard() {
                   <p className="text-lg mb-2">No stocks match current filters</p>
                   <p className="text-sm">Try adjusting the filter values or click "Show All Stocks"</p>
                   <p className="text-xs text-gray-500 mt-2">
-                    {stocks.length} stocks available • Showing top 10 results when filtered
+                    {totalAccumulated} stocks accumulated today • Showing top 10 results when filtered
                   </p>
                 </div>
               ) : (
@@ -454,6 +526,14 @@ export default function PublicDashboard() {
                           <div className="text-right">
                             <div className="text-xs md:text-sm text-yellow-300 font-semibold">
                               Gap: {stock.gap.toFixed(1)}%
+                            </div>
+                            <div className="text-xs text-green-300">
+                              {new Date(
+                                stock.firstDetectedAt || stock.fetchedAt || stock.lastUpdated,
+                              ).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </div>
                             <div className="text-xs text-blue-300">
                               Vol: {formatNumber(stock.volume)} ({volumeRatio.toFixed(1)}x)
@@ -535,7 +615,7 @@ export default function PublicDashboard() {
                   <h2 className="text-xl font-bold text-white">Gap Scanner Results</h2>
                   <div className="flex items-center space-x-2">
                     <div className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded border border-green-500/30">
-                      Top 10 of {filteredStocks.length} stocks
+                      Top 10 of {filteredStocks.length} ({totalAccumulated} found today)
                     </div>
                     <button
                       onClick={exportToCSV}
@@ -555,7 +635,7 @@ export default function PublicDashboard() {
                     <p className="text-lg mb-2">No stocks match current filters</p>
                     <p className="text-sm">Try adjusting the filter values or click "Show All Stocks"</p>
                     <p className="text-xs text-gray-500 mt-2">
-                      {stocks.length} stocks available • Showing top 10 results when filtered
+                      {totalAccumulated} stocks accumulated today • Showing top 10 results when filtered
                     </p>
                   </div>
                 ) : (
@@ -594,6 +674,14 @@ export default function PublicDashboard() {
                             </div>
                             <div className="text-right">
                               <div className="text-sm text-yellow-300 font-semibold">Gap: {stock.gap.toFixed(1)}%</div>
+                              <div className="text-xs text-green-300">
+                                {new Date(
+                                  stock.firstDetectedAt || stock.fetchedAt || stock.lastUpdated,
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
                               <div className="text-xs text-blue-300">
                                 Vol: {formatNumber(stock.volume)} ({volumeRatio.toFixed(1)}x)
                               </div>
