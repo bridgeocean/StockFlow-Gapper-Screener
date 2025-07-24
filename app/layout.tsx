@@ -6,7 +6,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Initiative - Professional Gap Scanner",
+  title: "StockFlow - Professional Gap Scanner",
   description: "Advanced stock scanner for gap-up opportunities",
   manifest: "/manifest.json",
   themeColor: "#10b981",

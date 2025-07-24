@@ -418,7 +418,7 @@ export default function PublicDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-6 w-6 md:h-8 md:w-8 text-green-400" />
-              <h1 className="text-lg md:text-2xl font-bold text-white">StockFlow Initiative</h1>
+              <h1 className="text-lg md:text-2xl font-bold text-white">StockFlow</h1>
               <span className="hidden sm:block text-sm text-gray-400">by ThePhDPush</span>
               <div
                 className={`px-2 py-1 text-xs rounded border ${

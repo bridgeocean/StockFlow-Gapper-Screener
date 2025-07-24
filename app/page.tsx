@@ -13,7 +13,7 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-8 w-8 text-green-400" />
-              <h1 className="text-2xl font-bold text-white">StockFlow Initiative</h1>
+              <h1 className="text-2xl font-bold text-white">StockFlow</h1>
               <span className="text-sm text-gray-400">by ThePhDPush</span>
             </div>
             <Link href="/public-dashboard">
@@ -180,9 +180,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-white/10 bg-black/20 backdrop-blur-sm py-8">
         <div className="container mx-auto px-4 text-center">
-          <div className="text-gray-400">
-            © 2024 StockFlow Initiative by ThePhDPush. Professional gap scanning tools.
-          </div>
+          <div className="text-gray-400">© 2024 StockFlow by ThePhDPush. Professional gap scanning tools.</div>
         </div>
       </footer>
     </div>
