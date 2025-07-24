@@ -21,15 +21,71 @@ export default function PublicDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
   const [dataSource, setDataSource] = useState<string>("unknown")
+  const [hasAutoAdjusted, setHasAutoAdjusted] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [cachedData, setCachedData] = useState<{ stocks: Stock[]; news: NewsItem[]; timestamp: string } | null>(null)
   const [filters, setFilters] = useState<StockFilters>({
     priceRange: [1, 5],
-    volumeMultiplier: 5,
+    volumeMultiplier: 1.3, // Start with 1.3x for initial data gathering
     gapPercent: 5,
     performance: 10,
     floatMax: 20,
     newsCatalyst: false,
   })
   const [lastResetDate, setLastResetDate] = useState<string>("")
+
+  // Load cached data from localStorage
+  const loadCachedData = () => {
+    try {
+      const cached = localStorage.getItem("stockflow_daily_cache")
+      if (cached) {
+        const parsedCache = JSON.parse(cached)
+        const cacheDate = new Date(parsedCache.timestamp).toDateString()
+        const today = new Date().toDateString()
+
+        if (cacheDate === today) {
+          console.log("📦 Loading cached data from today")
+          setCachedData(parsedCache)
+          setStocks(parsedCache.stocks || [])
+          setNews(parsedCache.news || [])
+          return true
+        } else {
+          console.log("🗑️ Clearing old cache data")
+          localStorage.removeItem("stockflow_daily_cache")
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cached data:", error)
+    }
+    return false
+  }
+
+  // Save data to cache
+  const saveCachedData = (stocksData: Stock[], newsData: NewsItem[]) => {
+    try {
+      const cacheData = {
+        stocks: stocksData,
+        news: newsData,
+        timestamp: new Date().toISOString(),
+      }
+      localStorage.setItem("stockflow_daily_cache", JSON.stringify(cacheData))
+    } catch (error) {
+      console.error("Error saving cached data:", error)
+    }
+  }
+
+  // Auto-adjust volume multiplier logic
+  const handleVolumeMultiplierAdjustment = () => {
+    const sessionKey = `stockflow_auto_adjust_${new Date().toDateString()}`
+    const hasAdjustedToday = localStorage.getItem(sessionKey)
+
+    if (!hasAdjustedToday && !hasAutoAdjusted && stocks.length >= 10) {
+      console.log("🔄 Auto-adjusting volume multiplier from 1.3x to 5x")
+      setFilters((prev) => ({ ...prev, volumeMultiplier: 5 }))
+      setHasAutoAdjusted(true)
+      localStorage.setItem(sessionKey, "true")
+    }
+  }
 
   // Check authentication on component mount
   useEffect(() => {
@@ -45,6 +101,13 @@ export default function PublicDashboard() {
       console.log("✅ Session found, user authenticated")
       setIsAuthenticated(true)
       setIsCheckingAuth(false)
+
+      // Load cached data immediately
+      const hasCachedData = loadCachedData()
+      if (hasCachedData) {
+        setIsLoading(false)
+        console.log("⚡ Instant load with cached data")
+      }
     }
 
     checkAuth()
@@ -62,8 +125,6 @@ export default function PublicDashboard() {
 
       const data = await response.json()
       console.log("📊 Raw API data:", data)
-      console.log("📈 Stocks array:", data.data)
-      console.log("📋 Number of stocks received:", data.data?.length || 0)
 
       if (data.success) {
         const newStocks = (data.data || []).map((stock) => ({
@@ -96,6 +157,15 @@ export default function PublicDashboard() {
             )
 
             console.log(`📈 Accumulated ${uniqueStocks.length} unique stocks for today`)
+
+            // Save to cache
+            saveCachedData(uniqueStocks, news)
+
+            // Check for volume multiplier adjustment
+            if (uniqueStocks.length >= 10 && !hasAutoAdjusted) {
+              setTimeout(() => handleVolumeMultiplierAdjustment(), 1000)
+            }
+
             return uniqueStocks
           })
         }
@@ -217,7 +287,10 @@ export default function PublicDashboard() {
     if (isAuthenticated) {
       const today = new Date().toDateString()
       setLastResetDate(today)
+
+      // Start fetching fresh data (will merge with cached data)
       fetchData()
+
       const interval = setInterval(() => {
         fetchStocks()
         const topSymbols = filteredStocks.slice(0, 10).map((stock) => stock.symbol)
@@ -235,6 +308,18 @@ export default function PublicDashboard() {
       applyFilters()
     }
   }, [stocks, filters, isAuthenticated])
+
+  // Handle volume multiplier auto-adjustment
+  useEffect(() => {
+    if (isAuthenticated && stocks.length >= 10 && !hasAutoAdjusted && isInitialLoad) {
+      const timer = setTimeout(() => {
+        handleVolumeMultiplierAdjustment()
+        setIsInitialLoad(false)
+      }, 30000) // Wait 30 seconds before auto-adjusting
+
+      return () => clearTimeout(timer)
+    }
+  }, [stocks.length, hasAutoAdjusted, isAuthenticated, isInitialLoad])
 
   // Show loading screen while checking authentication
   if (isCheckingAuth) {
