@@ -30,20 +30,16 @@ export async function GET(req: Request) {
     for (const r of rows) {
       if (!r.ticker) continue;
 
-      // pick the best % column available from your export
-      const pct =
-        r.gap_pct ??
-        r.change_pct ??
-        r.perf_today_pct ??
-        undefined;
+      // Use the best available % from your CSV
+      const pct = r.gap_pct ?? r.change_pct ?? r.perf_today_pct ?? undefined;
 
       await putSnapshot({
         Ticker: r.ticker,
         Ts: ts,
         Price: r.price,
-        PremarketGapPct: pct,      // Gap > Change > Performance
-        RelVol: r.relative_volume,
-        FloatShares: r.float_shares, // absolute shares (e.g., 9.54M -> 9540000)
+        PremarketGapPct: pct,        // Gap > Change > Performance
+        RelVol: r.relative_volume,   // parsed or computed from volume/avgvol
+        FloatShares: r.float_shares, // absolute number (e.g., 9.54M -> 9540000)
         RSI: r.rsi ?? null,
         MarketPhase: phase,
         Raw: r.raw
