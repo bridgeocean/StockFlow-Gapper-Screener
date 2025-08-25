@@ -1,4 +1,3 @@
-// lib/finviz-export.ts
 import Papa from "papaparse";
 
 const EXPORT_URL = process.env.FINVIZ_EXPORT_URL!;
@@ -50,6 +49,7 @@ export async function fetchFinvizExport(): Promise<Array<any>> {
     const change_pct      = parseNumberLoose(o.change);          // daily %
     const gap_pct         = parseNumberLoose(o.gap);             // "Gap" column
     const perf_today_pct  = parseNumberLoose(o.performance);     // today performance
+
     const volume          = parseNumberLoose(o.volume);
     const avgvol          = parseNumberLoose(o.averagevolume || o.avgvolume || o.avgvol);
 
@@ -74,7 +74,7 @@ export async function fetchFinvizExport(): Promise<Array<any>> {
       gap_pct,
       perf_today_pct,
       relative_volume,
-      float_shares,            // absolute shares (e.g., 9.54M -> 9_540_000)
+      float_shares,            // absolute shares
       rsi,
       sector: o.sector,
       company: o.company
