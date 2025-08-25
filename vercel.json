@@ -1,6 +1,3 @@
-// ==============================
-// FILE: vercel.json  (repo root)
-// ==============================
 {
   "crons": [
     { "path": "/api/cron/snapshot", "schedule": "*/5 * * * 1-5" }
