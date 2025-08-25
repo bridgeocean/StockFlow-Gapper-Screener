@@ -11,7 +11,7 @@ function key(s: string) {
 function parseNumberLoose(x: any) {
   if (x === null || x === undefined) return undefined;
   let s = String(x).trim();
-  // 9.54M, 825.3K, 1.2B, etc.
+  // Handle 9.54M, 825.3K, 1.2B, 0.5T
   const m = s.match(/^(-?\d+(?:\.\d+)?)([kmbt])$/i);
   if (m) {
     const n = parseFloat(m[1]);
@@ -19,13 +19,14 @@ function parseNumberLoose(x: any) {
     const mult = suf === "K" ? 1e3 : suf === "M" ? 1e6 : suf === "B" ? 1e9 : 1e12;
     return n * mult;
   }
+  // Strip commas, %, $, spaces
   s = s.replace(/[,%$\s,]/g, "");
   const n = Number(s);
   return Number.isFinite(n) ? n : undefined;
 }
 
 /**
- * Columns we expect (you said you're exporting):
+ * Expected CSV columns (your export URL):
  * ticker, price, change, relativevolume, volume, averagevolume,
  * float, rsi, performance, Gap, sector, company
  */
@@ -46,9 +47,9 @@ export async function fetchFinvizExport(): Promise<Array<any>> {
     for (const k of Object.keys(r)) o[key(k)] = r[k];
 
     const price           = parseNumberLoose(o.price);
-    const change_pct      = parseNumberLoose(o.change);      // daily %
-    const gap_pct         = parseNumberLoose(o.gap);         // "Gap" column
-    const perf_today_pct  = parseNumberLoose(o.performance); // Finviz "Performance" (today)
+    const change_pct      = parseNumberLoose(o.change);          // daily %
+    const gap_pct         = parseNumberLoose(o.gap);             // "Gap" column
+    const perf_today_pct  = parseNumberLoose(o.performance);     // today performance
     const volume          = parseNumberLoose(o.volume);
     const avgvol          = parseNumberLoose(o.averagevolume || o.avgvolume || o.avgvol);
 
@@ -58,7 +59,7 @@ export async function fetchFinvizExport(): Promise<Array<any>> {
       relative_volume = avgvol ? volume / avgvol : undefined;
     }
 
-    // Float sometimes appears as "Float" or "Shs Float"
+    // Float may appear as "Float", "Shs Float", etc.
     const float_shares    = parseNumberLoose(
       o.float || o.shsfloat || o.sharesfloat || o.floatshares
     );
@@ -73,7 +74,7 @@ export async function fetchFinvizExport(): Promise<Array<any>> {
       gap_pct,
       perf_today_pct,
       relative_volume,
-      float_shares,         // absolute shares
+      float_shares,            // absolute shares (e.g., 9.54M -> 9_540_000)
       rsi,
       sector: o.sector,
       company: o.company
