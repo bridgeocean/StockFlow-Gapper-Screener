@@ -7,7 +7,7 @@ import { fetchFinvizExport } from "@/lib/finviz-export";
 import { putSnapshot } from "@/lib/ddb";
 
 export async function GET(req: Request) {
-  // Optional: lock down to Vercel cron using CRON_SECRET
+  // Optional auth for Vercel Cron
   const secret = process.env.CRON_SECRET;
   if (secret) {
     const auth = req.headers.get("authorization") || "";
@@ -26,15 +26,24 @@ export async function GET(req: Request) {
     if (!rows?.length) return NextResponse.json({ ok: true, count: 0 });
 
     const ts = new Date().toISOString();
+
     for (const r of rows) {
       if (!r.ticker) continue;
+
+      // pick the best % column available from your export
+      const pct =
+        r.gap_pct ??
+        r.change_pct ??
+        r.perf_today_pct ??
+        undefined;
+
       await putSnapshot({
         Ticker: r.ticker,
         Ts: ts,
         Price: r.price,
-        PremarketGapPct: r.change_pct,      // using 'change' for now
+        PremarketGapPct: pct,      // Gap > Change > Performance
         RelVol: r.relative_volume,
-        FloatShares: r.float_shares_m ? Math.round(r.float_shares_m * 1_000_000) : undefined,
+        FloatShares: r.float_shares, // absolute shares (e.g., 9.54M -> 9540000)
         RSI: r.rsi ?? null,
         MarketPhase: phase,
         Raw: r.raw
