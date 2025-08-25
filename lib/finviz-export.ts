@@ -12,7 +12,7 @@ function parseNumberLoose(x: any) {
   if (x === null || x === undefined) return undefined;
   let s = String(x).trim();
 
-  // handle 9.54M, 825.3K, etc.
+  // 9.54M, 825.3K, 1.2B, etc.
   const m = s.match(/^(-?\d+(?:\.\d+)?)([kmbt])$/i);
   if (m) {
     const n = parseFloat(m[1]);
@@ -21,16 +21,14 @@ function parseNumberLoose(x: any) {
     return n * mult;
   }
 
-  // strip commas, %,$ and spaces
+  // strip commas, %, $, spaces
   s = s.replace(/[,%$\s,]/g, "");
   const n = Number(s);
   return Number.isFinite(n) ? n : undefined;
 }
 
 /**
- * Fetch Finviz Elite CSV export and normalize to easy-to-use keys.
- * You said your columns are:
- *   ticker,price,change,relativevolume,float,rsi,performance,Gap,sector,company
+ * Your CSV columns: ticker,price,change,relativevolume,float,rsi,performance,Gap,sector,company
  */
 export async function fetchFinvizExport(): Promise<Array<any>> {
   const res = await fetch(EXPORT_URL, { cache: "no-store" as any });
@@ -48,24 +46,23 @@ export async function fetchFinvizExport(): Promise<Array<any>> {
     const o: any = {};
     for (const k of Object.keys(r)) o[key(k)] = r[k];
 
-    const price = parseNumberLoose(o.price);
-    const change_pct = parseNumberLoose(o.change);        // daily % change column
-    const gap_pct = parseNumberLoose(o.gap);              // "Gap" column
-    const perf_today_pct = parseNumberLoose(o.performance); // Finviz "Performance" (often today)
-    const relative_volume = parseNumberLoose(o.relativevolume);
-    const float_shares = parseNumberLoose(o.float);
-    const rsi = parseNumberLoose(o.rsi);
+    const price            = parseNumberLoose(o.price);
+    const change_pct       = parseNumberLoose(o.change);       // daily %
+    const gap_pct          = parseNumberLoose(o.gap);          // "Gap" column
+    const perf_today_pct   = parseNumberLoose(o.performance);  // today performance
+    const relative_volume  = parseNumberLoose(o.relativevolume);
+    const float_shares     = parseNumberLoose(o.float);        // absolute shares
+    const rsi              = parseNumberLoose(o.rsi);
 
     rows.push({
       raw: r,
       ticker: o.ticker || o.symbol,
       price,
-      // expose all three so downstream can pick best:
-      change_pct,            // e.g., 24.86
-      gap_pct,               // e.g., 2.00
-      perf_today_pct,        // e.g., 24.86 (depends on Finviz)
+      change_pct,
+      gap_pct,
+      perf_today_pct,
       relative_volume,
-      float_shares,          // absolute shares
+      float_shares,
       rsi,
       sector: o.sector,
       company: o.company
