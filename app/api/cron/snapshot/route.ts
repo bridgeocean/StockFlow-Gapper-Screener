@@ -6,7 +6,16 @@ import { getMarketPhaseET } from "@/lib/market-hours";
 import { fetchFinvizExport } from "@/lib/finviz-export";
 import { putSnapshot } from "@/lib/ddb";
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Optional: lock down to Vercel cron using CRON_SECRET
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const auth = req.headers.get("authorization") || "";
+    if (auth !== `Bearer ${secret}`) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+  }
+
   try {
     const phase = getMarketPhaseET(new Date());
     if (phase === "CLOSED") {
