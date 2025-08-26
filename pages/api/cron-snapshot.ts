@@ -1,4 +1,3 @@
-// pages/api/cron-snapshot.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getMarketPhaseET } from "../../lib/market-hours";
 import { fetchFinvizExport } from "../../lib/finviz-export";
@@ -34,8 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         Ts: ts,
         Price: r.price,
         PremarketGapPct: pct,        // Gap > Change > Performance
-        RelVol: r.relative_volume,   // parsed or computed (vol/avgvol)
-        FloatShares: r.float_shares, // absolute number, e.g. 9.54M -> 9540000
+        RelVol: r.relative_volume,   // parsed or computed
+        FloatShares: r.float_shares, // absolute number
         RSI: r.rsi ?? null,
         MarketPhase: phase,
         Raw: r.raw
