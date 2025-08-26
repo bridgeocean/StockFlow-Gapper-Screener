@@ -1,4 +1,3 @@
-// pages/api/finviz-debug.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { fetchFinvizExport } from "../../lib/finviz-export";
 
