@@ -1,6 +1,7 @@
 // pages/api/finviz-debug.ts
 import type { NextApiRequest, NextApiResponse } from "next";
-import { fetchFinvizExport } from "@/lib/finviz-export";
+// ⬇️ use RELATIVE path (no "@/...")
+import { fetchFinvizExport } from "../../lib/finviz-export";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -9,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json({
       ok: true,
       keys: Object.keys(sample),
-      sample, // one normalized row we parsed
+      sample
     });
   } catch (e: any) {
     res.status(500).json({ ok: false, error: String(e?.message || e) });
