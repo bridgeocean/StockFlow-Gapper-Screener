@@ -7,7 +7,7 @@ import { getPrevClose, getDailyAvgVol, getTodayMinuteAggs } from "../../lib/poly
 import { rsi } from "../../lib/indicators";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Optional auth for Vercel Cron
+  // Optional auth for the scheduler
   const secret = process.env.CRON_SECRET;
   if (secret) {
     const auth = req.headers.authorization || "";
@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ ok: true, skipped: "market closed" });
     }
 
-    // 1) Get shortlist from Finviz
+    // 1) Finviz shortlist
     const rows = await fetchFinvizExport();
     if (!rows?.length) return res.status(200).json({ ok: true, count: 0 });
 
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const ticker: string | undefined = r.ticker;
       if (!ticker) continue;
 
-      // 2) Optional enrichment via Polygon (best-effort; never throws)
+      // 2) Enrichment via Polygon (best-effort)
       let RSI14m: number | null = null;
       let RelVolPoly: number | null = null;
       let GapPctPoly: number | null = null;
@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const cumVol = mins.reduce((s, a) => s + (a?.v ?? 0), 0);
             if (avgVol30 && avgVol30 > 0) RelVolPoly = cumVol / avgVol30;
 
-            // Regular open: approx 09:30 ET (13:30 UTC). Fallback to first bar.
+            // 09:30 ET ≈ 13:30 UTC. Fallback to first bar if none match.
             const nineThirtyUTC = new Date();
             nineThirtyUTC.setUTCHours(13, 30, 0, 0);
             const firstRegular = mins.find((a) => a.t >= nineThirtyUTC.getTime()) ?? mins[0];
@@ -63,23 +63,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           }
         } catch {
-          // swallow enrichment errors; Finviz data still gets logged
+          // ignore enrichment errors; Finviz data still gets logged
         }
       }
 
-      // Best available % from Finviz (may be undefined)
+      // 3) Write snapshot
       const pct = r.gap_pct ?? r.change_pct ?? r.perf_today_pct ?? undefined;
-
       await putSnapshot({
         Ticker: ticker,
         Ts: ts,
         Price: r.price,
         PremarketGapPct: pct,
-        // Finviz-sourced (filled if Finviz ever returns them)
+        // If Finviz ever supplies these, we keep them too:
         RelVol: r.relative_volume,
         FloatShares: r.float_shares,
         RSI: r.rsi ?? null,
-        // Enriched fields (Polygon)
+        // Enriched via Polygon:
         RSI14m: RSI14m ?? undefined,
         RelVolPoly: RelVolPoly ?? undefined,
         GapPctPoly: GapPctPoly ?? undefined,
