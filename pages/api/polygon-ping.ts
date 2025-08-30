@@ -1,4 +1,3 @@
-// pages/api/polygon-ping.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getPrevClose, getDailyAvgVol, getTodayMinuteAggs } from "../../lib/polygon";
 import { rsi } from "../../lib/indicators";
@@ -14,6 +13,7 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
       getDailyAvgVol(ticker, 30),
       getTodayMinuteAggs(ticker),
     ]);
+
     const closes = mins.map(m => m.c);
     const RSI14m = rsi(closes, 14);
     const cumVol = mins.reduce((s, m) => s + (m?.v ?? 0), 0);
@@ -21,11 +21,20 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
 
     let GapPctPoly: number | null = null;
     if (mins.length && typeof prevClose === "number" && prevClose > 0) {
-      const first = mins[0];
+      const first = mins[0]; // regular open approximation is fine for this test
       GapPctPoly = ((first.o - prevClose) / prevClose) * 100;
     }
-    res.status(200).json({ ok: true, prevClose, avgVol30, bars: mins.length, RSI14m, RelVolPoly, GapPctPoly });
+
+    return res.status(200).json({
+      ok: true,
+      bars: mins.length,
+      prevClose,
+      avgVol30,
+      RSI14m,
+      RelVolPoly,
+      GapPctPoly
+    });
   } catch (e: any) {
-    res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+    return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
   }
 }
