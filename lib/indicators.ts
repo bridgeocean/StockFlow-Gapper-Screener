@@ -1,4 +1,4 @@
-// Simple RSI(14) for minute bars
+// lib/indicators.ts
 export function rsi(values: number[], period = 14): number | null {
   if (!values || values.length < period + 1) return null;
   let gains = 0, losses = 0;
