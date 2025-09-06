@@ -1,328 +1,217 @@
-#!/usr/bin/env python3
-import os
-import sys
-import time
-import math
-import random
-import csv
-import json
+# scripts/make_training_from_polygon.py
+import os, sys, time, math, random, json
 from datetime import datetime, timedelta, timezone
-from typing import Dict, Iterable, List, Optional, Tuple
-
 import requests
+import pandas as pd
+import numpy as np
 
-# ---------------------------------------------------------------------
-# Config via env (with safe defaults)
-# ---------------------------------------------------------------------
+# ----------------------------
+# helpers
+# ----------------------------
+POLY = "https://api.polygon.io"
 API_KEY = os.environ.get("POLYGON_API_KEY", "").strip()
 if not API_KEY:
-    print("ERROR: POLYGON_API_KEY is not set.", file=sys.stderr)
+    print("ERR: POLYGON_API_KEY is not set")
     sys.exit(1)
 
-TRAIN_START = os.environ.get("TRAIN_START", "").strip()
-TRAIN_END = os.environ.get("TRAIN_END", "").strip()
+# default window ≈ last 2y (Polygon minute limit)
+TRAIN_START = os.environ.get("TRAIN_START", "")
+TRAIN_END   = os.environ.get("TRAIN_END", "")
+today = datetime.now(timezone.utc).date()
 
-# If not provided by the workflow, default to last ~2 years (Polygon minute history limit)
-today_utc = datetime.utcnow().date()
 if not TRAIN_END:
-    TRAIN_END = today_utc.strftime("%Y-%m-%d")
+    TRAIN_END = today.isoformat()
 if not TRAIN_START:
-    TRAIN_START = (today_utc - timedelta(days=730)).strftime("%Y-%m-%d")
+    # ~2y clamp
+    TRAIN_START = (today - timedelta(days=730)).isoformat()
 
-UNIVERSE_FILE = os.environ.get("UNIVERSE_FILE", "scripts/universe.txt").strip()
-OUTPUT_CSV = os.environ.get("OUTPUT_CSV", "training_polygon_v1.csv").strip()
+start_date = datetime.fromisoformat(TRAIN_START).date()
+end_date   = datetime.fromisoformat(TRAIN_END).date()
+if (today - start_date).days > 730:
+    clamp = (today - timedelta(days=730)).isoformat()
+    print(f"Requested TRAIN_START {TRAIN_START} is older than ~2y minute-history. Clamping to {clamp}.")
+    start_date = datetime.fromisoformat(clamp).date()
 
-# Regular US session in *UTC* (13:30–20:00)
-REG_OPEN_UTC = (13, 30)  # 09:30 ET
-REG_CLOSE_UTC = (20, 0)  # 16:00 ET
+print(f"Window: {start_date} → {end_date}")
 
-# Requests / Retry Settings
-MAX_RETRIES = 8
-BASE_SLEEP = 1.0   # seconds
-MAX_SLEEP = 30.0   # cap any single backoff sleep
-SESSION = requests.Session()
-SESSION.headers.update({"Authorization": f"Bearer {API_KEY}"})
+def load_universe(path="scripts/universe.txt"):
+    if not os.path.exists(path):
+        # small default universe
+        return ["AAPL", "TSLA", "AMD", "NVDA", "MSFT", "META"]
+    with open(path, "r") as f:
+        return [ln.strip().upper() for ln in f if ln.strip() and not ln.startswith("#")]
 
+UNIVERSE = load_universe()
+print(f"Universe ({len(UNIVERSE)}): {', '.join(UNIVERSE[:20])}{'…' if len(UNIVERSE)>20 else ''}")
 
-# ---------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------
-def iso_date(d: datetime) -> str:
-    return d.strftime("%Y-%m-%d")
+session = requests.Session()
 
+def backoff_sleep(attempt):
+    # exponential backoff + jitter, capped
+    base = min(60, (2 ** attempt))
+    time.sleep(base + random.uniform(0, 1.0))
 
-def daterange_utc(start: datetime, end: datetime) -> Iterable[datetime]:
-    cur = start
-    while cur <= end:
-        yield cur
-        cur += timedelta(days=1)
-
-
-def with_jitter(seconds: float) -> float:
-    # Full jitter
-    return seconds * (0.5 + random.random())
-
-
-def api_get(url: str, params: Dict) -> Optional[dict]:
-    """GET with exponential backoff on 429/5xx. Returns parsed JSON or None."""
+def get_json(path, params=None, max_attempts=8):
+    if params is None:
+        params = {}
+    params["apiKey"] = API_KEY
+    url = f"{POLY}{path}"
     attempt = 0
     while True:
-        attempt += 1
         try:
-            resp = SESSION.get(url, params=params, timeout=30)
-        except requests.RequestException as e:
-            if attempt >= MAX_RETRIES:
-                return None
-            sleep = min(MAX_SLEEP, with_jitter(BASE_SLEEP * (2 ** (attempt - 1))))
-            time.sleep(sleep)
-            continue
+            r = session.get(url, params=params, timeout=30)
+            if r.status_code == 200:
+                return r.json()
+            # retry on 429 + 5xx
+            if r.status_code in (429, 500, 502, 503, 504):
+                attempt += 1
+                if attempt >= max_attempts:
+                    raise RuntimeError(f"too many retries ({r.status_code})")
+                backoff_sleep(attempt)
+                continue
+            # 400/other: raise immediately with message
+            raise RuntimeError(f"{r.status_code} Client Error: {r.text[:180]}")
+        except Exception as e:
+            attempt += 1
+            if attempt >= max_attempts:
+                raise
+            backoff_sleep(attempt)
 
-        # Fast path
-        if resp.status_code == 200:
-            try:
-                return resp.json()
-            except Exception:
-                return None
+def list_business_days(d0, d1):
+    cur = d0
+    while cur <= d1:
+        # crude NYSE weekday filter (skip Sat/Sun); holidays return empty data (we skip later)
+        if cur.weekday() < 5:
+            yield cur
+        cur = cur + timedelta(days=1)
 
-        # Respect Retry-After
-        if resp.status_code in (429, 503, 502, 504):
-            if attempt >= MAX_RETRIES:
-                return None
-            retry_after = resp.headers.get("Retry-After")
-            if retry_after:
-                try:
-                    sleep = float(retry_after)
-                except ValueError:
-                    sleep = BASE_SLEEP
-            else:
-                sleep = min(MAX_SLEEP, with_jitter(BASE_SLEEP * (2 ** (attempt - 1))))
-            time.sleep(sleep)
-            continue
+def rsi(series, period=14):
+    s = pd.Series(series, dtype="float64")
+    delta = s.diff()
+    up = delta.clip(lower=0)
+    down = -1 * delta.clip(upper=0)
+    ma_up = up.rolling(window=period, min_periods=period).mean()
+    ma_down = down.rolling(window=period, min_periods=period).mean()
+    rs = ma_up / (ma_down.replace(0, np.nan))
+    out = 100 - (100 / (1 + rs))
+    return out.iloc[-1] if not out.empty else np.nan
 
-        # 400 typically means out-of-range day (holiday), pre-IPO, etc. Don't retry forever.
-        if resp.status_code == 400:
-            return None
+def get_prev_close(ticker, the_date):
+    # previous trading day's close using Polygon "previous close"
+    data = get_json(f"/v2/aggs/ticker/{ticker}/prev", {"adjusted": "true"})
+    result = data.get("results", [])
+    if not result:
+        return np.nan
+    return float(result[0].get("c", np.nan))
 
-        # Other client errors - don't loop forever.
-        if 400 <= resp.status_code < 500:
-            return None
+def get_last_30d_avg_volume(ticker, the_date):
+    # daily vols from the 30 sessions prior to the_date (exclude current day)
+    end = (the_date - timedelta(days=1)).isoformat()
+    start = (the_date - timedelta(days=60)).isoformat()  # wide range, Polygon returns only trading days
+    data = get_json(
+        f"/v2/aggs/ticker/{ticker}/range/1/day/{start}/{end}",
+        {"adjusted": "true", "sort": "asc", "limit": 50000},
+    )
+    res = data.get("results", [])
+    vols = [float(x.get("v", 0)) for x in res[-30:]]  # last 30 sessions
+    if not vols:
+        return np.nan
+    return float(np.mean(vols))
 
-        # Last resort for odd server codes
-        if attempt >= MAX_RETRIES:
-            return None
-        sleep = min(MAX_SLEEP, with_jitter(BASE_SLEEP * (2 ** (attempt - 1))))
-        time.sleep(sleep)
+def get_minutes_regular(ticker, the_date):
+    # 09:30–16:00 ET == 13:30–20:00 UTC
+    start = datetime(the_date.year, the_date.month, the_date.day, 13, 30, tzinfo=timezone.utc)
+    end   = datetime(the_date.year, the_date.month, the_date.day, 20,  0, tzinfo=timezone.utc)
+    data = get_json(
+        f"/v2/aggs/ticker/{ticker}/range/1/minute/{start.isoformat().replace('+00:00','Z')}/{end.isoformat().replace('+00:00','Z')}",
+        {"adjusted": "true", "sort": "asc", "limit": 50000},
+    )
+    res = data.get("results", [])
+    if not res:
+        return []
+    # normalize into simple dicts
+    out = []
+    for r in res:
+        out.append({
+            "t": int(r.get("t")),         # ms since epoch
+            "o": float(r.get("o", np.nan)),
+            "h": float(r.get("h", np.nan)),
+            "l": float(r.get("l", np.nan)),
+            "c": float(r.get("c", np.nan)),
+            "v": float(r.get("v", 0.0)),
+        })
+    return out
 
-
-def rsi(values: List[float], period: int = 14) -> Optional[float]:
-    """Classic RSI over a list of prices (>= period+1)."""
-    if values is None or len(values) < period + 1:
+def compute_row(ticker, d):
+    mins = get_minutes_regular(ticker, d)
+    if not mins or len(mins) < 31:  # need at least 30+ bars for 30-min label
         return None
-    gains = []
-    losses = []
-    for i in range(1, len(values)):
-        diff = values[i] - values[i - 1]
-        gains.append(max(0.0, diff))
-        losses.append(max(0.0, -diff))
-    # Wilder's smoothing
-    avg_gain = sum(gains[:period]) / period
-    avg_loss = sum(losses[:period]) / period
-    if avg_loss == 0 and avg_gain == 0:
-        return 50.0
-    if avg_loss == 0:
-        return 100.0
-    rs = avg_gain / avg_loss
-    rsi_val = 100.0 - (100.0 / (1.0 + rs))
-    # continue smoothing over remainder
-    for i in range(period, len(gains)):
-        avg_gain = ((avg_gain * (period - 1)) + gains[i]) / period
-        avg_loss = ((avg_loss * (period - 1)) + losses[i]) / period
-        if avg_loss == 0 and avg_gain == 0:
-            smoothed = 50.0
-        elif avg_loss == 0:
-            smoothed = 100.0
+
+    first = mins[0]
+    prev_close = get_prev_close(ticker, d)
+    if not (isinstance(prev_close, (int, float)) and prev_close > 0):
+        return None
+
+    # gap vs prev close
+    gap_pct = ((first["o"] - prev_close) / prev_close) * 100.0
+
+    # rsi on closes (full session)
+    rsi14m = rsi([m["c"] for m in mins], 14)
+
+    # relative volume (total day vs 30d avg)
+    cum_vol = sum(m["v"] for m in mins)
+    avg30   = get_last_30d_avg_volume(ticker, d)
+    rvol = (cum_vol / avg30) if (avg30 and avg30 > 0) else np.nan
+
+    # label: first 30 minutes change from open
+    # pick minute that ends at 10:00 ET (≈ 14:00 UTC). Use the last bar <= 14:00 utc
+    ten_utc = datetime(d.year, d.month, d.day, 14, 0, tzinfo=timezone.utc).timestamp() * 1000.0
+    close_10 = None
+    for m in mins:
+        if m["t"] <= ten_utc:
+            close_10 = m["c"]
         else:
-            rs = avg_gain / avg_loss
-            smoothed = 100.0 - (100.0 / (1.0 + rs))
-        rsi_val = smoothed
-    return float(rsi_val)
+            break
+    if close_10 is None or first["o"] <= 0:
+        return None
+    change_open_pct = ((close_10 - first["o"]) / first["o"]) * 100.0
 
+    return {
+        "date": d.isoformat(),
+        "ticker": ticker,
+        "gap_pct": round(gap_pct, 5),
+        "rsi14m": round(float(rsi14m), 5) if pd.notna(rsi14m) else np.nan,
+        "rvol": round(float(rvol), 5) if pd.notna(rvol) else np.nan,
+        "change_open_pct": round(change_open_pct, 5),
+    }
 
-# ---------------------------------------------------------------------
-# Polygon helpers
-# ---------------------------------------------------------------------
-def minute_aggs_one_day(ticker: str, day: datetime) -> List[dict]:
-    """Fetch minute bars for a single UTC day, but constrained to regular session."""
-    # Session window in UTC
-    start_dt = day.replace(hour=REG_OPEN_UTC[0], minute=REG_OPEN_UTC[1], second=0, microsecond=0, tzinfo=timezone.utc)
-    end_dt = day.replace(hour=REG_CLOSE_UTC[0], minute=REG_CLOSE_UTC[1], second=0, microsecond=0, tzinfo=timezone.utc)
+# ----------------------------
+# main
+# ----------------------------
+rows = []
+skipped = 0
 
-    url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/minute/{start_dt.isoformat()}/{end_dt.isoformat()}"
-    params = {"adjusted": "true", "sort": "asc", "limit": 50000}
-    data = api_get(url, params)
-    if not data or "results" not in data:
-        return []
-    return data["results"]
+for t in UNIVERSE:
+    cur = start_date
+    while cur <= end_date:
+        if cur.weekday() < 5:
+            try:
+                row = compute_row(t, cur)
+                if row:
+                    rows.append(row)
+            except Exception as e:
+                # keep going; these were the "too many retries" before
+                print(f"ERR {cur} {t}: {e}")
+        cur += timedelta(days=1)
 
+df = pd.DataFrame(rows)
+if df.empty:
+    print("Wrote 0 rows to training_polygon_v1.csv (no data).")
+    df.to_csv("training_polygon_v1.csv", index=False)
+    sys.exit(0)
 
-def daily_aggs(ticker: str, start: datetime, end: datetime) -> List[dict]:
-    """Fetch daily bars between start and end (inclusive)."""
-    url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/{start.date().isoformat()}/{end.date().isoformat()}"
-    params = {"adjusted": "true", "sort": "desc", "limit": 5000}
-    data = api_get(url, params)
-    if not data or "results" not in data:
-        return []
-    return data["results"]
-
-
-def prev_close_and_avgvol30(ticker: str, day: datetime, cache: Dict[str, Dict]) -> Tuple[Optional[float], Optional[float]]:
-    """
-    Get previous day's close and average daily volume over the last up-to-30 trading days ending *before* `day`.
-    Uses a small cache per ticker for efficiency.
-    """
-    key = f"{ticker}"
-    store = cache.setdefault(key, {})
-    # Pull a 90-day window ending the day before to be safe
-    end_d = (day - timedelta(days=1))
-    start_d = end_d - timedelta(days=90)
-
-    # Avoid re-fetch if we already have a range that covers this end date
-    # (simple cache: store by last end date used)
-    rng_key = store.get("_range_key")
-    want_key = f"{start_d.date()}:{end_d.date()}"
-    if rng_key != want_key:
-        dailies = daily_aggs(ticker, start_d, end_d)
-        store["_range_key"] = want_key
-        store["dailies"] = dailies
-    else:
-        dailies = store.get("dailies", [])
-
-    if not dailies:
-        return (None, None)
-
-    # dailies sorted desc (we asked sort=desc)
-    prev_close = None
-    vols = []
-    closes = []
-
-    for bar in dailies:
-        # bar fields: t (ms), o, h, l, c, v
-        closes.append(bar.get("c"))
-        v = bar.get("v")
-        if isinstance(v, (int, float)):
-            vols.append(v)
-
-    # previous close is the most recent daily close in this window
-    prev_close = closes[0] if closes else None
-
-    # avg vol of up to last 30 daily vols
-    avgvol30 = None
-    if vols:
-        take = vols[:30]
-        if take:
-            avgvol30 = sum(take) / float(len(take))
-
-    return (prev_close, avgvol30)
-
-
-# ---------------------------------------------------------------------
-# Main build
-# ---------------------------------------------------------------------
-def load_universe(path: str) -> List[str]:
-    if not os.path.exists(path):
-        return ["AAPL", "TSLA", "AMD", "NVDA"]
-    with open(path, "r", encoding="utf-8") as f:
-        syms = [ln.strip().upper() for ln in f if ln.strip() and not ln.strip().startswith("#")]
-    return syms or ["AAPL"]
-
-
-def main():
-    start_date = datetime.strptime(TRAIN_START, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    end_date = datetime.strptime(TRAIN_END, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    if end_date < start_date:
-        print(f"ERROR: TRAIN_END {TRAIN_END} < TRAIN_START {TRAIN_START}", file=sys.stderr)
-        sys.exit(1)
-
-    # Safety clamp (minute history ~2y on most plans)
-    cutoff = datetime.utcnow().replace(tzinfo=timezone.utc) - timedelta(days=730)
-    if start_date < cutoff:
-        print(f"Requested TRAIN_START {TRAIN_START} is older than ~2y minute-history. Clamping to {iso_date(cutoff)}.")
-        start_date = cutoff
-
-    universe = load_universe(UNIVERSE_FILE)
-    print(f"Universe ({len(universe)}): {', '.join(universe)}")
-    print(f"Window: {iso_date(start_date)} → {iso_date(end_date)}")
-
-    rows_out: List[Dict] = []
-    cache_daily: Dict[str, Dict] = {}
-
-    for ticker in universe:
-        # Pre-warm daily cache once (speeds up)
-        _ = prev_close_and_avgvol30(ticker, start_date, cache_daily)
-
-        for day in daterange_utc(start_date, end_date):
-            # Fetch prev close & avgvol30 as of this day
-            prev_close, avgvol30 = prev_close_and_avgvol30(ticker, day, cache_daily)
-            if prev_close is None:
-                # Likely pre-IPO or we don't have history yet
-                # Not an error.
-                # print(f"SKIP {iso_date(day)} {ticker}: no prev close", file=sys.stderr)
-                continue
-
-            mins = minute_aggs_one_day(ticker, day)
-            if not mins:
-                # Weekend/holiday/early-API return. Not an error.
-                continue
-
-            # First minute open (regular session) → gap %
-            first_open = mins[0].get("o")
-            if not isinstance(first_open, (int, float)) or prev_close is None or prev_close <= 0:
-                # malformed; skip
-                continue
-            gap_pct = (first_open - prev_close) / prev_close * 100.0
-
-            # RSI(14) on minute closes (regular session)
-            closes = [m.get("c") for m in mins if isinstance(m.get("c"), (int, float))]
-            rsi14m = rsi(closes, 14)
-
-            # Relative volume = today's total volume / avg daily volume (last up-to-30 sessions)
-            today_vol = 0.0
-            for m in mins:
-                v = m.get("v")
-                if isinstance(v, (int, float)):
-                    today_vol += v
-            relvol = None
-            if avgvol30 and avgvol30 > 0:
-                relvol = today_vol / avgvol30
-
-            rows_out.append({
-                "Date": iso_date(day),
-                "Ticker": ticker,
-                "GapPctPoly": round(gap_pct, 6),
-                "RSI14m": round(rsi14m, 6) if rsi14m is not None else "",
-                "RelVolPoly": round(relvol, 6) if relvol is not None else "",
-            })
-
-    if not rows_out:
-        print("No rows were built. Check date window and universe.", file=sys.stderr)
-        # Still write an empty file with headers so downstream steps don't crash
-        headers = ["Date", "Ticker", "GapPctPoly", "RSI14m", "RelVolPoly"]
-        with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=headers)
-            w.writeheader()
-        sys.exit(0)
-
-    # Sort by date, ticker
-    rows_out.sort(key=lambda r: (r["Date"], r["Ticker"]))
-
-    headers = ["Date", "Ticker", "GapPctPoly", "RSI14m", "RelVolPoly"]
-    with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=headers)
-        w.writeheader()
-        w.writerows(rows_out)
-
-    print(f"Wrote {len(rows_out)} rows to {OUTPUT_CSV}")
-
-
-if __name__ == "__main__":
-    main()
+# drop rows with missing key features/label
+df = df.dropna(subset=["gap_pct", "rsi14m", "rvol", "change_open_pct"])
+df = df.sort_values(["date", "ticker"])
+df.to_csv("training_polygon_v1.csv", index=False)
+print(f"Wrote {len(df):,} rows to training_polygon_v1.csv")
