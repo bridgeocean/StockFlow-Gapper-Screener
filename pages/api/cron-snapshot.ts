@@ -5,9 +5,9 @@ import { fetchFinvizExport } from "../../lib/finviz-export";
 import { putSnapshot } from "../../lib/ddb";
 import { getPrevClose, getDailyAvgVol, getTodayMinuteAggs } from "../../lib/polygon";
 import { rsi } from "../../lib/indicators";
+import { scoreWithCurrentModel } from "../../lib/ai-score";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Optional auth for the scheduler
   const secret = process.env.CRON_SECRET;
   if (secret) {
     const auth = req.headers.authorization || "";
@@ -22,70 +22,89 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ ok: true, skipped: "market closed" });
     }
 
-    // 1) Finviz shortlist
-    const rows = await fetchFinvizExport();
-    if (!rows?.length) return res.status(200).json({ ok: true, count: 0 });
+    const finviz = await fetchFinvizExport();
+    if (!finviz?.length) return res.status(200).json({ ok: true, count: 0 });
 
     const ts = new Date().toISOString();
     let wrote = 0;
 
-    for (const r of rows as any[]) {
+    for (const r of finviz as any[]) {
       const ticker: string | undefined = r.ticker;
       if (!ticker) continue;
 
-      // 2) Enrichment via Polygon (best-effort)
+      // ---------- Polygon enrichment ----------
       let RSI14m: number | null = null;
       let RelVolPoly: number | null = null;
       let GapPctPoly: number | null = null;
+      let ChangeFromOpenPct: number | null = null;
 
       if (process.env.POLYGON_API_KEY) {
         try {
           const [prevClose, avgVol30, mins] = await Promise.all([
             getPrevClose(ticker),
             getDailyAvgVol(ticker, 30),
-            getTodayMinuteAggs(ticker),
+            getTodayMinuteAggs(ticker), // minute bars today asc
           ]);
 
           if (mins?.length) {
             const closes = mins.map((a) => a.c);
+            const highs = mins.map((a) => a.h);
+            const volumes = mins.map((a) => a.v);
+            const open0930 = closes[0];
+            const priceNow = closes[closes.length - 1];
+
             RSI14m = rsi(closes, 14);
+            // rsi() returns single? If your rsi returns array, adapt accordingly.
 
-            const cumVol = mins.reduce((s, a) => s + (a?.v ?? 0), 0);
-            if (avgVol30 && avgVol30 > 0) RelVolPoly = cumVol / avgVol30;
+            // cum vol
+            const cum = volumes.reduce((acc: number[], v: number) => {
+              acc.push((acc[acc.length - 1] || 0) + (v || 0));
+              return acc;
+            }, []);
+            const elapsedMin = closes.length;
+            if (avgVol30 && avgVol30 > 0) {
+              RelVolPoly = cum[cum.length - 1] / (avgVol30 * Math.max(elapsedMin / 390.0, 1e-6));
+            }
 
-            // 09:30 ET ≈ 13:30 UTC. Fallback to first bar if none match.
-            const nineThirtyUTC = new Date();
-            nineThirtyUTC.setUTCHours(13, 30, 0, 0);
-            const firstRegular = mins.find((a) => a.t >= nineThirtyUTC.getTime()) ?? mins[0];
-
-            if (firstRegular && typeof prevClose === "number" && prevClose > 0) {
-              GapPctPoly = ((firstRegular.o - prevClose) / prevClose) * 100;
+            if (prevClose && prevClose > 0 && open0930) {
+              GapPctPoly = ((open0930 - prevClose) / prevClose) * 100;
+            }
+            if (open0930) {
+              ChangeFromOpenPct = ((priceNow - open0930) / open0930) * 100;
             }
           }
-        } catch {
-          // ignore enrichment errors; Finviz data still gets logged
-        }
+        } catch {}
       }
 
-      // 3) Write snapshot
+      // ---------- Choose best % from Finviz export as backup ----------
       const pct = r.gap_pct ?? r.change_pct ?? r.perf_today_pct ?? undefined;
+
+      // ---------- AI Score (if model available) ----------
+      const aiScore = scoreWithCurrentModel({
+        change_open_pct: ChangeFromOpenPct ?? 0,
+        gap_pct: GapPctPoly ?? (pct ?? 0),
+        rvol: RelVolPoly ?? (r.relative_volume ?? 0),
+        rsi14m: (RSI14m ?? r.rsi ?? 50),
+      });
+
       await putSnapshot({
         Ticker: ticker,
         Ts: ts,
         Price: r.price,
         PremarketGapPct: pct,
-        // If Finviz ever supplies these, we keep them too:
+        MarketPhase: phase,
+        // Original finviz-parsed fields you already wrote:
         RelVol: r.relative_volume,
         FloatShares: r.float_shares,
         RSI: r.rsi ?? null,
-        // Enriched via Polygon:
+        // Enriched fields:
         RSI14m: RSI14m ?? undefined,
         RelVolPoly: RelVolPoly ?? undefined,
         GapPctPoly: GapPctPoly ?? undefined,
-        MarketPhase: phase,
+        ChangeFromOpenPct: ChangeFromOpenPct ?? undefined,
+        AIScore: aiScore ?? undefined,
         Raw: r.raw,
       });
-
       wrote++;
     }
 
