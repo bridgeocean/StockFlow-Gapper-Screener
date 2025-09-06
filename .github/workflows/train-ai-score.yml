@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       YEARS:
-        description: "Years back (ignored if you provide explicit dates)"
-        default: "5"
+        description: "Years back (ignored if explicit dates; minute data is ~2y max on most plans)"
+        default: "2"
         required: false
       TRAIN_START:
         description: "Start date (UTC) YYYY-MM-DD (optional)"
@@ -23,23 +23,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compute date window
+      - name: Compute and clamp date window (Polygon minute data ≈ last 2y)
         id: window
         shell: bash
         run: |
-          # If explicit dates provided, use them; else compute "last N years"
+          # 1) pick explicit inputs or fallback to "last N years"
           if [[ -n "${{ github.event.inputs.TRAIN_START }}" ]]; then
             START="${{ github.event.inputs.TRAIN_START }}"
             END="${{ github.event.inputs.TRAIN_END }}"
+            [[ -z "$END" ]] && END=$(date -u +%Y-%m-%d)
           else
             YRS="${{ github.event.inputs.YEARS }}"
-            [[ -z "$YRS" ]] && YRS=5
+            [[ -z "$YRS" ]] && YRS=2
             START=$(date -u -d "-${YRS} years" +%Y-%m-%d)
             END=$(date -u +%Y-%m-%d)
           fi
+
+          # 2) clamp to last 730 days (Polygon minute history limit for most plans)
+          CUTOFF=$(date -u -d "-730 days" +%Y-%m-%d)
+          # if START is older than CUTOFF, lift it up
+          if [[ "$(date -u -d "$START" +%s)" -lt "$(date -u -d "$CUTOFF" +%s)" ]]; then
+            echo "Requested START $START is older than minute-history cutoff $CUTOFF. Clamping to $CUTOFF."
+            START="$CUTOFF"
+          fi
+
+          # ensure END >= START
+          if [[ "$(date -u -d "$END" +%s)" -lt "$(date -u -d "$START" +%s)" ]]; then
+            END="$START"
+          fi
+
           echo "start=$START" >> "$GITHUB_OUTPUT"
           echo "end=$END" >> "$GITHUB_OUTPUT"
-          echo "Training from $START to $END"
+          echo "Training window: $START → $END"
 
       - name: Set up Python
         uses: actions/setup-python@v5
