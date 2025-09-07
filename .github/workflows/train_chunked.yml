@@ -18,7 +18,7 @@ jobs:
   train:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # allow commits/pushes
+      contents: write
     env:
       TZ: UTC
 
@@ -77,46 +77,62 @@ jobs:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
         run: |
           set -euo pipefail
+
+          BRANCH="${GITHUB_REF_NAME:-main}"
           git config user.email "bot@github"
           git config user.name  "actions-bot"
+          git fetch origin "$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
 
           mkdir -p training
-          COMBINED="training/all_months.csv"
-          FIRST=1
+          COMBINED="training/training_all_months.csv"
 
           CUR="${START}-01"
           END_M="${END}-01"
 
-          # loop inclusive of END_M
-          while [ "$(date -u -d "$CUR" +%Y-%m)" != "$(date -u -d "$END_M +1 month" +%Y-%m)" ]; do
+          while [[ "$(date -u -d "$CUR" +%Y-%m)" != "$(date -u -d "$END_M +1 month" +%Y-%m)" ]]; do
             FROM="$(date -u -d "$CUR" +%Y-%m-01)"
             TO="$(date -u -d "$CUR +1 month -1 day" +%Y-%m-%d)"
             LABEL="$(date -u -d "$CUR" +%Y-%m)"
-            echo "=== Chunk $LABEL :: $FROM → $TO ==="
+            OUT="training/training_${LABEL}.csv"
 
-            # Run the fetcher: it reads TRAIN_START/END from env and writes training_polygon_v1.csv
-            TRAIN_START="$FROM" TRAIN_END="$TO" \
-              python scripts/make_training_from_polygon.py
+            echo "=== Chunk ${LABEL} :: ${FROM} → ${TO} ==="
 
-            if [ ! -s training_polygon_v1.csv ]; then
-              echo "Fetcher did not create training_polygon_v1.csv"; exit 2
-            fi
-
-            mv -f training_polygon_v1.csv "training/training_${LABEL}.csv"
-
-            # Maintain a combined CSV (header once)
-            if [ $FIRST -eq 1 ]; then
-              cp "training/training_${LABEL}.csv" "$COMBINED"
-              FIRST=0
+            # Skip if this month already exists (safe re-runs)
+            if [[ -s "$OUT" ]]; then
+              echo "Already have $OUT — skipping fetch."
             else
-              tail -n +2 "training/training_${LABEL}.csv" >> "$COMBINED"
+              TRAIN_START="$FROM" TRAIN_END="$TO" \
+                python scripts/make_training_from_polygon.py
+
+              if [[ ! -s training_polygon_v1.csv ]]; then
+                echo "Fetcher did not create training_polygon_v1.csv"; exit 2
+              fi
+
+              mv -f training_polygon_v1.csv "$OUT"
+              echo "Wrote $(wc -l < "$OUT") lines to $OUT"
             fi
 
-            git add "training/training_${LABEL}.csv" "$COMBINED"
-            git commit -m "Add training chunk ${LABEL}" || true
-            git push || true
+            # Maintain/append to combined file (header only once)
+            if [[ ! -s "$COMBINED" ]]; then
+              cp "$OUT" "$COMBINED"
+            else
+              tail -n +2 "$OUT" >> "$COMBINED"
+            fi
 
-            # next month
+            git add "$OUT" "$COMBINED"
+            git commit -m "Add training chunk ${LABEL}" || true
+
+            # Push with rebase + backoff (handles concurrent pushes)
+            for i in 1 2 3; do
+              if git pull --rebase origin "$BRANCH" && git push origin HEAD:"$BRANCH"; then
+                echo "Pushed chunk ${LABEL}"
+                break
+              fi
+              echo "Push failed (attempt $i). Retrying after backoff..."
+              sleep $((5*i))
+            done
+
             CUR="$(date -u -d "$CUR +1 month" +%Y-%m-01)"
           done
 
