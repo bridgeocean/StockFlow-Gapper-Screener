@@ -1,82 +1,62 @@
 # scripts/train_ai_score.py
-import json
-import sys
+import os, sys, json
 import pandas as pd
-import numpy as np
-from pathlib import Path
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, r2_score
-from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score, accuracy_score
 import joblib
 
-CSV_PATH = Path("training_polygon_v1.csv")
-if not CSV_PATH.exists():
-    print("ERROR: training_polygon_v1.csv not found")
-    sys.exit(1)
+CSV_PATH = os.environ.get("TRAINING_CSV", "data/training/training_polygon_v1.csv")
+MODEL_DIR = "models"
+os.makedirs(MODEL_DIR, exist_ok=True)
+MODEL_PATH = os.path.join(MODEL_DIR, "ai_score_v1.pkl")
+METRICS_PATH = os.path.join(MODEL_DIR, "ai_score_v1_metrics.json")
 
 df = pd.read_csv(CSV_PATH)
 
-# Harmonize column names if the fetcher produced Poly/camel-case names.
-rename_map = {
-    "Date": "date",
-    "Ticker": "ticker",
-    "GapPctPoly": "gap_pct",
-    "RSI14m": "rsi14m",
-    "RelVolPoly": "rvol",
-    # sometimes the label might have been written as ChangeOpenPct
-    "ChangeOpenPct": "change_open_pct",
-}
-df = df.rename(columns=rename_map)
+# Accept either the new or legacy column names
+def first_present(cols):
+    for c in cols:
+        if c in df.columns:
+            return c
+    raise KeyError(cols)
 
-required = ["gap_pct", "rsi14m", "rvol", "change_open_pct"]
-missing = [c for c in required if c not in df.columns]
-if missing:
-    print(f"ERROR: CSV is missing required columns: {missing}")
-    print("Make sure scripts/make_training_from_polygon.py wrote: "
-          "date,ticker,gap_pct,rsi14m,rvol,change_open_pct")
-    sys.exit(1)
+feat_gap = first_present(["GapPctPoly","gap_pct"])
+feat_rsi = first_present(["RSI14m","rsi14m"])
+feat_rvol = first_present(["RelVolPoly","rvol"])
+target_col = first_present(["UpClose"])  # 1 if close>open
 
-# Clean
-df = df.dropna(subset=required)
-# clip extreme outliers a bit to stabilize training
-df["gap_pct"] = df["gap_pct"].clip(-30, 30)
-df["rsi14m"] = df["rsi14m"].clip(0, 100)
-df["rvol"]   = df["rvol"].clip(0, 15)
-df["change_open_pct"] = df["change_open_pct"].clip(-20, 20)
-
-X = df[["gap_pct", "rsi14m", "rvol"]].values
-y = df["change_open_pct"].values
+df = df[[feat_gap, feat_rsi, feat_rvol, target_col]].dropna()
+X = df[[feat_gap, feat_rsi, feat_rvol]].values
+y = df[target_col].values
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.25, random_state=42
+    X, y, test_size=0.25, random_state=42, stratify=y
 )
 
-model = GradientBoostingRegressor(
-    n_estimators=400,
-    learning_rate=0.03,
-    max_depth=3,
-    random_state=42,
-    subsample=0.8
-)
-model.fit(X_train, y_train)
+pipe = Pipeline([
+    ("scaler", StandardScaler()),
+    ("clf", LogisticRegression(max_iter=200))
+])
 
-pred = model.predict(X_test)
-mae = float(mean_absolute_error(y_test, pred))
-r2  = float(r2_score(y_test, pred))
+pipe.fit(X_train, y_train)
 
-print(f"Eval — MAE: {mae:.4f} | R2: {r2:.4f} | N_test: {len(y_test)}")
+y_prob = pipe.predict_proba(X_test)[:,1]
+y_pred = (y_prob >= 0.5).astype(int)
 
-# Save model at repo root; workflow will move/commit it.
-OUT = Path("ai_score_v1.pkl")
-joblib.dump({
-    "model": model,
-    "features": ["gap_pct", "rsi14m", "rvol"],
-    "label": "change_open_pct",
-    "meta": {
-        "mae": mae,
-        "r2": r2,
-        "n_rows": int(len(df)),
-    }
-}, OUT)
+metrics = {
+    "n_rows": int(len(df)),
+    "auc": float(roc_auc_score(y_test, y_prob)),
+    "accuracy": float(accuracy_score(y_test, y_pred)),
+    "features": [feat_gap, feat_rsi, feat_rvol],
+    "target": target_col,
+}
 
-print(f"MODEL_SAVED: {OUT}")
+joblib.dump(pipe, MODEL_PATH)
+with open(METRICS_PATH, "w") as f:
+    json.dump(metrics, f, indent=2)
+
+print(f"Saved model → {MODEL_PATH}")
+print(json.dumps(metrics, indent=2))
