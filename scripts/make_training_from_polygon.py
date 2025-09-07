@@ -1,228 +1,282 @@
-# scripts/make_training_from_polygon.py
+#!/usr/bin/env python3
+"""
+Builds a training CSV from Polygon minute + daily data.
+
+ENV INPUTS
+----------
+POLYGON_API_KEY  : required
+TRAIN_START      : YYYY-MM-DD (inclusive)  e.g. "2023-10-01"
+TRAIN_END        : YYYY-MM-DD (inclusive)  e.g. "2023-10-31"
+UNIVERSE         : optional comma-separated tickers, e.g. "AAPL,TSLA,AMD,NVDA"
+OUT_CSV          : optional; defaults to "training_polygon_v1.csv"
+
+OUTPUT
+------
+CSV with columns:
+  date,ticker,gap_pct,change_open_pct,rsi14m,rvol
+
+Notes
+-----
+- gap_pct = (first minute open - previous trading day close) / previous close * 100
+- change_open_pct is identical to gap_pct (kept for compatibility with older trainer scripts)
+- rsi14m is 14-period RSI computed on that day’s minute closes; we take the last RSI value
+  available within the session (if fewer than 15 minutes, it will be NaN and the row is dropped).
+- rvol is "relative volume" = that day’s total volume / 30-trading-day average daily volume
+  (using daily bars prior to the day).
+"""
+
 import os
 import sys
-import csv
-import math
 import time
+import math
 import json
 import datetime as dt
-from typing import List, Dict, Any
+from typing import Dict, Any, List, Optional
 
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import pandas as pd
-from dateutil.relativedelta import relativedelta
+import numpy as np
+from dateutil import parser as dtparser
+from tenacity import (
+    retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+)
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 
-API_KEY = os.environ.get("POLYGON_API_KEY")
+API_BASE = "https://api.polygon.io"
+API_KEY = os.environ.get("POLYGON_API_KEY", "").strip()
+
+START = os.environ.get("TRAIN_START", "").strip()
+END = os.environ.get("TRAIN_END", "").strip()
+UNIVERSE = os.environ.get("UNIVERSE", "").strip()
+OUT_CSV = os.environ.get("OUT_CSV", "training_polygon_v1.csv")
+
+# Sensible default universe if none provided
+DEFAULT_UNIVERSE = ["AAPL", "TSLA", "AMD", "NVDA"]
+
 if not API_KEY:
-    print("ERROR: POLYGON_API_KEY env var is required", file=sys.stderr)
-    sys.exit(1)
+    print("ERROR: POLYGON_API_KEY is not set.", file=sys.stderr)
+    sys.exit(2)
 
-# Inputs (date-only; defaults ≈ last 24 months)
+if not START or not END:
+    print("ERROR: TRAIN_START and TRAIN_END must be YYYY-MM-DD.", file=sys.stderr)
+    sys.exit(2)
+
 def parse_date(s: str) -> dt.date:
-    return dt.date.fromisoformat(s)
+    return dt.datetime.strptime(s, "%Y-%m-%d").date()
 
-TODAY = dt.date.today()
-TRAIN_END = parse_date(os.environ.get("TRAIN_END", str(TODAY)))
-if TRAIN_END > TODAY:
-    TRAIN_END = TODAY
-DEFAULT_START = TRAIN_END - relativedelta(months=24)
-TRAIN_START = parse_date(os.environ.get("TRAIN_START", str(DEFAULT_START)))
+START_DATE = parse_date(START)
+END_DATE = parse_date(END)
 
-# Universe
-raw_tick = (os.environ.get("TICKERS") or "").strip()
-if raw_tick:
-    UNIVERSE = [t.strip().upper() for t in raw_tick.split(",") if t.strip()]
-else:
-    UNIVERSE = ["AAPL","TSLA","AMD","NVDA"]  # default starter set; change anytime
+if START_DATE > END_DATE:
+    print(f"ERROR: START {START} is after END {END}.", file=sys.stderr)
+    sys.exit(2)
 
-BASE = "https://api.polygon.io"
-SESSION = requests.Session()
+tickers = [t.strip().upper() for t in UNIVERSE.split(",") if t.strip()] or DEFAULT_UNIVERSE
 
-class PolyError(Exception):
-    pass
+print(f"Universe ({len(tickers)}): {', '.join(tickers)}")
+print(f"Window: {START_DATE} → {END_DATE}")
 
-def _raise_for_status(r: requests.Response):
-    if r.status_code >= 400:
-        try:
-            msg = r.json()
-        except Exception:
-            msg = r.text
-        raise PolyError(f"{r.status_code} {r.reason}: {msg}")
+session = requests.Session()
+session.params = {"apiKey": API_KEY}
+
+
+class RetryableHTTPError(HTTPError):
+    """Marker for errors that should be retried (e.g., 429, 5xx)."""
+
+
+def _raise_for_retry(status_code: int, url: str, body: Optional[Dict[str, Any]] = None):
+    if status_code in (429, 500, 502, 503, 504):
+        err = body.get("error") if isinstance(body, dict) else None
+        raise RetryableHTTPError(f"Retryable status {status_code} on {url} ({err})")
+    else:
+        raise HTTPError(f"HTTP {status_code} on {url}: {body}")
+
 
 @retry(
-    reraise=True,
-    stop=stop_after_attempt(8),
+    retry=retry_if_exception_type((RetryableHTTPError, ConnectionError, Timeout)),
+    stop=stop_after_attempt(7),
     wait=wait_exponential(multiplier=1, min=1, max=60),
-    retry=retry_if_exception_type((requests.RequestException, PolyError)),
+    reraise=True,
 )
-def poly_get(path: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-    params = dict(params or {})
-    params["apiKey"] = API_KEY
-    url = f"{BASE}{path}"
-    r = SESSION.get(url, params=params, timeout=30)
-    if r.status_code in (429, 502, 503, 504):
-        # let tenacity backoff
-        raise PolyError(f"Rate/Server error {r.status_code}")
-    _raise_for_status(r)
-    return r.json()
-
-def trading_days(start: dt.date, end: dt.date) -> List[dt.date]:
-    days = []
-    d = start
-    while d <= end:
-        if d.weekday() < 5:  # Mon-Fri
-            days.append(d)
-        d += dt.timedelta(days=1)
-    return days
-
-def compute_rsi(close_series: List[float], period: int = 14) -> float:
-    if len(close_series) < period + 1:
-        return math.nan
-    gains, losses = 0.0, 0.0
-    for i in range(1, period + 1):
-        diff = close_series[i] - close_series[i - 1]
-        if diff >= 0:
-            gains += diff
-        else:
-            losses -= diff
-    if losses == 0:
-        return 100.0
-    rs = gains / losses
-    return 100.0 - (100.0 / (1.0 + rs))
-
-def first_last_minute_ohlc(minutes: List[Dict[str, Any]]):
-    # Polygon minute agg uses keys: t (ms), o,h,l,c,v
-    if not minutes:
-        return None
-    o = minutes[0]["o"]
-    c = minutes[-1]["c"]
-    return o, c
-
-def extract_first_14m_closes(minutes: List[Dict[str, Any]]) -> List[float]:
-    closes = [m["c"] for m in minutes[:15]]  # need 15 points to compute 14 diffs
-    return closes
-
-def get_minute_day(ticker: str, day: dt.date) -> List[Dict[str, Any]]:
-    # date-only path fixes 400s
-    path = f"/v2/aggs/ticker/{ticker}/range/1/minute/{day.isoformat()}/{day.isoformat()}"
-    out = poly_get(path, params={"adjusted": "true", "sort": "asc", "limit": 50000})
-    return out.get("results") or []
-
-def get_daily_range(ticker: str, start: dt.date, end: dt.date) -> List[Dict[str, Any]]:
-    path = f"/v2/aggs/ticker/{ticker}/range/1/day/{start.isoformat()}/{end.isoformat()}"
-    out = poly_get(path, params={"adjusted": "true", "sort": "asc", "limit": 50000})
-    return out.get("results") or []
-
-def get_prev_close(ticker: str, day: dt.date) -> float:
-    # previous calendar trading day close from daily bars
-    prev = day - dt.timedelta(days=7)  # small window
-    daily = get_daily_range(ticker, prev, day)
-    # pick the daily bar *before* 'day'
-    prevbars = [b for b in daily if dt.datetime.utcfromtimestamp(b["t"]/1000).date() < day]
-    if not prevbars:
-        return math.nan
-    return prevbars[-1]["c"]
-
-def rel_vol_30d(ticker: str, day: dt.date) -> float:
-    lookback_start = day - relativedelta(days=45)
-    bars = get_daily_range(ticker, lookback_start, day)
-    # use last 30 trading days prior to 'day'
-    rows = []
-    for b in bars:
-        d = dt.datetime.utcfromtimestamp(b["t"]/1000).date()
-        if d < day:
-            rows.append(b)
-    vols = [b["v"] for b in rows[-30:]] if rows else []
-    if not vols:
-        return math.nan
-    avg30 = sum(vols)/len(vols)
-    # today volume (if today's bar exists)
-    today_bar = [b for b in bars if dt.datetime.utcfromtimestamp(b["t"]/1000).date() == day]
-    if not today_bar:
-        return math.nan
-    today_vol = today_bar[0]["v"]
-    return today_vol/avg30 if avg30 > 0 else math.nan
-
-def build_rows() -> List[Dict[str, Any]]:
-    rows = []
-    print(f"Window: {TRAIN_START.isoformat()} → {TRAIN_END.isoformat()}")
-    print(f"Universe ({len(UNIVERSE)}): {', '.join(UNIVERSE)}")
-    for d in trading_days(TRAIN_START, TRAIN_END):
-        for t in UNIVERSE:
+def get_json(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    # Always use date-only {from}/{to} in path for aggs calls
+    url = f"{API_BASE}{path}"
+    resp = session.get(url, params=params, timeout=30)
+    # Handle rate limit back-pressure if present
+    if resp.status_code == 429:
+        try:
+            data = resp.json()
+        except Exception:
+            data = {"error": "Too Many Requests"}
+        # Polygon sometimes sends Retry-After
+        ra = resp.headers.get("Retry-After")
+        if ra:
             try:
-                mins = get_minute_day(t, d)
-            except Exception as e:
-                print(f"ERR {d} {t}: {e}")
-                continue
-            if not mins:
-                # market holiday or no data
-                continue
-
-            # open/close from minutes
-            oc = first_last_minute_ohlc(mins)
-            if oc is None:
-                continue
-            open_px, close_px = oc
-
-            # prev close for gap
-            try:
-                prev_c = get_prev_close(t, d)
-            except Exception as e:
-                print(f"ERR {d} {t} prev_close: {e}")
-                prev_c = math.nan
-
-            gap_pct = ((open_px - prev_c) / prev_c * 100.0) if (prev_c and prev_c > 0) else math.nan
-
-            # RSI14m from first 15 closes (needs 15 minutes)
-            rsi14m = math.nan
-            try:
-                closes = extract_first_14m_closes(mins)
-                rsi14m = compute_rsi(closes, period=14)
+                wait_s = int(ra)
+                time.sleep(wait_s)
             except Exception:
                 pass
+        _raise_for_retry(resp.status_code, url, data)
 
-            # RelVol 30-day using daily volume
-            rvol = math.nan
-            try:
-                rvol = rel_vol_30d(t, d)
-            except Exception as e:
-                print(f"WARN {d} {t} rvol: {e}")
+    if resp.status_code >= 400:
+        try:
+            data = resp.json()
+        except Exception:
+            data = {"error": resp.text[:200]}
+        _raise_for_retry(resp.status_code, url, data)
 
-            day_ret = ((close_px - open_px) / open_px * 100.0) if open_px else math.nan
-            up_close = 1 if (not math.isnan(day_ret) and day_ret > 0) else 0
+    return resp.json()
 
-            row = {
-                "Date": d.isoformat(),
-                "Ticker": t,
-                "GapPctPoly": round(gap_pct, 4) if gap_pct == gap_pct else "",
-                "RSI14m": round(rsi14m, 4) if rsi14m == rsi14m else "",
-                "RelVolPoly": round(rvol, 4) if rvol == rvol else "",
-                "DayReturnPct": round(day_ret, 4) if day_ret == day_ret else "",
-                "UpClose": up_close,
-                # Back-compat lower-case aliases (if your old training script expects these)
-                "gap_pct": round(gap_pct, 4) if gap_pct == gap_pct else "",
-                "rsi14m": round(rsi14m, 4) if rsi14m == rsi14m else "",
-                "rvol": round(rvol, 4) if rvol == rvol else "",
-                "change_open_pct": round(day_ret, 4) if day_ret == day_ret else "",
-            }
-            rows.append(row)
-    return rows
 
-def main():
-    rows = build_rows()
-    if not rows:
-        print("No rows built.")
-        return
-    out = "training_polygon_v1.csv"
-    cols = ["Date","Ticker","GapPctPoly","RSI14m","RelVolPoly","DayReturnPct","UpClose",
-            "gap_pct","rsi14m","rvol","change_open_pct"]  # keep aliases last
-    with open(out, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=cols)
-        w.writeheader()
-        for r in rows:
-            w.writerow(r)
-    print(f"Wrote {len(rows)} rows to {out}")
+def daterange(start: dt.date, end: dt.date):
+    d = start
+    one = dt.timedelta(days=1)
+    while d <= end:
+        yield d
+        d += one
 
-if __name__ == "__main__":
-    main()
+
+def is_weekend(d: dt.date) -> bool:
+    return d.weekday() >= 5  # 5=Sat, 6=Sun
+
+
+def get_prev_trading_close(ticker: str, day: dt.date) -> Optional[float]:
+    """
+    Fetch previous trading day close using 1/day aggs over a small back window.
+    """
+    # look back 15 calendar days to find the last trading day before `day`
+    from_date = (day - dt.timedelta(days=20)).strftime("%Y-%m-%d")
+    to_date = (day - dt.timedelta(days=1)).strftime("%Y-%m-%d")
+    path = f"/v2/aggs/ticker/{ticker}/range/1/day/{from_date}/{to_date}"
+    data = get_json(path, {"adjusted": "true", "sort": "asc", "limit": 50000})
+    results = data.get("results", []) or []
+    if not results:
+        return None
+    # last trading day close
+    return float(results[-1]["c"])
+
+
+def fetch_minute_bars(ticker: str, day: dt.date) -> pd.DataFrame:
+    """
+    Fetch minute bars for a single calendar day using date-only range.
+    """
+    ds = day.strftime("%Y-%m-%d")
+    path = f"/v2/aggs/ticker/{ticker}/range/1/minute/{ds}/{ds}"
+    data = get_json(path, {"adjusted": "true", "sort": "asc", "limit": 50000})
+    results = data.get("results", []) or []
+    if not results:
+        return pd.DataFrame(columns=["t", "o", "h", "l", "c", "v"])
+
+    df = pd.DataFrame(results)
+    # Polygon uses epoch millis in "t"
+    df["ts"] = pd.to_datetime(df["t"], unit="ms", utc=True)
+    df = df.rename(columns={"o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"})
+    # Keep only regular trading hours (roughly). Many minute streams include pre/post.
+    df = df[(df["ts"].dt.time >= dt.time(13, 30)) & (df["ts"].dt.time <= dt.time(20, 0))]
+    df = df.reset_index(drop=True)
+    return df[["ts", "open", "high", "low", "close", "volume"]]
+
+
+def fetch_daily_volume_baseline(ticker: str, day: dt.date) -> Optional[float]:
+    """
+    30-trading-day average *prior to* `day`.
+    """
+    to_date = (day - dt.timedelta(days=1))
+    from_date = (to_date - dt.timedelta(days=60))  # 60 cal days ≈ 30 trading days
+    path = f"/v2/aggs/ticker/{ticker}/range/1/day/{from_date:%Y-%m-%d}/{to_date:%Y-%m-%d}"
+    data = get_json(path, {"adjusted": "true", "sort": "asc", "limit": 50000})
+    results = data.get("results", []) or []
+    if not results:
+        return None
+    vols = [float(r["v"]) for r in results[-30:]]  # last 30 trading days
+    if not vols:
+        return None
+    return float(np.mean(vols))
+
+
+def rsi(series: pd.Series, period: int = 14) -> pd.Series:
+    delta = series.diff()
+    up = np.where(delta > 0, delta, 0.0)
+    down = np.where(delta < 0, -delta, 0.0)
+    roll_up = pd.Series(up, index=series.index).ewm(alpha=1/period, adjust=False).mean()
+    roll_down = pd.Series(down, index=series.index).ewm(alpha=1/period, adjust=False).mean()
+    rs = roll_up / (roll_down.replace(0, np.nan))
+    out = 100 - (100 / (1 + rs))
+    return out
+
+
+rows: List[Dict[str, Any]] = []
+
+for day in daterange(START_DATE, END_DATE):
+    if is_weekend(day):
+        continue
+
+    for ticker in tickers:
+        try:
+            prev_close = get_prev_trading_close(ticker, day)
+            if prev_close is None or prev_close <= 0:
+                print(f"SKIP {day} {ticker}: no previous close")
+                continue
+
+            mdf = fetch_minute_bars(ticker, day)
+            if mdf.empty:
+                print(f"SKIP {day} {ticker}: no minute bars (holiday or no data)")
+                continue
+
+            # first RTH minute open
+            first_open = float(mdf.iloc[0]["open"])
+            gap_pct = (first_open - prev_close) / prev_close * 100.0
+
+            # total day volume from minute bars
+            day_vol = float(mdf["volume"].sum())
+
+            # 30D baseline daily volume
+            base_vol = fetch_daily_volume_baseline(ticker, day)
+            if base_vol is None or base_vol <= 0:
+                print(f"SKIP {day} {ticker}: no 30D volume baseline")
+                continue
+            rvol = day_vol / base_vol
+
+            # RSI(14) on minute closes; take last value of the day
+            closes = mdf["close"].astype(float)
+            rsi14 = rsi(closes, 14).iloc[-1]
+            if pd.isna(rsi14):
+                print(f"SKIP {day} {ticker}: insufficient minutes for RSI14")
+                continue
+
+            rows.append({
+                "date": day.strftime("%Y-%m-%d"),
+                "ticker": ticker,
+                "gap_pct": round(gap_pct, 6),
+                "change_open_pct": round(gap_pct, 6),  # kept for trainer compatibility
+                "rsi14m": round(float(rsi14), 6),
+                "rvol": round(rvol, 6),
+            })
+
+        except RetryableHTTPError as e:
+            print(f"RETRYABLE {day} {ticker}: {e}")
+            # tenacity will handle retries
+            raise
+        except HTTPError as e:
+            print(f"ERR {day} {ticker}: {e}")
+            # non-retryable HTTP error — just skip this ticker/day
+            continue
+        except Exception as e:
+            print(f"ERR {day} {ticker}: {type(e).__name__}: {e}")
+            continue
+
+if not rows:
+    print("No rows produced; nothing to write.")
+    sys.exit(0)
+
+df = pd.DataFrame(rows).sort_values(["date", "ticker"]).reset_index(drop=True)
+
+# Final sanity: drop rows with any NaNs
+before = len(df)
+df = df.dropna(subset=["gap_pct", "change_open_pct", "rsi14m", "rvol"])
+after = len(df)
+if after < before:
+    print(f"Dropped {before - after} rows with NaNs.")
+
+df.to_csv(OUT_CSV, index=False)
+print(f"Wrote {len(df)} rows to {OUT_CSV}")
