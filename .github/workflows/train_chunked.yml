@@ -10,23 +10,54 @@ on:
         description: "End month (YYYY-MM, inclusive)"
         required: false
 
+concurrency:
+  group: train-chunked
+  cancel-in-progress: false
+
 jobs:
   train:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # allow commits/pushes
+    env:
+      TZ: UTC
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify API key
+        run: |
+          if [ -z "${{ secrets.POLYGON_API_KEY }}" ]; then
+            echo "POLYGON_API_KEY secret is missing."; exit 1
+          fi
 
       - name: Set window defaults
-        id: win
         run: |
           START="${{ github.event.inputs.start_month }}"
           END="${{ github.event.inputs.end_month }}"
-          # defaults: last 24 months
-          if [ -z "$START" ]; then START="$(date -u -d 'first day of -23 months' +%Y-%m)"; fi
-          if [ -z "$END" ]; then   END="$(date -u +%Y-%m)"; fi
+
+          # Defaults: last ~24 months (inclusive of current month)
+          if [ -z "$START" ]; then
+            START="$(date -u -d "$(date -u +%Y-%m-01) -23 months" +%Y-%m)"
+          fi
+          if [ -z "$END" ]; then
+            END="$(date -u +%Y-%m)"
+          fi
+
+          # Validate inputs (must be YYYY-MM and START <= END)
+          if ! date -u -d "${START}-01" >/dev/null 2>&1; then
+            echo "Invalid start_month: $START"; exit 1
+          fi
+          if ! date -u -d "${END}-01" >/dev/null 2>&1; then
+            echo "Invalid end_month: $END"; exit 1
+          fi
+          if [ "$(date -u -d "${START}-01" +%s)" -gt "$(date -u -d "${END}-01" +%s)" ]; then
+            echo "ERROR: start_month ($START) is after end_month ($END)"; exit 1
+          fi
+
           echo "START=$START" >> $GITHUB_ENV
           echo "END=$END"     >> $GITHUB_ENV
           echo "Using window: $START → $END"
@@ -45,10 +76,17 @@ jobs:
         env:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
         run: |
-          set -e
+          set -euo pipefail
+          git config user.email "bot@github"
+          git config user.name  "actions-bot"
+
           mkdir -p training
+          COMBINED="training/all_months.csv"
+          FIRST=1
+
           CUR="${START}-01"
           END_M="${END}-01"
+
           # loop inclusive of END_M
           while [ "$(date -u -d "$CUR" +%Y-%m)" != "$(date -u -d "$END_M +1 month" +%Y-%m)" ]; do
             FROM="$(date -u -d "$CUR" +%Y-%m-01)"
@@ -56,19 +94,38 @@ jobs:
             LABEL="$(date -u -d "$CUR" +%Y-%m)"
             echo "=== Chunk $LABEL :: $FROM → $TO ==="
 
-            # run the fetcher: it reads TRAIN_START/END from env and writes training_polygon_v1.csv
+            # Run the fetcher: it reads TRAIN_START/END from env and writes training_polygon_v1.csv
             TRAIN_START="$FROM" TRAIN_END="$TO" \
               python scripts/make_training_from_polygon.py
 
-            # keep the month file, then commit & push right away
+            if [ ! -s training_polygon_v1.csv ]; then
+              echo "Fetcher did not create training_polygon_v1.csv"; exit 2
+            fi
+
             mv -f training_polygon_v1.csv "training/training_${LABEL}.csv"
-            git add "training/training_${LABEL}.csv"
-            git -c user.email=bot@github -c user.name="actions-bot" commit -m "Add training chunk ${LABEL}" || true
+
+            # Maintain a combined CSV (header once)
+            if [ $FIRST -eq 1 ]; then
+              cp "training/training_${LABEL}.csv" "$COMBINED"
+              FIRST=0
+            else
+              tail -n +2 "training/training_${LABEL}.csv" >> "$COMBINED"
+            fi
+
+            git add "training/training_${LABEL}.csv" "$COMBINED"
+            git commit -m "Add training chunk ${LABEL}" || true
             git push || true
 
             # next month
             CUR="$(date -u -d "$CUR +1 month" +%Y-%m-01)"
           done
+
+      - name: Upload CSVs as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: training-csvs
+          path: training/*.csv
+          if-no-files-found: error
 
       - name: Done
         run: echo "All chunks completed and committed."
