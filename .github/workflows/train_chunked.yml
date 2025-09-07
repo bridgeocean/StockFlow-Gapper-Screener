@@ -70,7 +70,7 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install pandas requests numpy pyarrow
+          pip install -U pandas requests numpy pyarrow tenacity python-dateutil
 
       - name: Run month-by-month and commit
         env:
