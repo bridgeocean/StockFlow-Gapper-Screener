@@ -1,282 +1,239 @@
 #!/usr/bin/env python3
 """
-Builds a training CSV from Polygon minute + daily data.
+Build a monthly training CSV from Polygon with safe rate limiting.
 
-ENV INPUTS
-----------
-POLYGON_API_KEY  : required
-TRAIN_START      : YYYY-MM-DD (inclusive)  e.g. "2023-10-01"
-TRAIN_END        : YYYY-MM-DD (inclusive)  e.g. "2023-10-31"
-UNIVERSE         : optional comma-separated tickers, e.g. "AAPL,TSLA,AMD,NVDA"
-OUT_CSV          : optional; defaults to "training_polygon_v1.csv"
+Outputs: training_polygon_v1.csv with columns:
+  Date, Ticker, GapPctPoly, RSI14m, RelVolPoly
 
-OUTPUT
-------
-CSV with columns:
-  date,ticker,gap_pct,change_open_pct,rsi14m,rvol
-
-Notes
------
-- gap_pct = (first minute open - previous trading day close) / previous close * 100
-- change_open_pct is identical to gap_pct (kept for compatibility with older trainer scripts)
-- rsi14m is 14-period RSI computed on that day’s minute closes; we take the last RSI value
-  available within the session (if fewer than 15 minutes, it will be NaN and the row is dropped).
-- rvol is "relative volume" = that day’s total volume / 30-trading-day average daily volume
-  (using daily bars prior to the day).
+Reads from env:
+  POLYGON_API_KEY        (required)
+  TRAIN_START            (YYYY-MM-DD, inclusive)
+  TRAIN_END              (YYYY-MM-DD, inclusive)
+  UNIVERSE               (comma-separated tickers, default: AAPL,TSLA,AMD,NVDA)
+  RATE_LIMIT_RPM         (requests per minute throttle, default: 4)
+  MAX_RETRY_MINUTES      (per-request patience, default: 12)
 """
 
 import os
 import sys
 import time
 import math
-import json
-import datetime as dt
-from typing import Dict, Any, List, Optional
-
+import random
 import requests
 import pandas as pd
-import numpy as np
-from dateutil import parser as dtparser
-from tenacity import (
-    retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-)
-from requests.exceptions import HTTPError, ConnectionError, Timeout
+from datetime import datetime, timedelta, timezone
 
-API_BASE = "https://api.polygon.io"
-API_KEY = os.environ.get("POLYGON_API_KEY", "").strip()
-
-START = os.environ.get("TRAIN_START", "").strip()
-END = os.environ.get("TRAIN_END", "").strip()
-UNIVERSE = os.environ.get("UNIVERSE", "").strip()
-OUT_CSV = os.environ.get("OUT_CSV", "training_polygon_v1.csv")
-
-# Sensible default universe if none provided
-DEFAULT_UNIVERSE = ["AAPL", "TSLA", "AMD", "NVDA"]
-
+# ---------- CONFIG / ENV ----------
+API_KEY = os.environ.get("POLYGON_API_KEY")
 if not API_KEY:
-    print("ERROR: POLYGON_API_KEY is not set.", file=sys.stderr)
-    sys.exit(2)
+    print("ERROR: POLYGON_API_KEY is missing in env.", file=sys.stderr)
+    sys.exit(1)
 
-if not START or not END:
-    print("ERROR: TRAIN_START and TRAIN_END must be YYYY-MM-DD.", file=sys.stderr)
-    sys.exit(2)
+TRAIN_START = os.environ.get("TRAIN_START")  # YYYY-MM-DD
+TRAIN_END   = os.environ.get("TRAIN_END")    # YYYY-MM-DD
+if not TRAIN_START or not TRAIN_END:
+    print("ERROR: TRAIN_START/TRAIN_END are required (YYYY-MM-DD).", file=sys.stderr)
+    sys.exit(1)
 
-def parse_date(s: str) -> dt.date:
-    return dt.datetime.strptime(s, "%Y-%m-%d").date()
+UNIVERSE = [t.strip().upper() for t in os.environ.get("UNIVERSE", "AAPL,TSLA,AMD,NVDA").split(",") if t.strip()]
+RATE_LIMIT_RPM = max(1, int(os.getenv("RATE_LIMIT_RPM", "4")))
+MAX_RETRY_MINUTES = int(os.getenv("MAX_RETRY_MINUTES", "12"))
 
-START_DATE = parse_date(START)
-END_DATE = parse_date(END)
+BASE = "https://api.polygon.io"
+SESSION = requests.Session()
 
-if START_DATE > END_DATE:
-    print(f"ERROR: START {START} is after END {END}.", file=sys.stderr)
-    sys.exit(2)
+_MIN_INTERVAL = 60.0 / RATE_LIMIT_RPM
+_last_call_ts = 0.0
 
-tickers = [t.strip().upper() for t in UNIVERSE.split(",") if t.strip()] or DEFAULT_UNIVERSE
+def _throttle():
+    global _last_call_ts
+    now = time.time()
+    wait = (_last_call_ts + _MIN_INTERVAL) - now
+    if wait > 0:
+        time.sleep(wait)
+    _last_call_ts = time.time()
 
-print(f"Universe ({len(tickers)}): {', '.join(tickers)}")
-print(f"Window: {START_DATE} → {END_DATE}")
-
-session = requests.Session()
-session.params = {"apiKey": API_KEY}
-
-
-class RetryableHTTPError(HTTPError):
-    """Marker for errors that should be retried (e.g., 429, 5xx)."""
-
-
-def _raise_for_retry(status_code: int, url: str, body: Optional[Dict[str, Any]] = None):
-    if status_code in (429, 500, 502, 503, 504):
-        err = body.get("error") if isinstance(body, dict) else None
-        raise RetryableHTTPError(f"Retryable status {status_code} on {url} ({err})")
+def _get_json(path_or_url: str, params: dict | None = None) -> dict:
+    """GET JSON with throttle + Retry-After + capped exponential backoff."""
+    if params is None:
+        params = {}
+    # accept either a full URL (next_url) or a path that we'll prefix
+    if path_or_url.startswith("http"):
+        url = path_or_url
+        # next_url already has query; just add apiKey if missing
+        if "apiKey=" not in url:
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}apiKey={API_KEY}"
     else:
-        raise HTTPError(f"HTTP {status_code} on {url}: {body}")
+        url = f"{BASE}{path_or_url}"
+        params = {**params, "apiKey": API_KEY}
 
+    deadline = time.time() + MAX_RETRY_MINUTES * 60
+    attempt = 0
+    while True:
+        _throttle()
+        resp = SESSION.get(url, params=params, timeout=30)
+        if resp.status_code == 200:
+            return resp.json()
 
-@retry(
-    retry=retry_if_exception_type((RetryableHTTPError, ConnectionError, Timeout)),
-    stop=stop_after_attempt(7),
-    wait=wait_exponential(multiplier=1, min=1, max=60),
-    reraise=True,
-)
-def get_json(path: str, params: Dict[str, Any]) -> Dict[str, Any]:
-    # Always use date-only {from}/{to} in path for aggs calls
-    url = f"{API_BASE}{path}"
-    resp = session.get(url, params=params, timeout=30)
-    # Handle rate limit back-pressure if present
-    if resp.status_code == 429:
-        try:
-            data = resp.json()
-        except Exception:
-            data = {"error": "Too Many Requests"}
-        # Polygon sometimes sends Retry-After
-        ra = resp.headers.get("Retry-After")
-        if ra:
-            try:
-                wait_s = int(ra)
-                time.sleep(wait_s)
-            except Exception:
-                pass
-        _raise_for_retry(resp.status_code, url, data)
+        if resp.status_code in (429, 502, 503, 504):
+            ra = resp.headers.get("Retry-After")
+            if ra:
+                try:
+                    sleep_s = float(ra)
+                except Exception:
+                    sleep_s = 1.0
+            else:
+                sleep_s = min(2 ** attempt, 60) + random.uniform(0, 1)
+            print(f"RETRYABLE {resp.status_code} on {url} — sleeping {sleep_s:.1f}s")
+            if time.time() + sleep_s > deadline:
+                resp.raise_for_status()
+            time.sleep(sleep_s)
+            attempt += 1
+            continue
 
-    if resp.status_code >= 400:
-        try:
-            data = resp.json()
-        except Exception:
-            data = {"error": resp.text[:200]}
-        _raise_for_retry(resp.status_code, url, data)
+        resp.raise_for_status()
 
-    return resp.json()
+def _to_yyyymmdd(ms_utc: int) -> str:
+    return datetime.fromtimestamp(ms_utc / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
 
+def _to_ny_dt(ms_utc: int) -> pd.Timestamp:
+    # UTC → America/New_York
+    return (pd.to_datetime(ms_utc, unit="ms", utc=True)
+              .tz_convert("America/New_York"))
 
-def daterange(start: dt.date, end: dt.date):
-    d = start
-    one = dt.timedelta(days=1)
-    while d <= end:
-        yield d
-        d += one
-
-
-def is_weekend(d: dt.date) -> bool:
-    return d.weekday() >= 5  # 5=Sat, 6=Sun
-
-
-def get_prev_trading_close(ticker: str, day: dt.date) -> Optional[float]:
-    """
-    Fetch previous trading day close using 1/day aggs over a small back window.
-    """
-    # look back 15 calendar days to find the last trading day before `day`
-    from_date = (day - dt.timedelta(days=20)).strftime("%Y-%m-%d")
-    to_date = (day - dt.timedelta(days=1)).strftime("%Y-%m-%d")
-    path = f"/v2/aggs/ticker/{ticker}/range/1/day/{from_date}/{to_date}"
-    data = get_json(path, {"adjusted": "true", "sort": "asc", "limit": 50000})
-    results = data.get("results", []) or []
+# ---------- DATA FETCH ----------
+def fetch_daily(ticker: str, start_date: str, end_date: str, back_days: int = 60) -> pd.DataFrame:
+    """Daily bars starting from (start_date - back_days) to end_date."""
+    start_dt = datetime.fromisoformat(start_date)
+    pre_dt = (start_dt - timedelta(days=back_days)).strftime("%Y-%m-%d")
+    path = f"/v2/aggs/ticker/{ticker}/range/1/day/{pre_dt}/{end_date}"
+    j = _get_json(path, {"adjusted": "true", "sort": "asc", "limit": 50000})
+    results = j.get("results", []) or []
     if not results:
-        return None
-    # last trading day close
-    return float(results[-1]["c"])
-
-
-def fetch_minute_bars(ticker: str, day: dt.date) -> pd.DataFrame:
-    """
-    Fetch minute bars for a single calendar day using date-only range.
-    """
-    ds = day.strftime("%Y-%m-%d")
-    path = f"/v2/aggs/ticker/{ticker}/range/1/minute/{ds}/{ds}"
-    data = get_json(path, {"adjusted": "true", "sort": "asc", "limit": 50000})
-    results = data.get("results", []) or []
-    if not results:
-        return pd.DataFrame(columns=["t", "o", "h", "l", "c", "v"])
+        return pd.DataFrame(columns=["t","o","h","l","c","v"])
 
     df = pd.DataFrame(results)
-    # Polygon uses epoch millis in "t"
-    df["ts"] = pd.to_datetime(df["t"], unit="ms", utc=True)
-    df = df.rename(columns={"o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"})
-    # Keep only regular trading hours (roughly). Many minute streams include pre/post.
-    df = df[(df["ts"].dt.time >= dt.time(13, 30)) & (df["ts"].dt.time <= dt.time(20, 0))]
-    df = df.reset_index(drop=True)
-    return df[["ts", "open", "high", "low", "close", "volume"]]
+    # t=ms, v=volume, o/h/l/c
+    df["date"] = df["t"].apply(_to_yyyymmdd)
+    return df[["date", "o", "h", "l", "c", "v"]]
 
+def fetch_minutes_month(ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
+    """All minute bars for the month (handles pagination via next_url)."""
+    path = f"/v2/aggs/ticker/{ticker}/range/1/minute/{start_date}/{end_date}"
+    params = {"adjusted": "true", "sort": "asc", "limit": 50000}
 
-def fetch_daily_volume_baseline(ticker: str, day: dt.date) -> Optional[float]:
-    """
-    30-trading-day average *prior to* `day`.
-    """
-    to_date = (day - dt.timedelta(days=1))
-    from_date = (to_date - dt.timedelta(days=60))  # 60 cal days ≈ 30 trading days
-    path = f"/v2/aggs/ticker/{ticker}/range/1/day/{from_date:%Y-%m-%d}/{to_date:%Y-%m-%d}"
-    data = get_json(path, {"adjusted": "true", "sort": "asc", "limit": 50000})
-    results = data.get("results", []) or []
-    if not results:
+    all_rows = []
+    j = _get_json(path, params)
+    all_rows.extend(j.get("results", []) or [])
+
+    next_url = j.get("next_url")
+    while next_url:
+        j = _get_json(next_url)
+        all_rows.extend(j.get("results", []) or [])
+        next_url = j.get("next_url")
+
+    if not all_rows:
+        return pd.DataFrame(columns=["t","o","h","l","c","v","n"])
+
+    df = pd.DataFrame(all_rows)
+    # convert to NY time, add local date and time-of-day
+    df["dt_ny"] = df["t"].apply(_to_ny_dt)
+    df["date"] = df["dt_ny"].dt.strftime("%Y-%m-%d")
+    df["tod"] = df["dt_ny"].dt.strftime("%H:%M")
+    return df
+
+# ---------- FEATURES ----------
+def rsi14_from_first_15m(min_df_for_day: pd.DataFrame) -> float | None:
+    """RSI(14) on first 15 closes (09:30..09:44). Returns None if insufficient data."""
+    # Keep 9:30–9:44 inclusive (15 bars = 14 periods)
+    mask = min_df_for_day["tod"].between("09:30", "09:44", inclusive="both")
+    sub = min_df_for_day.loc[mask]
+    if len(sub) < 15:
         return None
-    vols = [float(r["v"]) for r in results[-30:]]  # last 30 trading days
-    if not vols:
-        return None
-    return float(np.mean(vols))
+    closes = sub["c"].astype(float).reset_index(drop=True)
+    delta = closes.diff().dropna()
+    gains = delta.clip(lower=0).sum() / 14.0
+    losses = (-delta.clip(upper=0)).sum() / 14.0
+    if losses == 0:
+        return 100.0
+    rs = gains / losses
+    rsi = 100.0 - (100.0 / (1.0 + rs))
+    return float(rsi)
 
+def build_rows_for_ticker(ticker: str, start_date: str, end_date: str) -> list[dict]:
+    day_df = fetch_daily(ticker, start_date, end_date, back_days=60)
+    min_df = fetch_minutes_month(ticker, start_date, end_date)
 
-def rsi(series: pd.Series, period: int = 14) -> pd.Series:
-    delta = series.diff()
-    up = np.where(delta > 0, delta, 0.0)
-    down = np.where(delta < 0, -delta, 0.0)
-    roll_up = pd.Series(up, index=series.index).ewm(alpha=1/period, adjust=False).mean()
-    roll_down = pd.Series(down, index=series.index).ewm(alpha=1/period, adjust=False).mean()
-    rs = roll_up / (roll_down.replace(0, np.nan))
-    out = 100 - (100 / (1 + rs))
-    return out
+    # rolling 30-day avg daily volume for RelVol
+    day_df["vol30"] = day_df["v"].rolling(30).mean()
+    day_df["prev_close"] = day_df["c"].shift(1)
 
+    # index by date for quick lookup
+    min_by_date = dict(tuple(min_df.groupby("date")))
 
-rows: List[Dict[str, Any]] = []
+    rows = []
+    for _, row in day_df.iterrows():
+        d = row["date"]
+        if d < start_date or d > end_date:
+            continue  # only export inside the requested month
 
-for day in daterange(START_DATE, END_DATE):
-    if is_weekend(day):
-        continue
+        prev_c = row["prev_close"]
+        if pd.isna(prev_c) or prev_c <= 0:
+            continue
 
-    for ticker in tickers:
+        # gap % = (today open - prev close)/prev close * 100
+        gap_pct = (float(row["o"]) - float(prev_c)) / float(prev_c) * 100.0
+
+        # rsi14 from first 15 minutes
+        rsi14 = None
+        if d in min_by_date:
+            rsi14 = rsi14_from_first_15m(min_by_date[d])
+
+        # relative volume = day volume / 30d avg volume
+        vol = float(row["v"])
+        vol30 = float(row["vol30"]) if not pd.isna(row["vol30"]) else None
+        rvol = (vol / vol30) if (vol30 and vol30 > 0) else None
+
+        if rsi14 is None or rvol is None:
+            continue  # drop incomplete rows
+
+        rows.append({
+            "Date": d,
+            "Ticker": ticker,
+            "GapPctPoly": round(gap_pct, 6),
+            "RSI14m": round(rsi14, 6),
+            "RelVolPoly": round(rvol, 6),
+        })
+    return rows
+
+# ---------- MAIN ----------
+def main():
+    print(f"Window: {TRAIN_START} → {TRAIN_END}")
+    print(f"Universe ({len(UNIVERSE)}): {', '.join(UNIVERSE)}")
+
+    all_rows: list[dict] = []
+    for t in UNIVERSE:
         try:
-            prev_close = get_prev_trading_close(ticker, day)
-            if prev_close is None or prev_close <= 0:
-                print(f"SKIP {day} {ticker}: no previous close")
-                continue
-
-            mdf = fetch_minute_bars(ticker, day)
-            if mdf.empty:
-                print(f"SKIP {day} {ticker}: no minute bars (holiday or no data)")
-                continue
-
-            # first RTH minute open
-            first_open = float(mdf.iloc[0]["open"])
-            gap_pct = (first_open - prev_close) / prev_close * 100.0
-
-            # total day volume from minute bars
-            day_vol = float(mdf["volume"].sum())
-
-            # 30D baseline daily volume
-            base_vol = fetch_daily_volume_baseline(ticker, day)
-            if base_vol is None or base_vol <= 0:
-                print(f"SKIP {day} {ticker}: no 30D volume baseline")
-                continue
-            rvol = day_vol / base_vol
-
-            # RSI(14) on minute closes; take last value of the day
-            closes = mdf["close"].astype(float)
-            rsi14 = rsi(closes, 14).iloc[-1]
-            if pd.isna(rsi14):
-                print(f"SKIP {day} {ticker}: insufficient minutes for RSI14")
-                continue
-
-            rows.append({
-                "date": day.strftime("%Y-%m-%d"),
-                "ticker": ticker,
-                "gap_pct": round(gap_pct, 6),
-                "change_open_pct": round(gap_pct, 6),  # kept for trainer compatibility
-                "rsi14m": round(float(rsi14), 6),
-                "rvol": round(rvol, 6),
-            })
-
-        except RetryableHTTPError as e:
-            print(f"RETRYABLE {day} {ticker}: {e}")
-            # tenacity will handle retries
-            raise
-        except HTTPError as e:
-            print(f"ERR {day} {ticker}: {e}")
-            # non-retryable HTTP error — just skip this ticker/day
-            continue
+            rows = build_rows_for_ticker(t, TRAIN_START, TRAIN_END)
+            all_rows.extend(rows)
+        except requests.HTTPError as e:
+            print(f"ERR {TRAIN_START}..{TRAIN_END} {t}: HTTPError {e}", file=sys.stderr)
         except Exception as e:
-            print(f"ERR {day} {ticker}: {type(e).__name__}: {e}")
-            continue
+            print(f"ERR {TRAIN_START}..{TRAIN_END} {t}: {e}", file=sys.stderr)
 
-if not rows:
-    print("No rows produced; nothing to write.")
-    sys.exit(0)
+    if not all_rows:
+        print("No rows created for this chunk (likely too few prior days for RVOL/RSI).")
+        # still write an empty CSV with headers so the workflow continues sanely
+        pd.DataFrame(columns=["Date","Ticker","GapPctPoly","RSI14m","RelVolPoly"]).to_csv(
+            "training_polygon_v1.csv", index=False
+        )
+        return
 
-df = pd.DataFrame(rows).sort_values(["date", "ticker"]).reset_index(drop=True)
+    out = pd.DataFrame(all_rows, columns=["Date","Ticker","GapPctPoly","RSI14m","RelVolPoly"])
+    out.sort_values(["Date","Ticker"], inplace=True)
+    out.to_csv("training_polygon_v1.csv", index=False)
+    print(f"Wrote {len(out)} rows to training_polygon_v1.csv")
 
-# Final sanity: drop rows with any NaNs
-before = len(df)
-df = df.dropna(subset=["gap_pct", "change_open_pct", "rsi14m", "rvol"])
-after = len(df)
-if after < before:
-    print(f"Dropped {before - after} rows with NaNs.")
-
-df.to_csv(OUT_CSV, index=False)
-print(f"Wrote {len(df)} rows to {OUT_CSV}")
+if __name__ == "__main__":
+    main()
