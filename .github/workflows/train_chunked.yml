@@ -39,7 +39,7 @@ jobs:
           START="${{ github.event.inputs.start_month }}"
           END="${{ github.event.inputs.end_month }}"
 
-          # Defaults: last ~24 months (inclusive of current month)
+          # Defaults: last ~24 months (inclusive)
           if [ -z "$START" ]; then
             START="$(date -u -d "$(date -u +%Y-%m-01) -23 months" +%Y-%m)"
           fi
@@ -47,15 +47,11 @@ jobs:
             END="$(date -u +%Y-%m)"
           fi
 
-          # Validate inputs (must be YYYY-MM and START <= END)
-          if ! date -u -d "${START}-01" >/dev/null 2>&1; then
-            echo "Invalid start_month: $START"; exit 1
-          fi
-          if ! date -u -d "${END}-01" >/dev/null 2>&1; then
-            echo "Invalid end_month: $END"; exit 1
-          fi
+          # Validate
+          date -u -d "${START}-01" >/dev/null 2>&1 || { echo "Invalid start_month $START"; exit 1; }
+          date -u -d "${END}-01"   >/dev/null 2>&1 || { echo "Invalid end_month $END"; exit 1; }
           if [ "$(date -u -d "${START}-01" +%s)" -gt "$(date -u -d "${END}-01" +%s)" ]; then
-            echo "ERROR: start_month ($START) is after end_month ($END)"; exit 1
+            echo "start_month ($START) is after end_month ($END)"; exit 1
           fi
 
           echo "START=$START" >> $GITHUB_ENV
@@ -70,68 +66,52 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -U pandas requests numpy pyarrow tenacity python-dateutil
+          pip install -U pandas requests numpy pyarrow tenacity python-dateutil pytz
 
       - name: Run month-by-month and commit
         env:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          UNIVERSE: AAPL,TSLA,AMD,NVDA
+          RATE_LIMIT_RPM: 4          # lower to 3 or 2 if you still see many 429s
+          MAX_RETRY_MINUTES: 12
         run: |
           set -euo pipefail
-
-          BRANCH="${GITHUB_REF_NAME:-main}"
           git config user.email "bot@github"
           git config user.name  "actions-bot"
-          git fetch origin "$BRANCH"
-          git checkout -B "$BRANCH" "origin/$BRANCH"
 
           mkdir -p training
-          COMBINED="training/training_all_months.csv"
+          COMBINED="training/all_months.csv"
+          FIRST=1
 
           CUR="${START}-01"
           END_M="${END}-01"
 
-          while [[ "$(date -u -d "$CUR" +%Y-%m)" != "$(date -u -d "$END_M +1 month" +%Y-%m)" ]]; do
+          while [ "$(date -u -d "$CUR" +%Y-%m)" != "$(date -u -d "$END_M +1 month" +%Y-%m)" ]; do
             FROM="$(date -u -d "$CUR" +%Y-%m-01)"
             TO="$(date -u -d "$CUR +1 month -1 day" +%Y-%m-%d)"
             LABEL="$(date -u -d "$CUR" +%Y-%m)"
-            OUT="training/training_${LABEL}.csv"
+            echo "=== Chunk $LABEL :: $FROM → $TO ==="
 
-            echo "=== Chunk ${LABEL} :: ${FROM} → ${TO} ==="
+            TRAIN_START="$FROM" TRAIN_END="$TO" \
+              python scripts/make_training_from_polygon.py
 
-            # Skip if this month already exists (safe re-runs)
-            if [[ -s "$OUT" ]]; then
-              echo "Already have $OUT — skipping fetch."
-            else
-              TRAIN_START="$FROM" TRAIN_END="$TO" \
-                python scripts/make_training_from_polygon.py
-
-              if [[ ! -s training_polygon_v1.csv ]]; then
-                echo "Fetcher did not create training_polygon_v1.csv"; exit 2
-              fi
-
-              mv -f training_polygon_v1.csv "$OUT"
-              echo "Wrote $(wc -l < "$OUT") lines to $OUT"
+            if [ ! -f training_polygon_v1.csv ]; then
+              echo "No training_polygon_v1.csv created"; exit 2
             fi
 
-            # Maintain/append to combined file (header only once)
-            if [[ ! -s "$COMBINED" ]]; then
-              cp "$OUT" "$COMBINED"
+            mv -f training_polygon_v1.csv "training/training_${LABEL}.csv"
+
+            if [ $FIRST -eq 1 ]; then
+              cp "training/training_${LABEL}.csv" "$COMBINED"
+              FIRST=0
             else
-              tail -n +2 "$OUT" >> "$COMBINED"
+              # append without header
+              tail -n +2 "training/training_${LABEL}.csv" >> "$COMBINED"
             fi
 
-            git add "$OUT" "$COMBINED"
+            git add "training/training_${LABEL}.csv" "$COMBINED"
             git commit -m "Add training chunk ${LABEL}" || true
-
-            # Push with rebase + backoff (handles concurrent pushes)
-            for i in 1 2 3; do
-              if git pull --rebase origin "$BRANCH" && git push origin HEAD:"$BRANCH"; then
-                echo "Pushed chunk ${LABEL}"
-                break
-              fi
-              echo "Push failed (attempt $i). Retrying after backoff..."
-              sleep $((5*i))
-            done
+            git push || true
 
             CUR="$(date -u -d "$CUR +1 month" +%Y-%m-01)"
           done
