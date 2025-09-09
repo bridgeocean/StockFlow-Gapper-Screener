@@ -3,76 +3,64 @@ name: Daily AI Score (Polygon)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "40 13 * * 1-5"  # ≈ 9:40am US/Eastern during DST
+    # 9:35am US/Eastern, Mon–Fri
+    - cron: '35 13 * * 1-5'
 
 jobs:
   score:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      TZ: America/New_York
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Has model?
-        id: has_model
-        shell: bash
-        run: |
-          if [ -f models/ai_score.joblib ]; then
-            echo "has_model=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_model=false" >> $GITHUB_OUTPUT
-          fi
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
-        if: steps.has_model.outputs.has_model == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install deps
-        if: steps.has_model.outputs.has_model == 'true'
         run: |
           python -m pip install --upgrade pip
-          pip install -U pandas numpy joblib requests pyarrow tenacity python-dateutil scikit-learn
+          pip install -U pandas numpy scikit-learn requests tenacity python-dateutil pyarrow joblib
 
-      - name: Build today's features (single day)
-        if: steps.has_model.outputs.has_model == 'true'
+      - name: Build today's scores
         env:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
-        shell: bash
         run: |
-          TODAY="$(date -u +%Y-%m-%d)"
-          echo "Building features for $TODAY"
-          TRAIN_START="$TODAY" TRAIN_END="$TODAY" \
-            python scripts/make_training_from_polygon.py
-          test -f training_polygon_v1.csv
+          set -euo pipefail
+          mkdir -p public
 
-      - name: Score and write JSON
-        if: steps.has_model.outputs.has_model == 'true'
-        run: |
-          python scripts/score_today_from_csv.py \
-            --csv training_polygon_v1.csv \
-            --model models/ai_score.joblib \
-            --out_json data/today_scores.json \
-            --top 50
+          # If your script writes to public directly, use this:
+          # python scripts/create_score_today_from_csv.py --model ai_score.joblib --out public/today_scores.json
 
-      - name: Upload today scores
-        if: steps.has_model.outputs.has_model == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: today-scores
-          path: data/today_scores.json
+          # If your existing script writes to data/today_scores.json, keep this block:
+          python scripts/create_score_today_from_csv.py
+          if [ -f data/today_scores.json ]; then
+            mv -f data/today_scores.json public/today_scores.json
+          fi
 
-      - name: Commit today scores
-        if: steps.has_model.outputs.has_model == 'true'
+          echo "Preview:"
+          head -c 600 public/today_scores.json || true
+          echo; echo "Public dir:"; ls -al public
+
+      - name: Commit today_scores.json
         run: |
           git config user.email "bot@github"
-          git config user.name "actions-bot"
-          git add data/today_scores.json || true
-          git commit -m "Add today_scores.json $(date -u +%F)" || echo "Nothing to commit"
+          git config user.name  "actions-bot"
+          git add public/today_scores.json
+          git commit -m "Update today_scores.json" || echo "Nothing to commit"
           git push || true
 
-      - name: No model yet — skipping
-        if: steps.has_model.outputs.has_model != 'true'
-        run: echo "Model not present; scoring skipped."
+      - name: Upload artifact (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: today_scores
+          path: public/today_scores.json
+          if-no-files-found: warn
