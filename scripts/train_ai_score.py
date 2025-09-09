@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 TRAIN_PATH_PRIMARY = Path("training_all.csv")
 MONTH_DIR = Path("training")
 
-# Canonical column names and their synonyms (all treated case-insensitively)
+# Canonical names (case-insensitive) and their synonyms
 SYN = {
     "gap_pct": {"gap_pct", "gappct", "gappctpoly", "gap_pctpoly", "gap_percent"},
     "rvol": {"rvol", "relvol", "relvolpoly", "rel_vol", "volume_ratio"},
@@ -26,6 +26,8 @@ SYN = {
     "date": {"date", "day"},
     "ticker": {"ticker", "symbol"},
 }
+
+NUM_CANONICAL = {"gap_pct", "rvol", "rsi14m", "change_open_pct"}
 
 def load_training_df() -> pd.DataFrame:
     if TRAIN_PATH_PRIMARY.exists():
@@ -43,34 +45,44 @@ def load_training_df() -> pd.DataFrame:
     print(f"Stitched {len(month_files)} month files → {df.shape}")
     return df
 
+def _collapse_duplicate_name(df: pd.DataFrame, name: str):
+    """Coalesce all columns with the same name into a single column (rowwise first non-null)."""
+    idxs = [i for i, c in enumerate(df.columns) if c == name]
+    if len(idxs) <= 1:
+        return
+    parts = [df.iloc[:, i] for i in idxs]
+    # Try numeric coalesce first, then fallback to string if all-NaN
+    parts_num = [pd.to_numeric(s, errors="coerce") for s in parts]
+    merged = pd.concat(parts_num, axis=1).bfill(axis=1).iloc[:, 0]
+    if merged.isna().all():
+        merged = pd.concat(parts, axis=1).bfill(axis=1).iloc[:, 0]
+    df.drop(columns=[name], inplace=True)  # drops all dups with that label
+    df[name] = merged
+
+def collapse_all_duplicate_names(df: pd.DataFrame):
+    """Find any duplicate-named columns and coalesce them."""
+    counts = pd.Series(df.columns).value_counts()
+    dups = counts[counts > 1].index.tolist()
+    for name in dups:
+        _collapse_duplicate_name(df, name)
+
 def find_candidates(cols, keyset):
-    """Return all present columns that match a synonym set."""
     return [c for c in cols if c in keyset]
 
 def resolve_canonical(df: pd.DataFrame, canonical: str) -> str | None:
     """
     Build a single canonical column by combining any synonyms present.
-    - For numeric features, we numeric-cast each candidate and bfill across them.
-    - For non-numeric (date/ticker), we just bfill across string candidates.
-    Drops other synonym columns afterward so we never keep duplicates.
+    Drops the synonym columns afterward so only the canonical remains.
     """
-    cols_lc = [c.strip().lower() for c in df.columns]
-    df.columns = cols_lc  # normalize in-place
-
     keys = SYN[canonical]
     cands = find_candidates(set(df.columns), keys | {canonical})
     if not cands:
         return None
 
-    # Keep order stable but deduplicate
-    cands = list(dict.fromkeys(cands))
-
-    # Numeric vs non-numeric canonical
-    is_numeric = canonical in {"gap_pct", "rvol", "rsi14m", "change_open_pct"}
-
+    is_numeric = canonical in NUM_CANONICAL
     parts = []
     for c in cands:
-        s = df[c]
+        s = df[c]  # guaranteed Series now (duplicate names were coalesced)
         if is_numeric:
             s = pd.to_numeric(s, errors="coerce")
         parts.append(s)
@@ -78,7 +90,6 @@ def resolve_canonical(df: pd.DataFrame, canonical: str) -> str | None:
     merged = pd.concat(parts, axis=1).bfill(axis=1).iloc[:, 0]
     df[canonical] = merged
 
-    # Drop all non-canonical duplicates to avoid future DataFrame indexing
     to_drop = [c for c in cands if c != canonical]
     if to_drop:
         df.drop(columns=to_drop, inplace=True, errors="ignore")
@@ -91,6 +102,10 @@ def main():
     if df.empty:
         print("Empty training set.")
         sys.exit(0)
+
+    # Normalize headers then fix duplicate names once globally
+    df.columns = [c.strip().lower() for c in df.columns]
+    collapse_all_duplicate_names(df)
 
     # Resolve all canonicals
     c_gap = resolve_canonical(df, "gap_pct")
@@ -112,16 +127,15 @@ def main():
     use_cols = [c for c in [c_date, c_tic, c_gap, c_rvol, c_rsi, c_y] if c]
     df = df[use_cols].copy()
 
-    # Cast numerics (safe: now each is a single Series, not a duplicate-named frame)
+    # Cast numerics (now these are single Series)
     for col in [c_gap, c_rvol, c_rsi, c_y]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # Clip outliers
     df[c_gap] = df[c_gap].clip(-40, 40)
     df[c_rvol] = df[c_rvol].clip(0, 15)
-    df[c_rsi] = df[c_rsi].clip(0, 100)
+    df[c_rsi]  = df[c_rsi].clip(0, 100)
 
-    # Drop incomplete rows
     df = df.dropna(subset=[c_gap, c_rvol, c_rsi, c_y]).reset_index(drop=True)
     if df.empty:
         print("All rows dropped after NA filtering.")
@@ -138,8 +152,8 @@ def main():
     n = len(df)
     cut = int(n * 0.8)
     X_cols = [c_gap, c_rvol, c_rsi]
-
     y_series = (df[c_y] > 0.0).astype(int)
+
     X_train, y_train = df.loc[: cut - 1, X_cols], y_series.iloc[:cut]
     X_test,  y_test  = df.loc[cut:, X_cols],    y_series.iloc[cut:]
 
