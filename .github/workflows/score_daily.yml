@@ -1,19 +1,19 @@
 name: Daily AI Score (Polygon)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
+  # premarket on weekdays (adjust if you like)
   schedule:
-    # 9:35am US/Eastern, Mon–Fri
-    - cron: '35 13 * * 1-5'
+    - cron: "30 12 * * 1-5"   # 12:30 UTC ≈ 08:30 ET
+
+permissions:
+  contents: write
 
 jobs:
   score:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     env:
-      TZ: America/New_York
-
+      TZ: UTC
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,39 +28,38 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -U pandas numpy scikit-learn requests tenacity python-dateutil pyarrow joblib
+          pip install -U pandas numpy requests python-dateutil tenacity scikit-learn joblib
 
-      - name: Build today's scores
+      # Use whichever script you created. If you have both, prefer score_today.py.
+      - name: Build today_scores.json
         env:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
         run: |
           set -euo pipefail
-          mkdir -p public
-
-          # If your script writes to public directly, use this:
-          # python scripts/create_score_today_from_csv.py --model ai_score.joblib --out public/today_scores.json
-
-          # If your existing script writes to data/today_scores.json, keep this block:
-          python scripts/create_score_today_from_csv.py
-          if [ -f data/today_scores.json ]; then
-            mv -f data/today_scores.json public/today_scores.json
+          if [ -f scripts/score_today.py ]; then
+            python scripts/score_today.py --out public/today_scores.json
+          else
+            python scripts/create_score_today_from_csv.py --out public/today_scores.json
           fi
+          echo "== ls public =="
+          ls -lh public || true
+          echo "== preview =="
+          head -c 400 public/today_scores.json || true
+          echo
 
-          echo "Preview:"
-          head -c 600 public/today_scores.json || true
-          echo; echo "Public dir:"; ls -al public
-
-      - name: Commit today_scores.json
+      - name: Commit JSON (trigger Vercel deploy)
         run: |
+          set -euo pipefail
           git config user.email "bot@github"
           git config user.name  "actions-bot"
-          git add public/today_scores.json
-          git commit -m "Update today_scores.json" || echo "Nothing to commit"
+          git add -A public/today_scores.json
+          git commit -m "chore: update today_scores.json" || echo "Nothing to commit"
+          git pull --rebase origin main || true
           git push || true
 
-      - name: Upload artifact (optional)
+      - name: Upload JSON as artifact
         uses: actions/upload-artifact@v4
         with:
           name: today_scores
           path: public/today_scores.json
-          if-no-files-found: warn
+          if-no-files-found: error
