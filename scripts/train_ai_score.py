@@ -27,25 +27,15 @@ SYN = {
     "ticker": {"ticker","symbol"},
 }
 
-def pick(cols, key):
-    want = SYN[key]
-    for c in cols:
-        if c in want:
-            return c
-    return None
-
 def _read_csv_lower(path):
     df = pd.read_csv(path)
     df.columns = [c.strip().lower() for c in df.columns]
     return df
 
 def _valid_basic(df):
-    if df is None or df.empty: return False
-    if df.shape[1] == 1: return False
-    return True
+    return df is not None and not df.empty and df.shape[1] > 1
 
 def load_training_df():
-    # Try training_all.csv
     df = None
     if TRAIN_PATH.exists():
         try:
@@ -82,14 +72,28 @@ def clean_to_numeric(series: pd.Series) -> pd.Series:
     """Robust string→number cleaner: strips %, commas, spaces, unicode minus."""
     s = series.astype(str)
     s = s.str.strip()
-    # Map obvious empties to NaN
     s = s.replace({"": np.nan, "nan": np.nan, "None": np.nan, "null": np.nan})
-    # Remove percent signs, commas, spaces
     s = s.str.replace(r"[,%\s]", "", regex=True)
-    # Replace unicode minus (−) with hyphen-minus (-)
     s = s.str.replace("−", "-", regex=False)
-    # Convert
     return pd.to_numeric(s, errors="coerce")
+
+def choose_best(df: pd.DataFrame, keyset: set, prefer_nonnull_in: str | None):
+    """Pick the column in keyset with highest overlap with prefer_nonnull_in (label).
+       Returns (best_col, debug_list)."""
+    candidates = [c for c in df.columns if c in keyset]
+    if not candidates:
+        return None, []
+    rows = []
+    for c in candidates:
+        total = df[c].notna().sum()
+        if prefer_nonnull_in and prefer_nonnull_in in df.columns:
+            overlap = df.loc[df[prefer_nonnull_in].notna(), c].notna().sum()
+        else:
+            overlap = total
+        rows.append((overlap, total, c))
+    # sort by overlap, then by total
+    rows.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    return rows[0][2], rows
 
 def main():
     df = load_training_df()
@@ -97,78 +101,94 @@ def main():
         print("Empty training set.")
         sys.exit(1)
 
-    cols = set(df.columns)
-    c_gap = pick(cols,"gap_pct")
-    c_rvol= pick(cols,"rvol")
-    c_rsi = pick(cols,"rsi14m")
-    c_y   = pick(cols,"change_open_pct")
-    c_date= pick(cols,"date")
-    c_tic = pick(cols,"ticker")
-
-    print("Selected columns →",
-          {"gap": c_gap, "rvol": c_rvol, "rsi": c_rsi, "label": c_y, "date": c_date, "ticker": c_tic})
-
-    req = [("gap", c_gap), ("rvol", c_rvol), ("rsi", c_rsi), ("label", c_y)]
-    if any(v is None for _, v in req):
-        print("Missing required columns. Available:", list(df.columns))
+    # --- choose label first (column with most non-null) ---
+    c_y, y_dbg = choose_best(df, SYN["change_open_pct"], prefer_nonnull_in=None)
+    print("Label candidates:", y_dbg)
+    if c_y is None:
+        print("No label column found among", SYN["change_open_pct"])
         sys.exit(1)
 
-    use_cols = [c for c in [c_date,c_tic,c_gap,c_rvol,c_rsi,c_y] if c]
+    # --- choose features maximizing overlap with label rows ---
+    c_gap, gap_dbg = choose_best(df, SYN["gap_pct"], prefer_nonnull_in=c_y)
+    c_rvol, rvol_dbg = choose_best(df, SYN["rvol"], prefer_nonnull_in=c_y)
+    c_rsi,  rsi_dbg  = choose_best(df, SYN["rsi14m"], prefer_nonnull_in=c_y)
+
+    # optional date/ticker for sorting/diagnostics
+    c_date = next((c for c in df.columns if c in SYN["date"]), None)
+    c_tic  = next((c for c in df.columns if c in SYN["ticker"]), None)
+
+    print("Selected →", {"gap": c_gap, "rvol": c_rvol, "rsi": c_rsi, "label": c_y, "date": c_date, "ticker": c_tic})
+    print("Debug overlap (gap):", gap_dbg)
+    print("Debug overlap (rvol):", rvol_dbg)
+    print("Debug overlap (rsi) :", rsi_dbg)
+
+    required = [("gap", c_gap), ("rvol", c_rvol), ("rsi", c_rsi), ("label", c_y)]
+    if any(v is None for _, v in required):
+        print("Missing at least one required concept. Have columns:", list(df.columns))
+        sys.exit(1)
+
+    use_cols = [c for c in [c_date, c_tic, c_gap, c_rvol, c_rsi, c_y] if c]
     df = df[use_cols].copy()
 
-    # Before-clean counts
-    print("Non-null BEFORE cleaning:")
-    for name, col in [("gap",c_gap),("rvol",c_rvol),("rsi",c_rsi),("label",c_y)]:
+    # Show non-null counts overall
+    print("Non-null BEFORE cleaning (overall):")
+    for name, col in [("gap", c_gap), ("rvol", c_rvol), ("rsi", c_rsi), ("label", c_y)]:
         print(f"  {name:>5}: {df[col].notna().sum()} / {len(df)}")
 
-    # Clean → numeric
+    # Clean to numeric
     for col in [c_gap, c_rvol, c_rsi, c_y]:
         df[col] = clean_to_numeric(df[col])
 
-    # After-clean counts
-    print("Non-null AFTER cleaning:")
-    empty_any = False
-    for name, col in [("gap",c_gap),("rvol",c_rvol),("rsi",c_rsi),("label",c_y)]:
+    print("Non-null AFTER cleaning (overall):")
+    for name, col in [("gap", c_gap), ("rvol", c_rvol), ("rsi", c_rsi), ("label", c_y)]:
         nn = df[col].notna().sum()
-        print(f"  {name:>5}: {nn} / {len(df)}  dtype={df[col].dtype}")
-        if nn == 0:
-            print(f"ERROR: Column '{col}' has 0 valid numeric values after cleaning.")
-            empty_any = True
-    if empty_any:
-        print("Aborting because at least one required column is entirely empty after cleaning.")
+        print(f"  {name:>5}: {nn} / {len(df)} dtype={df[col].dtype}")
+
+    # focus on rows where label is present
+    labeled = df[df[c_y].notna()].copy()
+    print(f"Labeled rows after cleaning: {len(labeled)}")
+
+    if labeled.empty:
+        print("No rows with label available after cleaning. Cannot train.")
         sys.exit(1)
 
-    # sanity clips
-    df[c_gap] = df[c_gap].clip(-40, 40)
-    df[c_rvol]= df[c_rvol].clip(0, 15)
-    df[c_rsi] = df[c_rsi].clip(0, 100)
+    # Show feature coverage *within* labeled rows
+    print("Within labeled rows (non-null counts):")
+    for name, col in [("gap", c_gap), ("rvol", c_rvol), ("rsi", c_rsi)]:
+        print(f"  {name:>5}: {labeled[col].notna().sum()} / {len(labeled)}")
 
-    # Final NA drop on features+label
-    before = len(df)
-    df = df.dropna(subset=[c_gap,c_rvol,c_rsi,c_y]).reset_index(drop=True)
-    after = len(df)
-    print(f"Dropped {before-after} rows with NA in required columns; remaining {after} rows.")
-    if df.empty:
-        print("All rows dropped after NA filtering (even after cleaning).")
+    # Clip and final dropna (only within labeled set)
+    labeled[c_gap] = labeled[c_gap].clip(-40, 40)
+    labeled[c_rvol]= labeled[c_rvol].clip(0, 15)
+    labeled[c_rsi] = labeled[c_rsi].clip(0, 100)
+
+    before = len(labeled)
+    labeled = labeled.dropna(subset=[c_gap, c_rvol, c_rsi, c_y]).reset_index(drop=True)
+    after = len(labeled)
+    print(f"Dropped {before-after} labeled rows with NA in features; remaining {after} rows.")
+
+    if labeled.empty:
+        print("Still no usable rows where label and all features overlap.")
         sys.exit(1)
 
-    # time sort (optional)
-    if c_date and pd.api.types.is_string_dtype(df[c_date]):
+    # Optional time sort
+    if c_date and pd.api.types.is_string_dtype(labeled[c_date]):
         try:
-            df[c_date] = pd.to_datetime(df[c_date])
-            df = df.sort_values(c_date).reset_index(drop=True)
+            labeled[c_date] = pd.to_datetime(labeled[c_date])
+            labeled = labeled.sort_values(c_date).reset_index(drop=True)
         except Exception as e:
             print("Date parse warning:", e)
 
-    n = len(df)
-    cut = int(n*0.8)
-    X_cols = [c_gap,c_rvol,c_rsi]
-    X_train, y_train = df.loc[:cut-1, X_cols], (df.loc[:cut-1, c_y] > 0.0).astype(int)
-    X_test,  y_test  = df.loc[cut:,   X_cols], (df.loc[cut:,   c_y] > 0.0).astype(int)
+    # Train/test split
+    n = len(labeled)
+    cut = int(n * 0.8)
+    X_cols = [c_gap, c_rvol, c_rsi]
+    X_train, y_train = labeled.loc[:cut-1, X_cols], (labeled.loc[:cut-1, c_y] > 0.0).astype(int)
+    X_test,  y_test  = labeled.loc[cut:,   X_cols], (labeled.loc[cut:,   c_y] > 0.0).astype(int)
 
     pipe = Pipeline([
         ("scaler", StandardScaler()),
-        ("clf", LogisticRegression(max_iter=200))
+        ("clf", LogisticRegression(max_iter=200)),
     ])
     pipe.fit(X_train, y_train)
 
