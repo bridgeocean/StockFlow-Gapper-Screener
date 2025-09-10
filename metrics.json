@@ -1,0 +1,18 @@
+{
+  "n_rows": 1168,
+  "features": [
+    "gap_pct",
+    "rvol",
+    "rsi14m"
+  ],
+  "label_column": "change_open_pct",
+  "positive_def": "change_open_pct > 0.0",
+  "train": {
+    "roc_auc": 0.9997591254400593,
+    "pr_auc": 0.9998039011351861
+  },
+  "test": {
+    "roc_auc": 0.999707773232028,
+    "pr_auc": 0.9997077732320282
+  }
+}
