@@ -1,129 +1,117 @@
-// app/public-dashboard/page.tsx
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import * as React from 'react';
 
-type Row = {
+type ScoreRow = {
   ticker: string;
-  price?: number | null;
-  gap_pct: number;
-  rvol: number;
-  rsi14m: number;
-  ai_score: number;
+  date?: string;
+  gap_pct?: number;
+  rvol?: number;
+  rsi14m?: number;
+  score?: number;
+  price?: number;
 };
 
-export default function PublicDashboard() {
-  const [data, setData] = useState<Row[]>([]);
-  const [q, setQ] = useState("");
-  const [minScore, setMinScore] = useState<number | "">("");
-  const [minPrice, setMinPrice] = useState<number | "">("");
-  const [maxPrice, setMaxPrice] = useState<number | "">("");
+type TodayScores = {
+  generatedAt: string | null;
+  scores: ScoreRow[];
+};
 
-  useEffect(() => {
-    fetch("/today_scores.json", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((rows: Row[]) => setData(rows))
-      .catch((e) => {
-        console.error("Failed to load /today_scores.json", e);
-        setData([]);
-      });
+export default function PublicDashboardPage() {
+  const [data, setData] = React.useState<TodayScores | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const r = await fetch('/api/today-scores', { cache: 'no-store' });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const json = (await r.json()) as TodayScores;
+        if (!cancelled) setData(json);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message || 'Failed to load');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    // Optional auto-refresh every 60s
+    const id = setInterval(load, 60_000);
+    return () => { cancelled = true; clearInterval(id); };
   }, []);
 
-  const filtered = useMemo(() => {
-    return (data || [])
-      .filter((r) =>
-        q ? r.ticker.toUpperCase().includes(q.trim().toUpperCase()) : true
-      )
-      .filter((r) =>
-        minScore !== "" ? r.ai_score >= Number(minScore) : true
-      )
-      .filter((r) =>
-        minPrice !== "" && r.price != null ? r.price >= Number(minPrice) : true
-      )
-      .filter((r) =>
-        maxPrice !== "" && r.price != null ? r.price <= Number(maxPrice) : true
-      );
-  }, [data, q, minScore, minPrice, maxPrice]);
+  const rows = data?.scores ?? [];
 
   return (
-    <main className="mx-auto max-w-7xl p-6">
-      <h1 className="text-2xl font-bold mb-4">Premarket AI Scores</h1>
-
-      <div className="flex flex-wrap gap-3 mb-4">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Filter by ticker (e.g., AAPL)"
-          className="border rounded px-3 py-2"
-        />
-        <input
-          value={minScore}
-          onChange={(e) => setMinScore(e.target.value === "" ? "" : Number(e.target.value))}
-          placeholder="Min AI score (0..1)"
-          className="border rounded px-3 py-2"
-          type="number"
-          step="0.01"
-          min={0}
-          max={1}
-        />
-        <input
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value === "" ? "" : Number(e.target.value))}
-          placeholder="Min price"
-          className="border rounded px-3 py-2"
-          type="number"
-          step="0.01"
-        />
-        <input
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value === "" ? "" : Number(e.target.value))}
-          placeholder="Max price"
-          className="border rounded px-3 py-2"
-          type="number"
-          step="0.01"
-        />
-      </div>
-
-      <div className="overflow-auto border rounded">
-        <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left p-2">Ticker</th>
-              <th className="text-right p-2">Price</th>
-              <th className="text-right p-2">Gap %</th>
-              <th className="text-right p-2">RelVol</th>
-              <th className="text-right p-2">RSI(14m)</th>
-              <th className="text-right p-2">AI Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td className="p-3 text-gray-500" colSpan={6}>
-                  {data.length === 0
-                    ? "No data yet — run the Daily AI Score workflow (or check the scheduled run)."
-                    : "No rows match your filters."}
-                </td>
-              </tr>
-            ) : (
-              filtered.map((r) => (
-                <tr key={r.ticker} className="border-t">
-                  <td className="p-2 font-semibold">{r.ticker}</td>
-                  <td className="p-2 text-right">{r.price ?? "-"}</td>
-                  <td className="p-2 text-right">{r.gap_pct.toFixed(2)}</td>
-                  <td className="p-2 text-right">{r.rvol.toFixed(2)}</td>
-                  <td className="p-2 text-right">{r.rsi14m.toFixed(1)}</td>
-                  <td className="p-2 text-right">{r.ai_score.toFixed(3)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="text-xs text-gray-500 mt-3">
-        Tip: set Min price = 1 and Max price = 5 to focus on your $1–$5 universe.
+    <main style={{ maxWidth: 1000, margin: '40px auto', padding: '0 16px' }}>
+      <h1 style={{ marginBottom: 6 }}>Public Gap Dashboard</h1>
+      <p style={{ color: '#666', marginTop: 0 }}>
+        {data?.generatedAt
+          ? `Last updated: ${new Date(data.generatedAt).toLocaleString()}`
+          : `Waiting for today's scores…`}
       </p>
+
+      {loading && <p>Loading…</p>}
+      {error && <p style={{ color: 'crimson' }}>Error: {error}</p>}
+
+      {!loading && rows.length === 0 && !error && (
+        <div style={{ padding: 12, background: '#fafafa', border: '1px solid #eee', borderRadius: 8 }}>
+          <p>No scores yet. Make sure your “Daily AI Score (Polygon)” workflow ran and pushed
+            <code style={{ marginLeft: 6, marginRight: 6 }}>public/today_scores.json</code> to <code>main</code>.
+          </p>
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <Th>#</Th>
+                <Th>Ticker</Th>
+                <Th>AI Score</Th>
+                <Th>Gap %</Th>
+                <Th>RelVol</Th>
+                <Th>RSI(14m)</Th>
+                <Th>Price</Th>
+                <Th>Date</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={r.ticker + i} style={{ borderTop: '1px solid #eee' }}>
+                  <Td>{i + 1}</Td>
+                  <Td><strong>{r.ticker}</strong></Td>
+                  <Td>{fmt(r.score)}</Td>
+                  <Td>{fmtPct(r.gap_pct)}</Td>
+                  <Td>{fmt(r.rvol)}</Td>
+                  <Td>{fmt(r.rsi14m)}</Td>
+                  <Td>{fmt(r.price)}</Td>
+                  <Td>{r.date ? new Date(r.date).toLocaleDateString() : ''}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid #ddd' }}>{children}</th>;
+}
+function Td({ children }: { children: React.ReactNode }) {
+  return <td style={{ padding: '8px 6px' }}>{children}</td>;
+}
+
+function fmt(x: any) {
+  return typeof x === 'number' && isFinite(x) ? x.toFixed(3) : '';
+}
+function fmtPct(x: any) {
+  return typeof x === 'number' && isFinite(x) ? (x * 100).toFixed(2) + '%' : '';
 }
