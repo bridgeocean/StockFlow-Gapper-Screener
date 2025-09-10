@@ -1,8 +1,7 @@
-# .github/workflows/train_model.yml
 name: Train AI Score — Model
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
   train:
@@ -24,24 +23,49 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -U pandas numpy scikit-learn joblib
+          pip install -U pandas numpy scikit-learn joblib pyarrow
 
+      # <<< IMPORTANT: stitch REAL CSV data, not file names >>>
       - name: Stitch monthly CSVs → training_all.csv
+        shell: bash
         run: |
-          set -euo pipefail
-          if ls training/training_*.csv 1>/dev/null 2>&1; then
-            head -n1 training/training_*.csv | head -n1 > training_all.csv
-            for f in training/training_*.csv; do
-              tail -n +2 "$f" >> training_all.csv
-            done
-            echo "Built training_all.csv"
-          else
-            if [ -f training_all.csv ]; then
-              echo "Using existing training_all.csv"
-            else
-              echo "No training CSVs found."; exit 1
-            fi
-          fi
+          python - << 'PY'
+          import glob, sys
+          import pandas as pd
+
+          files = sorted(glob.glob("training/*.csv"))
+          if not files:
+            print("No monthly CSVs found in training/*.csv; nothing to stitch.")
+            sys.exit(1)
+
+          dfs = []
+          for f in files:
+            df = pd.read_csv(f)
+            # normalize column names
+            df.columns = [c.strip().lower() for c in df.columns]
+            dfs.append(df)
+
+          big = pd.concat(dfs, ignore_index=True)
+
+          # keep only columns we know about if they exist
+          want = [
+            "date", "ticker",
+            "gap_pct", "gappct", "gappctpoly", "gap_pctpoly", "gap_percent",
+            "rvol", "relvol", "relvolpoly", "rel_vol", "volume_ratio",
+            "rsi14m", "rsi_14m", "rsi_14", "rsi",
+            "change_open_pct", "changeopenpct", "perf_10m_pct", "open_to_10m_pct",
+            "open_to_15m_pct", "perf10m_pct", "perf15m_pct", "change_o", "changeopen"
+          ]
+          have = [c for c in big.columns if c in want]
+          if not have:
+            print("Stitched file has no known columns. Columns were:", list(big.columns))
+            sys.exit(1)
+
+          # write clean stitched file
+          big.to_csv("training_all.csv", index=False)
+          print("Wrote training_all.csv:", big.shape)
+          print("Columns:", list(big.columns))
+          PY
 
       - name: Train model
         run: |
@@ -50,16 +74,16 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: model
+          name: ai-model
           path: |
-            models/ai_score.joblib
+            ai_score.joblib
             metrics.json
-          if-no-files-found: error
 
       - name: Commit model to repo
         run: |
+          set -e
           git config user.email "bot@github"
           git config user.name  "actions-bot"
-          git add models/ai_score.joblib metrics.json
-          git commit -m "Update ai_score model and metrics" || true
+          git add ai_score.joblib metrics.json training_all.csv
+          git commit -m "Update AI model & metrics" || echo "Nothing to commit"
           git push || true
