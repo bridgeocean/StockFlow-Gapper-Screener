@@ -13,7 +13,7 @@ import joblib
 TRAIN_PATH = Path("training_all.csv")
 MONTH_DIR  = Path("training")
 
-# Column synonyms (everything lowercased)
+# Column synonyms (lowercase)
 SYN = {
     "gap_pct": {"gap_pct","gappct","gappctpoly","gap_pctpoly","gap_percent"},
     "rvol": {"rvol","relvol","relvolpoly","rel_vol","volume_ratio"},
@@ -34,24 +34,18 @@ def pick(cols, key):
             return c
     return None
 
-def _valid_df(df):
-    if df is None or df.empty:
-        return False
-    if df.shape[1] == 1:
-        # A single column is a tell-tale sign of a broken "stitched" file
-        return False
-    cols = set(df.columns)
-    need_any = pick(cols,"gap_pct") and pick(cols,"rvol") and pick(cols,"rsi14m")
-    y_ok    = pick(cols,"change_open_pct") is not None
-    return bool(need_any and y_ok)
-
 def _read_csv_lower(path):
     df = pd.read_csv(path)
     df.columns = [c.strip().lower() for c in df.columns]
     return df
 
+def _valid_basic(df):
+    if df is None or df.empty: return False
+    if df.shape[1] == 1: return False
+    return True
+
 def load_training_df():
-    # 1) Try training_all.csv first
+    # Try training_all.csv
     df = None
     if TRAIN_PATH.exists():
         try:
@@ -60,11 +54,11 @@ def load_training_df():
         except Exception as e:
             print("Failed to read training_all.csv:", e)
 
-    if not _valid_df(df):
-        print("training_all.csv invalid or missing features; falling back to stitches from training/*.csv")
+    if not _valid_basic(df):
+        print("training_all.csv invalid; falling back to training/*.csv")
         files = sorted(glob.glob(str(MONTH_DIR / "training_*.csv")))
         if not files:
-            print("No monthly files found in training/*.csv. Cannot train.")
+            print("No monthly files found; cannot train.")
             sys.exit(1)
 
         dfs = []
@@ -75,13 +69,27 @@ def load_training_df():
             except Exception as e:
                 print(f"Skip unreadable {f}: {e}")
         if not dfs:
-            print("No readable monthly CSVs. Cannot train.")
+            print("No readable monthly CSVs; cannot train.")
             sys.exit(1)
 
         df = pd.concat(dfs, ignore_index=True)
         print("Stitched in-memory from monthlies:", df.shape)
 
+    print("Columns in dataset:", list(df.columns))
     return df
+
+def clean_to_numeric(series: pd.Series) -> pd.Series:
+    """Robust string→number cleaner: strips %, commas, spaces, unicode minus."""
+    s = series.astype(str)
+    s = s.str.strip()
+    # Map obvious empties to NaN
+    s = s.replace({"": np.nan, "nan": np.nan, "None": np.nan, "null": np.nan})
+    # Remove percent signs, commas, spaces
+    s = s.str.replace(r"[,%\s]", "", regex=True)
+    # Replace unicode minus (−) with hyphen-minus (-)
+    s = s.str.replace("−", "-", regex=False)
+    # Convert
+    return pd.to_numeric(s, errors="coerce")
 
 def main():
     df = load_training_df()
@@ -97,34 +105,60 @@ def main():
     c_date= pick(cols,"date")
     c_tic = pick(cols,"ticker")
 
-    if not all([c_gap, c_rvol, c_rsi, c_y]):
-        print("Missing required feature/label columns. Columns were:", list(df.columns))
+    print("Selected columns →",
+          {"gap": c_gap, "rvol": c_rvol, "rsi": c_rsi, "label": c_y, "date": c_date, "ticker": c_tic})
+
+    req = [("gap", c_gap), ("rvol", c_rvol), ("rsi", c_rsi), ("label", c_y)]
+    if any(v is None for _, v in req):
+        print("Missing required columns. Available:", list(df.columns))
         sys.exit(1)
 
     use_cols = [c for c in [c_date,c_tic,c_gap,c_rvol,c_rsi,c_y] if c]
     df = df[use_cols].copy()
 
-    # coerce numerics
-    for c in [c_gap,c_rvol,c_rsi,c_y]:
-        df[c] = pd.to_numeric(df[c], errors="coerce")
+    # Before-clean counts
+    print("Non-null BEFORE cleaning:")
+    for name, col in [("gap",c_gap),("rvol",c_rvol),("rsi",c_rsi),("label",c_y)]:
+        print(f"  {name:>5}: {df[col].notna().sum()} / {len(df)}")
 
-    # sanity limits
+    # Clean → numeric
+    for col in [c_gap, c_rvol, c_rsi, c_y]:
+        df[col] = clean_to_numeric(df[col])
+
+    # After-clean counts
+    print("Non-null AFTER cleaning:")
+    empty_any = False
+    for name, col in [("gap",c_gap),("rvol",c_rvol),("rsi",c_rsi),("label",c_y)]:
+        nn = df[col].notna().sum()
+        print(f"  {name:>5}: {nn} / {len(df)}  dtype={df[col].dtype}")
+        if nn == 0:
+            print(f"ERROR: Column '{col}' has 0 valid numeric values after cleaning.")
+            empty_any = True
+    if empty_any:
+        print("Aborting because at least one required column is entirely empty after cleaning.")
+        sys.exit(1)
+
+    # sanity clips
     df[c_gap] = df[c_gap].clip(-40, 40)
     df[c_rvol]= df[c_rvol].clip(0, 15)
     df[c_rsi] = df[c_rsi].clip(0, 100)
 
+    # Final NA drop on features+label
+    before = len(df)
     df = df.dropna(subset=[c_gap,c_rvol,c_rsi,c_y]).reset_index(drop=True)
+    after = len(df)
+    print(f"Dropped {before-after} rows with NA in required columns; remaining {after} rows.")
     if df.empty:
-        print("All rows dropped after NA filtering.")
+        print("All rows dropped after NA filtering (even after cleaning).")
         sys.exit(1)
 
-    # time-based split if date exists
+    # time sort (optional)
     if c_date and pd.api.types.is_string_dtype(df[c_date]):
         try:
             df[c_date] = pd.to_datetime(df[c_date])
             df = df.sort_values(c_date).reset_index(drop=True)
-        except Exception:
-            pass
+        except Exception as e:
+            print("Date parse warning:", e)
 
     n = len(df)
     cut = int(n*0.8)
