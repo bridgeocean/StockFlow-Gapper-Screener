@@ -2,9 +2,9 @@ name: Daily AI Score (Polygon)
 
 on:
   workflow_dispatch: {}
-  # premarket on weekdays (adjust if you like)
+  # Premarket weekdays (adjust to your preference)
   schedule:
-    - cron: "30 12 * * 1-5"   # 12:30 UTC ≈ 08:30 ET
+    - cron: "30 12 * * 1-5"  # 12:30 UTC ≈ 08:30 ET
 
 permissions:
   contents: write
@@ -28,23 +28,144 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -U pandas numpy requests python-dateutil tenacity scikit-learn joblib
+          pip install -U pandas numpy joblib scikit-learn python-dateutil
 
-      # Use whichever script you created. If you have both, prefer score_today.py.
       - name: Build today_scores.json
         env:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
         run: |
           set -euo pipefail
-          if [ -f scripts/score_today.py ]; then
-            python scripts/score_today.py --out public/today_scores.json
-          else
-            python scripts/create_score_today_from_csv.py --out public/today_scores.json
-          fi
+          mkdir -p public
+
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          import pandas as pd
+          import numpy as np
+
+          # ---- Locate training data ----
+          P_ALL = Path("training/all_months.csv")
+          P_PRIMARY = Path("training_all.csv")
+          month_files = sorted(Path("training").glob("training_*.csv"))
+
+          if P_ALL.exists():
+              df = pd.read_csv(P_ALL)
+              src = str(P_ALL)
+          elif P_PRIMARY.exists():
+              df = pd.read_csv(P_PRIMARY)
+              src = str(P_PRIMARY)
+          elif month_files:
+              df = pd.concat([pd.read_csv(p) for p in month_files], ignore_index=True)
+              src = "training/training_*.csv"
+          else:
+              raise SystemExit("No training CSVs found (training/all_months.csv, training_all.csv, or training/training_*.csv).")
+
+          print(f"Loaded training data from {src}: {df.shape}")
+
+          # ---- Normalize headers & resolve synonyms ----
+          df.columns = [c.strip().lower() for c in df.columns]
+
+          SYN = {
+              "gap_pct": {"gap_pct","gappct","gappctpoly","gap_pctpoly","gap_percent","gappct_poly"},
+              "rvol": {"rvol","relvol","relvolpoly","rel_vol","volume_ratio","relvol_poly"},
+              "rsi14m": {"rsi14m","rsi_14m","rsi_14","rsi"},
+              "date": {"date","day"},
+              "ticker": {"ticker","symbol"},
+          }
+
+          def resolve(cols, key):
+              for c in cols:
+                  if c in SYN[key]: return c
+              return None
+
+          cols = set(df.columns)
+          c_gap   = resolve(cols, "gap_pct")
+          c_rvol  = resolve(cols, "rvol")
+          c_rsi   = resolve(cols, "rsi14m")
+          c_date  = resolve(cols, "date")
+          c_tick  = resolve(cols, "ticker")
+
+          needed = [c_gap, c_rvol, c_rsi, c_date, c_tick]
+          if any(x is None for x in needed):
+              raise SystemExit(f"Missing required columns. Have: {df.columns.tolist()}")
+
+          # ---- Coerce types & pick latest day ----
+          for c in [c_gap, c_rvol, c_rsi]:
+              df[c] = pd.to_numeric(df[c], errors="coerce")
+
+          df[c_date] = pd.to_datetime(df[c_date], errors="coerce")
+          df = df.dropna(subset=[c_gap, c_rvol, c_rsi, c_date, c_tick]).reset_index(drop=True)
+          if df.empty:
+              raise SystemExit("All rows dropped after cleaning.")
+
+          last_day = df[c_date].max()
+          d = df[df[c_date] == last_day].copy()
+          if d.empty:
+              # If timestamps include intraday, fallback to same calendar date
+              d = df[df[c_date].dt.date == last_day.date()].copy()
+
+          if d.empty:
+              raise SystemExit("No rows for most recent date.")
+
+          # ---- Score: model if available, else fallback rule ----
+          scores = None
+          try:
+              from joblib import load
+              model_path = Path("models/ai_score.joblib")
+              if model_path.exists():
+                  model = load(model_path)
+                  X = d[[c_gap, c_rvol, c_rsi]].to_numpy()
+                  try:
+                      scores = model.predict_proba(X)[:,1]
+                  except Exception:
+                      z = model.decision_function(X)
+                      # logistic squashing to [0,1]
+                      scores = 1.0/(1.0+np.exp(-z))
+                  print("Scored with trained model.")
+              else:
+                  print("No models/ai_score.joblib; using rules fallback.")
+          except Exception as e:
+              print(f"Model load failed ({e}); using rules fallback.")
+
+          if scores is None:
+              # Heuristic rules -> 0..1
+              gap = np.clip(d[c_gap].to_numpy(), -20, 20) / 20.0
+              rvol = np.clip(d[c_rvol].to_numpy(), 0, 10) / 3.0
+              rsi = (np.clip(d[c_rsi].to_numpy(), 0, 100) - 50.0) / 50.0
+              raw = 0.55*gap + 0.30*np.sqrt(np.clip(rvol,0,10)) + 0.15*rsi
+              scores = (raw - raw.min()) / (raw.max() - raw.min() + 1e-9)
+
+          d["score"] = scores
+          d = d.sort_values("score", ascending=False).reset_index(drop=True)
+
+          # ---- Compose JSON ----
+          payload = {
+              "generated_utc": pd.Timestamp.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "asof_date_utc": pd.Timestamp(last_day).strftime("%Y-%m-%d"),
+              "universe": int(d[c_tick].nunique()),
+              "rows": [
+                  {
+                      "rank": int(i+1),
+                      "ticker": str(row[c_tick]),
+                      "date": pd.Timestamp(row[c_date]).strftime("%Y-%m-%d"),
+                      "gap_pct": float(row[c_gap]),
+                      "rsi14m": float(row[c_rsi]),
+                      "rvol": float(row[c_rvol]),
+                      "score": float(row["score"]),
+                  }
+                  for i, row in d.iterrows()
+              ]
+          }
+
+          out = Path("public/today_scores.json")
+          out.write_text(json.dumps(payload, indent=2))
+          print(f"Wrote {out} with {len(payload['rows'])} rows (latest={payload['asof_date_utc']}).")
+          PY
+
           echo "== ls public =="
           ls -lh public || true
           echo "== preview =="
-          head -c 400 public/today_scores.json || true
+          head -c 500 public/today_scores.json || true
           echo
 
       - name: Commit JSON (trigger Vercel deploy)
