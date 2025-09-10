@@ -4,48 +4,47 @@ name: Daily AI Score (Polygon)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "35 13 * * 1-5"   # ~09:35 ET
-  push:
-    paths:
-      - "public/finviz_universe.json"   # <-- new: run when universe changes
+    - cron: "25 12 * * 1-5"  # 12:25 UTC on weekdays; adjust to your premarket window
+
+permissions:
+  contents: write
 
 jobs:
   score:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     env:
-      POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
-      UNIVERSE_SOURCE: FINVIZ_FILE
-      FINVIZ_FILE_PATH: public/finviz_universe.json
-      STRICT_FINVIZ: "true"
-      PRICE_MIN: "1"
-      PRICE_MAX: "5"
-      MAX_TICKERS: "100"
-      MODEL_PATH: models/ai_score.joblib
-      OUT_PATH: public/today_scores.json
+      TZ: UTC
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
+
       - name: Set up Python
         uses: actions/setup-python@v5
-        with: { python-version: "3.11" }
+        with:
+          python-version: "3.11"
+
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -U requests numpy tenacity joblib
-      - name: Build today_scores.json
-        run: python scripts/score_today_from_polygon.py
-      - name: Commit JSON (trigger Vercel deploy)
+          pip install -U pandas numpy joblib scikit-learn
+
+      # If your screener produces a CSV here, ensure it's present before scoring.
+      # Otherwise, daily_ai_score.py will explain what's missing.
+      - name: Run daily scorer
         run: |
-          git config user.email "bot@github"
-          git config user.name  "actions-bot"
-          git add public/today_scores.json
-          git commit -m "Update today_scores.json" || true
-          git push || true
-      - name: Upload JSON as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: today_scores
-          path: public/today_scores.json
+          python scripts/daily_ai_score.py
+
+      - name: Commit today_scores.json
+        run: |
+          if [ -f public/today_scores.json ]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add public/today_scores.json
+            git commit -m "Update today_scores.json [skip ci]" || echo "No changes to commit"
+            git push
+          else
+            echo "public/today_scores.json was not produced."
+            exit 1
+          fi
