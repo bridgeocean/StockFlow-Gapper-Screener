@@ -1,100 +1,80 @@
-name: Train AI Score (Polygon)
+name: Daily AI Score (Polygon)
 
 on:
-  workflow_dispatch:
-    inputs:
-      YEARS:
-        description: "Years back (ignored if explicit dates; minute data is ~2y max on most plans)"
-        default: "2"
-        required: false
-      TRAIN_START:
-        description: "Start date (UTC) YYYY-MM-DD (optional)"
-        required: false
-      TRAIN_END:
-        description: "End date (UTC) YYYY-MM-DD (optional)"
-        required: false
+  workflow_dispatch: {}
+  schedule:
+    # run on market days ~15:20 UTC (after premarket); tweak as you like
+    - cron: "20 15 * * 1-5"
 
-permissions:
-  contents: write
+concurrency:
+  group: daily-ai-score
+  cancel-in-progress: false
 
 jobs:
-  train:
+  score:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TZ: UTC
+      # OPTIONAL: put a default comma-separated list here or use GitHub "Repository variables" as CANDIDATE_TICKERS
+      CANDIDATE_TICKERS: ${{ vars.CANDIDATE_TICKERS }} # e.g. "AAPL,TSLA,AMD,NVDA"
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Compute and clamp date window (Polygon minute data ≈ last 2y)
-        id: window
-        shell: bash
+      - name: Verify prerequisites
         run: |
-          # 1) pick explicit inputs or fallback to "last N years"
-          if [[ -n "${{ github.event.inputs.TRAIN_START }}" ]]; then
-            START="${{ github.event.inputs.TRAIN_START }}"
-            END="${{ github.event.inputs.TRAIN_END }}"
-            [[ -z "$END" ]] && END=$(date -u +%Y-%m-%d)
-          else
-            YRS="${{ github.event.inputs.YEARS }}"
-            [[ -z "$YRS" ]] && YRS=2
-            START=$(date -u -d "-${YRS} years" +%Y-%m-%d)
-            END=$(date -u +%Y-%m-%d)
+          if [ ! -f "models/ai_score.joblib" ]; then
+            echo "Model (models/ai_score.joblib) not found. Run the training workflow first."; exit 1
           fi
-
-          # 2) clamp to last 730 days (Polygon minute history limit for most plans)
-          CUTOFF=$(date -u -d "-730 days" +%Y-%m-%d)
-          # if START is older than CUTOFF, lift it up
-          if [[ "$(date -u -d "$START" +%s)" -lt "$(date -u -d "$CUTOFF" +%s)" ]]; then
-            echo "Requested START $START is older than minute-history cutoff $CUTOFF. Clamping to $CUTOFF."
-            START="$CUTOFF"
-          fi
-
-          # ensure END >= START
-          if [[ "$(date -u -d "$END" +%s)" -lt "$(date -u -d "$START" +%s)" ]]; then
-            END="$START"
-          fi
-
-          echo "start=$START" >> "$GITHUB_OUTPUT"
-          echo "end=$END" >> "$GITHUB_OUTPUT"
-          echo "Training window: $START → $END"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
       - name: Install deps
         run: |
-          pip install --upgrade pip
-          pip install requests pandas scikit-learn
+          python -m pip install --upgrade pip
+          pip install -U pandas numpy requests pyarrow joblib scikit-learn python-dateutil tenacity
 
-      - name: Build training CSV
+      # If you already have a candidate CSV, skip building.
+      # Otherwise: if today_tickers.txt is missing but CANDIDATE_TICKERS is set, write it.
+      - name: Ensure tickers list exists if we need to build
+        run: |
+          if [ ! -f "public/today_candidates.csv" ] && [ ! -f "latest_screener.csv" ] && [ ! -f "public/latest_screener.csv" ] && [ ! -f "data/latest_screener.csv" ] && [ ! -f "public/today_tickers.txt" ]; then
+            if [ -n "${CANDIDATE_TICKERS}" ]; then
+              mkdir -p public
+              # normalize commas/spaces into newlines
+              echo "${CANDIDATE_TICKERS}" | tr ',' '\n' | sed 's/^[ \t]*//;s/[ \t]*$//' | grep -E '^[A-Z]+' > public/today_tickers.txt
+              echo "Wrote public/today_tickers.txt from CANDIDATE_TICKERS:"
+              cat public/today_tickers.txt
+            else
+              echo "No candidate CSV and no tickers list provided."
+              echo "Provide one of: public/today_candidates.csv OR set repo var CANDIDATE_TICKERS OR commit public/today_tickers.txt"
+              exit 1
+            fi
+          fi
+
+      - name: Run daily scorer
         env:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
-          TRAIN_START: ${{ steps.window.outputs.start }}
-          TRAIN_END:   ${{ steps.window.outputs.end }}
         run: |
-          python scripts/make_training_from_polygon.py
+          python scripts/daily_ai_score.py
 
-      - name: Train model
+      - name: Commit & push today_scores.json
         run: |
-          python scripts/train_ai_score.py
-
-      - name: Move model to public/
-        run: |
-          mkdir -p public
-          mv model_logreg_v1.json public/model_logreg_v1.json
-
-      - name: Commit model to repo
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/model_logreg_v1.json
-          git commit -m "chore: update AI model (${{ steps.window.outputs.start }} → ${{ steps.window.outputs.end }})" || echo "No changes to commit"
-          git push
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-score-artifacts
-          path: |
-            training_polygon_v1.csv
-            public/model_logreg_v1.json
+          if [ -f "public/today_scores.json" ]; then
+            git config user.email "bot@github"
+            git config user.name  "actions-bot"
+            git add public/today_scores.json
+            git commit -m "Update today_scores.json" || true
+            git push || true
+            echo "Committed public/today_scores.json"
+          else
+            echo "today_scores.json not produced."
+            exit 1
+          fi
