@@ -1,21 +1,25 @@
+# .github/workflows/train_model.yml
 name: Train AI Score — Model
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   train:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install deps
         run: |
@@ -23,42 +27,39 @@ jobs:
           pip install -U pandas numpy scikit-learn joblib
 
       - name: Stitch monthly CSVs → training_all.csv
-        shell: bash
         run: |
-          shopt -s nullglob
-          files=(training/training_*.csv)
-          echo "Found ${#files[@]} month files."
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No training/*.csv yet. Nothing to train."; exit 0
+          set -euo pipefail
+          if ls training/training_*.csv 1>/dev/null 2>&1; then
+            head -n1 training/training_*.csv | head -n1 > training_all.csv
+            for f in training/training_*.csv; do
+              tail -n +2 "$f" >> training_all.csv
+            done
+            echo "Built training_all.csv"
+          else
+            if [ -f training_all.csv ]; then
+              echo "Using existing training_all.csv"
+            else
+              echo "No training CSVs found."; exit 1
+            fi
           fi
-          python - <<'PY'
-          import glob, pandas as pd
-          files = sorted(glob.glob('training/training_*.csv'))
-          df = pd.concat((pd.read_csv(f) for f in files), ignore_index=True)
-          print("stitched shape:", df.shape)
-          df.to_csv('training_all.csv', index=False)
-          PY
 
       - name: Train model
         run: |
-          mkdir -p models
           python scripts/train_ai_score.py
-          [ -f ai_score.joblib ] && mv -f ai_score.joblib models/ai_score.joblib
-          [ -f metrics.json ] && mv -f metrics.json models/metrics.json
-          test -f models/ai_score.joblib
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: model-and-training-data
+          name: model
           path: |
-            training_all.csv
-            models/**
+            models/ai_score.joblib
+            metrics.json
+          if-no-files-found: error
 
       - name: Commit model to repo
         run: |
           git config user.email "bot@github"
-          git config user.name "actions-bot"
-          git add training_all.csv models/ || true
-          git commit -m "Train model $(date -u +%F)" || echo "Nothing to commit"
+          git config user.name  "actions-bot"
+          git add models/ai_score.joblib metrics.json
+          git commit -m "Update ai_score model and metrics" || true
           git push || true
