@@ -1,0 +1,67 @@
+name: Daily AI Score (Polygon) — RTH Open
+
+on:
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: "Optional CSV tickers override (e.g., ABCD,EFGH)"
+        required: false
+  schedule:
+    # 09:35 UTC = 05:35 ET (EDT). Change if needed.
+    - cron: "35 13 * * 1-5"
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+      TICKER_FILE: "public/today_tickers.txt"
+      CANDIDATE_TICKERS: ${{ github.event.inputs.tickers }}
+      PRICE_MIN: "1"
+      PRICE_MAX: "5"
+      DAILY_FALLBACK: "1"
+      MODEL_PATH: "ai_score.joblib"
+      OUT_JSON: "public/today_scores.json"
+      SESSION: "rth_open"            # regular trading hours open refresh
+
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Ensure candidate list (from repo file if no input)
+        run: |
+          if [ -z "${{ github.event.inputs.tickers }}" ]; then
+            if [ ! -s "$TICKER_FILE" ]; then
+              echo "❌ No CANDIDATE_TICKERS and $TICKER_FILE missing."
+              exit 1
+            fi
+          fi
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U pandas numpy requests joblib scikit-learn python-dateutil
+
+      - name: Score (RTH open)
+        run: |
+          python scripts/daily_ai_score.py
+
+      - name: Commit & push JSON
+        run: |
+          git config user.email "bot@github"
+          git config user.name  "actions-bot"
+          git add public/today_scores.json
+          git commit -m "RTH open: update today_scores.json" || echo "No changes"
+          git push || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: today_scores_rth_open
+          path: public/today_scores.json
