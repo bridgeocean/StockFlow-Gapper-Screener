@@ -1,22 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import IconStockflow from "./components/IconStockflow";
 
-// Simple demo login gate (NOT production secure)
 const VALID_EMAIL = "bridgeocean@cyberservices.com";
 const VALID_PASS = "admin123";
 
 export default function Landing() {
   const r = useRouter();
+  const [showLogin, setShowLogin] = useState(false);
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
-
-  useEffect(() => {
-    const ok = sessionStorage.getItem("sf_auth_ok") === "1";
-    if (ok) return;
-  }, []);
 
   const onLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,10 +26,11 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#2a1459] via-[#180a36] to-black text-white">
+      {/* Header */}
       <header className="max-w-6xl mx-auto px-5 py-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
-            <span className="text-xl">🚀</span>
+          <div className="text-green-400">
+            <IconStockflow size={36} className="text-green-400" />
           </div>
           <div>
             <div className="text-xl font-bold">StockFlow</div>
@@ -41,13 +38,14 @@ export default function Landing() {
           </div>
         </div>
         <button
-          onClick={() => r.push("/public-dashboard")}
+          onClick={() => setShowLogin(true)}
           className="rounded-xl bg-white text-black px-4 py-2 font-medium hover:opacity-90"
         >
           Launch Scanner
         </button>
       </header>
 
+      {/* Hero */}
       <main className="max-w-6xl mx-auto px-5">
         <section className="grid md:grid-cols-2 gap-10 items-center mt-10">
           <div>
@@ -62,7 +60,7 @@ export default function Landing() {
 
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => r.push("/public-dashboard")}
+                onClick={() => setShowLogin(true)}
                 className="rounded-xl bg-[#b197fc] text-black px-5 py-2 font-semibold hover:brightness-110"
               >
                 Start Scanning
@@ -74,52 +72,20 @@ export default function Landing() {
                 Learn More
               </a>
             </div>
-
-            <div className="mt-8 rounded-xl border border-green-500/30 bg-green-500/10 text-green-200 px-4 py-3">
-              <div className="font-semibold">Live Data</div>
-              <div className="text-sm">
-                Successfully connected to Live Feed API. Data is being updated in real-time from professional market sources.
-              </div>
-            </div>
           </div>
 
-          <form
-            onSubmit={onLogin}
-            className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 p-6"
-          >
-            <div className="text-lg font-bold mb-1">Member Login</div>
-            <div className="text-sm text-white/70 mb-4">Sign in to launch the scanner</div>
-            {err && <div className="mb-3 text-sm text-red-300">{err}</div>}
-            <label className="block text-sm mb-1">Email</label>
-            <input
-              className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 mb-3 outline-none"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="username"
-              required
-            />
-            <label className="block text-sm mb-1">Password</label>
-            <input
-              className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 mb-4 outline-none"
-              type="password"
-              value={pass}
-              onChange={(e) => setPass(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-[#b197fc] text-black px-4 py-2 font-semibold hover:brightness-110"
-            >
-              Launch Gap Scanner
-            </button>
-            <div className="text-xs text-white/60 mt-3">
-              © 2024 StockFlow by ThePhDPush. Professional gap scanning tools.
+          {/* Visual */}
+          <div className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 p-6 flex items-center justify-center">
+            <div className="text-center">
+              <div className="mb-3 inline-block text-green-400">
+                <IconStockflow size={64} className="text-green-400" />
+              </div>
+              <div className="text-white/80">Professional gap scanning tools</div>
             </div>
-          </form>
+          </div>
         </section>
 
+        {/* Features */}
         <section id="features" className="mt-16 grid md:grid-cols-3 gap-6">
           {[
             {
@@ -153,11 +119,58 @@ export default function Landing() {
             </div>
           ))}
         </section>
+
+        <footer className="py-10 text-white/60">
+          © 2024 StockFlow by ThePhDPush. Professional gap scanning tools.
+        </footer>
       </main>
 
-      <footer className="max-w-6xl mx-auto px-5 py-10 text-white/60">
-        Ready to Find Your Next Gap Play? Join thousands of traders using our professional-grade gap scanner powered by Live Feed.
-      </footer>
+      {/* Login modal (only when Launch/Start is clicked) */}
+      {showLogin && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur flex items-center justify-center p-4 z-50">
+          <form
+            onSubmit={onLogin}
+            className="w-full max-w-sm rounded-2xl bg-[#0b0616] border border-white/10 p-6"
+          >
+            <div className="text-lg font-bold mb-1">Member Login</div>
+            <div className="text-sm text-white/70 mb-4">Sign in to launch the scanner</div>
+            {err && <div className="mb-3 text-sm text-red-300">{err}</div>}
+            <label className="block text-sm mb-1">Email</label>
+            <input
+              className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 mb-3 outline-none"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              required
+            />
+            <label className="block text-sm mb-1">Password</label>
+            <input
+              className="w-full rounded-lg bg-black/30 border border-white/10 px-3 py-2 mb-4 outline-none"
+              type="password"
+              value={pass}
+              onChange={(e) => setPass(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                className="flex-1 rounded-xl bg-[#b197fc] text-black px-4 py-2 font-semibold hover:brightness-110"
+              >
+                Launch Gap Scanner
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLogin(false)}
+                className="rounded-xl border border-white/20 px-4 py-2 font-semibold hover:bg-white/5"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
