@@ -1,135 +1,50 @@
-// app/components/NewsPanel.tsx
-"use client";
-
-import { useEffect, useState, useMemo } from "react";
+'use client';
 
 type NewsItem = {
-  datetime?: string;   // ISO string from our JSON (if present)
-  date?: string;       // some feeds use 'date'
+  datetime?: string;
   ticker?: string;
   title?: string;
-  headline?: string;
+  link?: string;
   source?: string;
-  url?: string;
 };
 
-type NewsPayload = {
-  count?: number;
-  items?: NewsItem[];
-  generatedAt?: string;
-};
-
-function formatTime(ts?: string) {
-  if (!ts) return "";
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return ts;
-  return d.toLocaleString(undefined, {
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-export default function NewsPanel() {
-  const [data, setData] = useState<NewsPayload | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch once at mount; you can add polling if you want live refresh
-  useEffect(() => {
-    let active = true;
-    const fetchNews = async () => {
-      try {
-        setLoading(true);
-        setErr(null);
-        const res = await fetch("/today_news.json", { cache: "no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = (await res.json()) as NewsPayload;
-        if (active) setData(json);
-      } catch (e: any) {
-        if (active) setErr(e?.message || "Failed to load news.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    fetchNews();
-    return () => { active = false; };
-  }, []);
-
-  const items = useMemo(() => {
-    const raw = data?.items ?? [];
-    // Normalize: some feeds use 'headline' instead of 'title'
-    return raw.map((r) => ({
-      ...r,
-      title: r.title || r.headline || "",
-      datetime: r.datetime || r.date || "",
-    }));
-  }, [data]);
-
-  if (loading) {
-    return (
-      <div className="rounded-2xl border p-4 shadow-sm">
-        <div className="font-semibold mb-2">News</div>
-        <div className="text-sm opacity-70">Loading…</div>
-      </div>
-    );
-  }
-
-  if (err) {
-    return (
-      <div className="rounded-2xl border p-4 shadow-sm">
-        <div className="font-semibold mb-2">News</div>
-        <div className="text-sm text-red-600">Error: {err}</div>
-        <div className="text-xs opacity-70 mt-1">
-          Tip: ensure <code>public/today_news.json</code> is committed by the daily job.
-        </div>
-      </div>
-    );
-  }
-
-  if (!items.length) {
-    return (
-      <div className="rounded-2xl border p-4 shadow-sm">
-        <div className="font-semibold mb-2">News</div>
-        <div className="text-sm opacity-70">No news yet for today.</div>
-      </div>
-    );
-  }
-
+export default function NewsPanel({
+  news,
+  updatedAt,
+  loading,
+}: {
+  news: NewsItem[];
+  updatedAt: string | null;
+  loading: boolean;
+}) {
   return (
-    <div className="rounded-2xl border p-4 shadow-sm">
-      <div className="flex items-baseline justify-between mb-3">
-        <div className="font-semibold">News</div>
-        {data?.generatedAt && (
-          <div className="text-xs opacity-60">
-            Updated {formatTime(data.generatedAt)}
-          </div>
-        )}
+    <section className="bg-white rounded-2xl shadow p-4 md:p-6 h-full">
+      <div className="flex items-baseline justify-between mb-4">
+        <h2 className="text-xl font-semibold tracking-tight">Premarket News</h2>
+        <span className="text-sm text-neutral-500">
+          {updatedAt ? `Updated: ${updatedAt}` : loading ? 'Loading…' : ''}
+        </span>
       </div>
-
-      <ul className="space-y-3">
-        {items.slice(0, 50).map((n, idx) => (
-          <li key={idx} className="border rounded-xl p-3 hover:shadow-sm transition">
-            <div className="text-xs opacity-60 mb-1">
-              {n.ticker ? <span className="font-mono mr-2">{n.ticker}</span> : null}
-              {n.source ? <span className="mr-2">{n.source}</span> : null}
-              {n.datetime ? formatTime(n.datetime) : null}
-            </div>
-            <div className="font-medium">
-              {n.url ? (
-                <a className="underline underline-offset-2" href={n.url} target="_blank" rel="noreferrer">
-                  {n.title || "(no title)"}
-                </a>
-              ) : (
-                n.title || "(no title)"
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+      {loading ? (
+        <div className="text-neutral-500">Fetching news…</div>
+      ) : news.length === 0 ? (
+        <div className="text-neutral-500">
+          No news found. Ensure the “Daily AI Score (Finviz → News → JSON)” workflow committed <code>public/today_news.json</code>.
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {news.map((n, idx) => (
+            <li key={idx} className="border border-neutral-200 rounded-xl p-3">
+              <div className="text-xs text-neutral-500 mb-1">
+                {n.datetime ? new Date(n.datetime).toLocaleString() : ''} {n.ticker ? `• ${n.ticker}` : ''} {n.source ? `• ${n.source}` : ''}
+              </div>
+              <a className="font-medium hover:underline" href={n.link ?? '#'} target="_blank" rel="noreferrer">
+                {n.title ?? '(no title)'}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
