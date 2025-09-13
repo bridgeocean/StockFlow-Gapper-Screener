@@ -3,15 +3,14 @@
 import Papa from "papaparse";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import IconStockflow from "../components/IconStockflow";
 
-// --- Data types ---
 type ScoreRow = { ticker: string; score?: number; gap_pct?: number; rvol?: number; rsi14m?: number; };
 type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[]; };
-type CandidateRow = { [k: string]: any; Ticker?: string; Symbol?: string; Price?: string; GapPct?: string; Perf10m?: string; RVol?: string; RelVol?: string; Float?: string; };
+type CandidateRow = { [k: string]: any };
 type NewsItem = { ticker: string; headline: string; source?: string; url?: string; published?: string; };
 type NewsPayload = { generatedAt?: string; items: NewsItem[]; };
 
-// --- Helpers ---
 const num = (v: any): number | undefined => {
   if (v === null || v === undefined) return undefined;
   if (typeof v === "number") return v;
@@ -26,7 +25,6 @@ const toISOorNull = (s?: string | null) => {
   return isNaN(d.getTime()) ? null : d.toISOString();
 };
 
-// Merge previous + incoming by ticker so list doesn't flicker
 function mergeByTicker<T extends { ticker: string }>(prev: T[], incoming: T[]): T[] {
   const map = new Map<string, T>();
   prev.forEach((r) => map.set(r.ticker, r));
@@ -37,18 +35,15 @@ function mergeByTicker<T extends { ticker: string }>(prev: T[], incoming: T[]): 
 export default function Dashboard() {
   const r = useRouter();
 
-  // Gate (very simple demo gate)
   useEffect(() => {
     const ok = sessionStorage.getItem("sf_auth_ok") === "1";
     if (!ok) r.push("/");
   }, [r]);
 
-  // Raw payloads
   const [scores, setScores] = useState<ScoresPayload | null>(null);
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
   const [news, setNews] = useState<NewsPayload | null>(null);
 
-  // Merged rows
   type Row = {
     ticker: string;
     price?: number;
@@ -57,17 +52,17 @@ export default function Dashboard() {
     rvol?: number;
     floatM?: number;
     score?: number;
-    firstSeenAt?: string; // local time string
+    firstSeenAt?: string;
   };
   const [rows, setRows] = useState<Row[]>([]);
   const rowsRef = useRef(rows);
   const firstSeen = useRef<Map<string, string>>(new Map());
   useEffect(() => { rowsRef.current = rows; }, [rows]);
 
-  // Filters (defaults; Volume Multiplier default to 1.3x)
+  // Filters (defaults per your brief)
   const [priceMin, setPriceMin] = useState(1);
   const [priceMax, setPriceMax] = useState(5);
-  const [minRvol, setMinRvol] = useState(1.3);
+  const [minRvol, setMinRvol] = useState(1.0);
   const [minGap, setMinGap] = useState(5);
   const [minPerf, setMinPerf] = useState(10);
   const [maxFloat, setMaxFloat] = useState(20);
@@ -75,7 +70,6 @@ export default function Dashboard() {
 
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  // Build merged rows from payloads (filter news tickers if newsOnly)
   const buildMergedRows = (
     sPayload: ScoresPayload | null,
     cRows: CandidateRow[],
@@ -89,20 +83,23 @@ export default function Dashboard() {
         ? new Set(newsItems.map((n) => n.ticker?.toUpperCase()).filter(Boolean))
         : null;
 
-    const symbolKey =
-      ["Ticker", "Symbol", "ticker", "symbol"].find((k) => k in (cRows[0] || {})) || "Ticker";
+    const pickSymbolKey = (row: CandidateRow) => {
+      for (const k of ["Ticker", "ticker", "Symbol", "symbol"]) if (k in row) return k;
+      return "Ticker";
+    };
+    const symKey = pickSymbolKey(cRows[0] || {});
 
     const result: Row[] = [];
     for (const r of cRows) {
-      const t = String(r[symbolKey] ?? "").toUpperCase().trim();
+      const t = String(r[symKey] ?? "").toUpperCase().trim();
       if (!t) continue;
       if (allowedNews && !allowedNews.has(t)) continue;
 
-      const price = num(r.Price);
-      const gapPct = num(r.GapPct);
-      const perf10mPct = num(r.Perf10m);
-      const rvol = num(r.RVol ?? r.RelVol);
-      const floatM = num(r.Float);
+      const price = num(r.Price ?? r.price);
+      const gapPct = num(r.GapPct ?? r.gapPct ?? r.Change ?? r.change);
+      const perf10mPct = num(r.Perf10m ?? r.perf10m);
+      const rvol = num(r.RVol ?? r.RelVol ?? r.rvol ?? r.relvol);
+      const floatM = num(r.Float ?? r.float);
       const sRow = sMap.get(t);
 
       result.push({
@@ -121,22 +118,20 @@ export default function Dashboard() {
   const pull = async () => {
     try {
       const sRes = await fetch("/today_scores.json", { cache: "no-store" });
-      const sPayload = (await sRes.json()) as ScoresPayload;
+      const sPayload = sRes.ok ? ((await sRes.json()) as ScoresPayload) : { generatedAt: null, scores: [] };
       setScores(sPayload);
 
       const cRes = await fetch("/today_candidates.csv", { cache: "no-store" });
-      const cText = await cRes.text();
+      const cText = cRes.ok ? await cRes.text() : "";
       const parsed = Papa.parse<CandidateRow>(cText, { header: true, skipEmptyLines: true });
-      const cRows = (parsed.data || []).filter(Boolean);
-      setCandidates(cRows);
+      setCandidates((parsed.data || []).filter(Boolean));
 
       const nRes = await fetch("/today_news.json", { cache: "no-store" });
       const nPayload = nRes.ok ? ((await nRes.json()) as NewsPayload) : { items: [] };
       setNews(nPayload);
 
-      const merged = buildMergedRows(sPayload, cRows, newsOnly ? nPayload.items : undefined);
+      const merged = buildMergedRows(sPayload, (parsed.data || []).filter(Boolean), newsOnly ? nPayload.items : undefined);
 
-      // add firstSeen timestamps
       merged.forEach((m) => {
         if (!firstSeen.current.has(m.ticker)) {
           firstSeen.current.set(m.ticker, new Date().toLocaleTimeString());
@@ -147,19 +142,16 @@ export default function Dashboard() {
       setRows((prev) => mergeByTicker(prev, merged));
       setLastUpdated(new Date().toLocaleTimeString());
     } catch {
-      // ignore transient errs
+      // ignore transient fetch errors
     }
   };
 
-  // Initial + 60s refresh
   useEffect(() => {
     pull();
     const id = setInterval(pull, 60_000);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Rebuild instantly when toggling “news only”
   useEffect(() => {
     const merged = buildMergedRows(scores, candidates, newsOnly ? (news?.items ?? []) : undefined);
     merged.forEach((m) => {
@@ -172,7 +164,6 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newsOnly, candidates, scores, news]);
 
-  // Filters
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (r.price === undefined) return false;
@@ -185,7 +176,6 @@ export default function Dashboard() {
     });
   }, [rows, priceMin, priceMax, minRvol, minGap, minPerf, maxFloat]);
 
-  // Keep only news for tickers **currently shown**, max 10
   const shownTickers = new Set(filtered.map((f) => f.ticker));
   const newsShown = (news?.items || [])
     .filter((n) => n.ticker && shownTickers.has(n.ticker.toUpperCase()))
@@ -207,51 +197,44 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-b from-[#2a1459] via-[#180a36] to-black text-white">
       {/* Top bar */}
       <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <IconStockflow size={36} className="text-green-400" />
+          <div className="text-xl font-bold">StockFlow</div>
+        </div>
+
+        <div className="flex items-center gap-2">
           <button
             onClick={() => r.push("/")}
-            className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/15"
+            className="rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2"
             title="Home"
           >
             🏠
           </button>
-          <div>
-            <div className="text-xl font-bold">StockFlow</div>
-            <div className="text-xs text-white/70">by ThePhDPush</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
           <button
             onClick={onRefresh}
             className="rounded-xl bg-green-500 text-black px-4 py-2 font-semibold hover:brightness-110"
+            title="Refresh now"
           >
             Refresh
           </button>
+          <div className="text-xs text-white/70 ml-1">
+            Last Update {lastUpdated ?? "—"} • Auto: 60s
+          </div>
           <button
             onClick={onLogout}
-            className="rounded-xl bg-red-500 text-white px-4 py-2 font-semibold hover:brightness-110"
+            className="ml-3 rounded-xl bg-red-500 text-white px-4 py-2 font-semibold hover:brightness-110"
           >
             Logout
           </button>
         </div>
       </div>
 
-      {/* Live banner */}
-      <div className="max-w-7xl mx-auto px-5">
-        <div className="rounded-xl border border-green-500/30 bg-green-500/10 text-green-200 px-4 py-3">
-          <div className="font-semibold">Live Data</div>
-          <div className="text-sm">
-            Successfully connected to Live Feed API. Data is being updated in real-time from professional market sources.
-          </div>
-        </div>
-      </div>
-
       {/* KPIs */}
-      <div className="max-w-7xl mx-auto px-5 grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+      <div className="max-w-7xl mx-auto px-5 grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
         <KPI label="Filtered Stocks" value={filtered.length.toString()} sub="Active scanners" />
         <KPI label="Average Gap" value={`${avgGap}%`} sub="Gap percentage" />
         <KPI label="Hot Stocks" value={Math.min(filtered.length, 10).toString()} sub="High momentum" />
-        <KPI label="Last Update" value={lastUpdated ?? "—"} sub="Auto: 60s" />
+        <KPI label="Tracked" value={rowsRef.current.length.toString()} sub="Seen this session" />
       </div>
 
       {/* Filters */}
@@ -261,7 +244,7 @@ export default function Dashboard() {
             className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10"
             onClick={() => {
               setPriceMin(1); setPriceMax(5);
-              setMinRvol(1.3); setMinGap(5);
+              setMinRvol(1.0); setMinGap(5);
               setMinPerf(10); setMaxFloat(20);
               setNewsOnly(false);
             }}
@@ -269,7 +252,7 @@ export default function Dashboard() {
             🔄 Reset Filters
           </button>
 
-        <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={newsOnly} onChange={(e) => setNewsOnly(e.target.checked)} />
             📢 News Catalyst Only
           </label>
@@ -283,7 +266,7 @@ export default function Dashboard() {
             onChange={(a, b) => { setPriceMin(a); setPriceMax(b); }}
           />
           <SingleSlider
-            label={`Volume Multiplier: ${minRvol.toFixed(1)}x+`}
+            label={`Volume Multiplier: ${minRvol.toFixed(1)}x+ (Rel Vol)`}
             min={1} max={20} step={0.1}
             value={minRvol}
             onChange={setMinRvol}
@@ -363,7 +346,8 @@ export default function Dashboard() {
               {filtered.length === 0 && (
                 <tr>
                   <Td colSpan={9} className="text-center text-white/60 py-6">
-                    No matches yet. Try relaxing filters or check back after next refresh.
+                    No matches yet. If your CSV has only <span className="font-mono">ticker,price,change,volume</span>,
+                    we’ll use <span className="font-mono">change</span> as Gap%. Try lowering Gap% or setting Rel Vol ≥ 1.0.
                   </Td>
                 </tr>
               )}
@@ -372,7 +356,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* News panel (only tickers that show up; limit 10) */}
+      {/* News (limit 10; only for shown tickers) */}
       <div className="max-w-7xl mx-auto px-5 mt-6 mb-12">
         <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
           <h3 className="font-semibold text-lg mb-2">📰 Market News</h3>
@@ -411,7 +395,6 @@ export default function Dashboard() {
   );
 }
 
-// --- Small UI helpers ---
 function KPI({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
