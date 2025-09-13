@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -10,7 +9,7 @@ import { AUTH_KEY } from "../components/auth";
 
 export default function DashboardPage() {
   const r = useRouter();
-  const [topTickers, setTopTickers] = useState<string[]>([]);
+  const [pageTickers, setPageTickers] = useState<string[]>([]);
 
   async function doLogout() {
     try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
@@ -33,12 +32,15 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <section className="lg:col-span-2">
-          <ScoresTable onTopTickersChange={setTopTickers} />
+      {/* Wider table, slimmer news.
+         On xl+, this creates two columns: [flex table][fixed ~420px news].
+         On smaller screens, they stack. */}
+      <div className="max-w-7xl mx-auto px-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-5">
+        <section>
+          <ScoresTable onTopTickersChange={setPageTickers} />
         </section>
         <aside>
-          <NewsPanel tickers={topTickers} />
+          <NewsPanel tickers={pageTickers} />
         </aside>
       </div>
     </main>
