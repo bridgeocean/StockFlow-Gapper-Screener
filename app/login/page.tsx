@@ -1,17 +1,23 @@
 // app/login/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import IconStockflow from "../components/IconStockflow";
 import { migrateOldAuthKey, AUTH_KEY } from "../components/auth";
 
 export default function LoginPage() {
   const r = useRouter();
-  const sp = useSearchParams();
-  const next = sp.get("next") || "/dashboard";
 
-  useEffect(() => { migrateOldAuthKey(); }, []);
+  // Read ?next=/some/path without useSearchParams (avoids Suspense requirement)
+  const nextRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    migrateOldAuthKey();
+    if (typeof window !== "undefined") {
+      nextRef.current = new URLSearchParams(window.location.search).get("next");
+    }
+  }, []);
 
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -37,10 +43,10 @@ export default function LoginPage() {
         return;
       }
 
-      // optional local flag for any client-only checks
+      // Optional client flag for any client-only checks
       try { localStorage.setItem(AUTH_KEY, "1"); } catch {}
 
-      r.replace(next);
+      r.replace(nextRef.current || "/dashboard");
     } catch (e) {
       console.error(e);
       setErr("Network error, try again.");
