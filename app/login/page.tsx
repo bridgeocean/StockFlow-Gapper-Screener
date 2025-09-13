@@ -1,13 +1,16 @@
 // app/login/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import IconStockflow from "../components/IconStockflow";
-import { loginLocal, migrateOldAuthKey } from "../components/auth";
+import { migrateOldAuthKey, AUTH_KEY } from "../components/auth";
 
 export default function LoginPage() {
   const r = useRouter();
+  const sp = useSearchParams();
+  const next = sp.get("next") || "/dashboard";
+
   useEffect(() => { migrateOldAuthKey(); }, []);
 
   const [email, setEmail] = useState("");
@@ -19,10 +22,31 @@ export default function LoginPage() {
     e.preventDefault();
     setErr(null);
     setBusy(true);
-    const ok = loginLocal(email, pass);
-    setBusy(false);
-    if (ok) r.push("/dashboard");
-    else setErr("Invalid credentials");
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password: pass }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        setErr(data?.message || "Invalid credentials");
+        setBusy(false);
+        return;
+      }
+
+      // optional local flag for any client-only checks
+      try { localStorage.setItem(AUTH_KEY, "1"); } catch {}
+
+      r.replace(next);
+    } catch (e) {
+      console.error(e);
+      setErr("Network error, try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -36,9 +60,7 @@ export default function LoginPage() {
 
       <section className="max-w-md mx-auto mt-12 p-6 rounded-2xl bg-white/5 border border-white/10">
         <h1 className="text-2xl font-bold">Sign in</h1>
-        <p className="text-white/70 text-sm mt-1">
-          Members only. Use your credentials to continue.
-        </p>
+        <p className="text-white/70 text-sm mt-1">Members only.</p>
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div>
@@ -49,7 +71,7 @@ export default function LoginPage() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="bridgeocean@cyberservices.com"
             />
           </div>
 
@@ -61,7 +83,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={pass}
               onChange={(e) => setPass(e.target.value)}
-              placeholder="••••••••"
+              placeholder="admin123"
             />
           </div>
 
