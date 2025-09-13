@@ -10,11 +10,7 @@ type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[]; };
 type CandidateRow = { [k: string]: any };
 type NewsItem = { ticker: string; headline: string; source?: string; url?: string; published?: string; };
 type NewsPayload = { generatedAt?: string; items: NewsItem[]; };
-
-type Alert = {
-  id: string; level: "HIGH" | "MEDIUM" | "LOW"; at: string;
-  ticker: string; price?: number; changePct?: number; gapPct?: number; read?: boolean;
-};
+type Alert = { id: string; level: "HIGH" | "MEDIUM" | "LOW"; at: string; ticker: string; price?: number; changePct?: number; gapPct?: number; read?: boolean; };
 
 const num = (v: any): number | undefined => {
   if (v === null || v === undefined) return undefined;
@@ -54,16 +50,37 @@ export default function Dashboard() {
   const [rows, setRows] = useState<any[]>([]);
   const rowsRef = useRef(rows); useEffect(() => { rowsRef.current = rows; }, [rows]);
 
-  // Filters (defaults)
+  // Filter state (defaults)
   const [priceMin, setPriceMin] = useState(1);
   const [priceMax, setPriceMax] = useState(5);
   const [minGap, setMinGap] = useState(5);
   const [newsOnly, setNewsOnly] = useState(false);
+
+  // Extra filter state
+  const [minRelVol, setMinRelVol] = useState(1.3); // default 1.3x
+  const [minPerf10m, setMinPerf10m] = useState(10); // default 10%
+  const [maxFloatM, setMaxFloatM] = useState(20);   // default 20M
+
+  // Availability of fields
+  const [hasRelVol, setHasRelVol] = useState(false);
+  const [hasPerf10m, setHasPerf10m] = useState(false);
+  const [hasFloatM, setHasFloatM] = useState(false);
+
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const pickSymKey = (row: CandidateRow) => {
     for (const k of ["Ticker", "ticker", "Symbol", "symbol"]) if (k in row) return k;
     return "Ticker";
+  };
+
+  const detectFields = (rows: CandidateRow[]) => {
+    const any = rows[0] || {};
+    const hasRel = ("RelVol" in any) || ("Relative Volume" in any) || (("Volume" in any) && ("AvgVolume" in any));
+    const hasPerf = ("Perf10m" in any) || ("Perf_10m_pct" in any) || ("perf10m" in any) || ("Change" in any) || ("change" in any);
+    const hasFloat = ("FloatM" in any) || ("Float (M)" in any) || ("Float" in any) || ("float" in any);
+    setHasRelVol(!!hasRel);
+    setHasPerf10m(!!hasPerf);
+    setHasFloatM(!!hasFloat);
   };
 
   const buildMergedRows = (
@@ -89,9 +106,30 @@ export default function Dashboard() {
       const price = num(r.Price ?? r.price);
       const gapPct = num(r.GapPct ?? r.gapPct ?? r.Change ?? r.change);
       const volume = num(r.Volume ?? r.volume);
-      const sRow = sMap.get(t);
 
-      result.push({ ticker: t, price, gapPct, volume, score: sRow?.score });
+      // RelVol: native or derived
+      let relVol = num(r.RelVol ?? r["Relative Volume"]);
+      if (relVol === undefined && r.Volume !== undefined && r.AvgVolume !== undefined) {
+        const v = num(r.Volume); const av = num(r.AvgVolume);
+        if (v !== undefined && av && av > 0) relVol = v / av;
+      }
+
+      // Perf10m: native or fallback to Change (%)
+      let perf10m = num(r.Perf10m ?? r.perf10m ?? r.Perf_10m_pct);
+      if (perf10m === undefined) perf10m = num(r.Change ?? r.change);
+
+      // FloatM: native or derived from Float
+      let floatM = num(r.FloatM ?? r["Float (M)"]);
+      if (floatM === undefined) {
+        const rawFloat = num(r.Float ?? r.float);
+        if (rawFloat !== undefined) {
+          // If rawFloat is too big, assume shares and convert to millions
+          floatM = rawFloat > 1000 ? rawFloat / 1_000_000 : rawFloat; 
+        }
+      }
+
+      const sRow = sMap.get(t);
+      result.push({ ticker: t, price, gapPct, volume, relVol, perf10m, floatM, score: sRow?.score });
     }
     return result;
   };
@@ -122,6 +160,7 @@ export default function Dashboard() {
       const parsed = Papa.parse<CandidateRow>(cText, { header: true, skipEmptyLines: true });
       const cRows = (parsed.data || []).filter(Boolean);
       setCandidates(cRows);
+      detectFields(cRows);
 
       const nRes = await fetch("/today_news.json", { cache: "no-store" });
       const nPayload = nRes.ok ? ((await nRes.json()) as NewsPayload) : { items: [] };
@@ -162,9 +201,12 @@ export default function Dashboard() {
       if (r.price === undefined) return false;
       if (r.price < priceMin || r.price > priceMax) return false;
       if (r.gapPct !== undefined && r.gapPct < minGap) return false;
+      if (hasRelVol && minRelVol && r.relVol !== undefined && r.relVol < minRelVol) return false;
+      if (hasPerf10m && minPerf10m && r.perf10m !== undefined && r.perf10m < minPerf10m) return false;
+      if (hasFloatM && maxFloatM && r.floatM !== undefined && r.floatM > maxFloatM) return false;
       return true;
     });
-  }, [rowsWithSince, priceMin, priceMax, minGap]);
+  }, [rowsWithSince, priceMin, priceMax, minGap, hasRelVol, minRelVol, hasPerf10m, minPerf10m, hasFloatM, maxFloatM]);
 
   // Metrics
   const avgGap =
@@ -188,7 +230,7 @@ export default function Dashboard() {
       {/* Top bar */}
       <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <IconStockflow size={36} className="text-green-400" />
+          <IconStockflow size={36} className="text-green-400 rotate-0" />
           <div className="text-xl font-bold">StockFlow</div>
         </div>
 
@@ -212,7 +254,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-4 flex-wrap">
           <button
             className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10"
-            onClick={() => { setPriceMin(1); setPriceMax(5); setMinGap(5); setNewsOnly(false); }}
+            onClick={() => { setPriceMin(1); setPriceMax(5); setMinGap(5); setNewsOnly(false); setMinRelVol(1.3); setMinPerf10m(10); setMaxFloatM(20); }}
           >
             🔄 Reset Filters
           </button>
@@ -222,13 +264,32 @@ export default function Dashboard() {
           </label>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mt-4">
-          <RangeSlider label={`Price Range: $${priceMin} - $${priceMax}`} min={0.5} max={20} step={0.5} value={[priceMin, priceMax]} onChange={(a, b) => { setPriceMin(a); setPriceMax(b); }} />
-          <SingleSlider label={`Gap Percentage: ${minGap}%+`} min={0} max={50} step={1} value={minGap} onChange={setMinGap} />
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+          <RangeSlider label={`Price Range: $${priceMin} - $${priceMax}`} min={0.5} max={50} step={0.5} value={[priceMin, priceMax]} onChange={(a, b) => { setPriceMin(a); setPriceMax(b); }} />
+
+          <SingleSlider label={`Gap Percentage: ${minGap}%+`} min={0} max={100} step={1} value={minGap} onChange={setMinGap} />
+
+          <SingleSlider
+            label={`Volume Multiplier: ${minRelVol.toFixed(1)}x+${hasRelVol ? "" : " (data missing)"}`}
+            min={1} max={20} step={0.1} value={minRelVol} onChange={setMinRelVol}
+            disabled={!hasRelVol}
+          />
+
+          <SingleSlider
+            label={`Performance: ${minPerf10m}%+${hasPerf10m ? "" : " (data missing)"}`}
+            min={0} max={100} step={1} value={minPerf10m} onChange={setMinPerf10m}
+            disabled={!hasPerf10m}
+          />
+
+          <SingleSlider
+            label={`Float Max: ${maxFloatM}M${hasFloatM ? "" : " (data missing)"}`}
+            min={1} max={500} step={1} value={maxFloatM} onChange={setMaxFloatM}
+            disabled={!hasFloatM}
+          />
         </div>
       </div>
 
-      {/* Table (simplified) */}
+      {/* Table */}
       <div className="max-w-7xl mx-auto px-5 mt-6">
         <div className="text-sm text-white/70">
           Showing top {Math.min(10, filtered.length)} of {filtered.length} ({rowsRef.current.length} tracked)
@@ -252,7 +313,8 @@ export default function Dashboard() {
                 .map((r) => {
                   const badges = [];
                   if ((r.gapPct ?? 0) >= 15) badges.push("🔥 Hot Stock");
-                  // Momentum & volume badges kept for future if CSV adds fields
+                  if (hasRelVol && (r.relVol ?? 0) >= 5) badges.push("📢 High Volume");
+                  if (hasPerf10m && (r.perf10m ?? 0) >= 10) badges.push("⚡ Strong Momentum");
                   return (
                     <tr key={r.ticker} className="border-t border-white/10">
                       <Td className="font-mono">{r.ticker}</Td>
@@ -275,8 +337,12 @@ export default function Dashboard() {
               {filtered.length === 0 && (
                 <tr>
                   <Td colSpan={6} className="text-center text-white/60 py-6">
-                    No matches yet. If your CSV has only <span className="font-mono">ticker,price,change,volume</span>,
-                    we’ll use <span className="font-mono">change</span> as Gap%. Try lowering Gap% or widening price range.
+                    No matches yet. Current CSV columns detected:
+                    {" "}
+                    <code className="text-white/80">
+                      {Object.keys(candidates[0] || {}).join(", ") || "—"}
+                    </code>.
+                    Add <code>RelVol</code>/<code>AvgVolume</code>, <code>Perf10m</code>, and <code>FloatM</code> to enable all filters.
                   </Td>
                 </tr>
               )}
@@ -315,9 +381,7 @@ export default function Dashboard() {
                   🚀 NEW GAPPER: <span className="font-mono">{a.ticker}</span>{" "}
                   gapping {a.gapPct !== undefined ? `${a.gapPct.toFixed(1)}%` : "—"}
                 </div>
-                <div className="text-sm text-white/80 mt-1">
-                  Price: {a.price !== undefined ? `$${a.price.toFixed(2)}` : "—"}
-                </div>
+                <div className="text-sm text-white/80 mt-1">Price: {a.price !== undefined ? `$${a.price.toFixed(2)}` : "—"}</div>
               </div>
             ))}
             {alerts.length === 0 && <div className="text-sm text-white/60">No alerts yet</div>}
@@ -327,24 +391,27 @@ export default function Dashboard() {
         {/* Market News (only for shown tickers, max 10) */}
         <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
           <h3 className="font-semibold text-lg mb-2">📰 Market News</h3>
-          {newsShown.length ? (
+          {(news?.items || []).filter((n) => n.ticker && shownTickers.has(n.ticker.toUpperCase())).slice(0, 10).length ? (
             <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
-              {newsShown.map((n, i) => {
-                const when = toISOorNull(n.published);
-                const tlabel = when ? new Date(when).toLocaleTimeString() : "";
-                return (
-                  <div key={i} className="border-b border-white/10 pb-2">
-                    <div className="text-sm text白/60">
-                      <span className="font-mono">{n.ticker}</span> {tlabel && <span>• {tlabel}</span>}
+              {(news?.items || [])
+                .filter((n) => n.ticker && shownTickers.has(n.ticker.toUpperCase()))
+                .slice(0, 10)
+                .map((n, i) => {
+                  const when = toISOorNull(n.published);
+                  const tlabel = when ? new Date(when).toLocaleTimeString() : "";
+                  return (
+                    <div key={i} className="border-b border-white/10 pb-2">
+                      <div className="text-sm text-white/60">
+                        <span className="font-mono">{n.ticker}</span> {tlabel && <span>• {tlabel}</span>}
+                      </div>
+                      <div className="font-medium">{n.headline}</div>
+                      <div className="text-sm">
+                        {n.source && <span>Source: {n.source}</span>}{" "}
+                        {n.url && <> • <a className="underline" href={n.url} target="_blank" rel="noreferrer">Read more →</a></>}
+                      </div>
                     </div>
-                    <div className="font-medium">{n.headline}</div>
-                    <div className="text-sm">
-                      {n.source && <span>Source: {n.source}</span>}{" "}
-                      {n.url && <> • <a className="underline" href={n.url} target="_blank" rel="noreferrer">Read more →</a></>}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           ) : (
             <div className="text-sm text-white/60">No news for the current tickers.</div>
@@ -370,11 +437,11 @@ function Th({ children }: { children: any }) {
 function Td({ children, className = "", colSpan }: { children: any; className?: string; colSpan?: number }) {
   return <td className={`px-3 py-2 ${className}`} colSpan={colSpan}>{children}</td>;
 }
-function SingleSlider({ label, min, max, step, value, onChange }: any) {
+function SingleSlider({ label, min, max, step, value, onChange, disabled = false }: any) {
   return (
-    <div>
+    <div className={disabled ? "opacity-50" : ""}>
       <div className="text-sm font-medium mb-1">{label}</div>
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full" />
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full" disabled={disabled} />
     </div>
   );
 }
