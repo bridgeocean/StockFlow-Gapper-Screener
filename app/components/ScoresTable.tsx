@@ -6,77 +6,147 @@ import { useEffect, useMemo, useState } from "react";
 type ScoreRow = {
   ticker: string;
   price?: number | null;
-  gap_pct?: number | null;      // % gap (pre/post)
-  change_pct?: number | null;   // intraday % change if present
+  gap_pct?: number | null;      // % gap (Finviz "Gap")
+  change_pct?: number | null;   // % daily change
   rvol?: number | null;         // relative volume
   float_m?: number | null;      // float in millions
-  ai_score?: number | null;     // 0..1
-  volume?: number | null;       // absolute volume if present
-  ts?: string | null;           // identified/updated timestamp (ISO)
+  ai_score?: number | null;     // 0..1 (if available)
+  volume?: number | null;       // absolute volume
+  ts?: string | null;           // timestamp
 };
 
-type TodayScores = {
+type ScoresPayload = {
   generatedAt: string | null;
   scores: ScoreRow[];
 };
 
-const ONE_MIN = 60_000;
+// ---------- helpers ----------
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+const parseChange = (s: any) => {
+  if (s == null) return null;
+  const m = String(s).trim().match(/^(-?\d+(?:\.\d+)?)%?$/);
+  return m ? Number(m[1]) : safeNum(s);
+};
 
+function mapFinvizStocksToScores(rows: any[]): ScoresPayload {
+  const scores: ScoreRow[] = rows.map((s) => {
+    // Accept a variety of possible keys from the /api/stocks route
+    const t = (s.symbol || s.ticker || "").toString().toUpperCase();
+
+    // gap percentage: prefer 'gap', then 'gap_pct', then fall back to change
+    const gap =
+      safeNum(s.gap) ?? safeNum(s.gap_pct) ?? parseChange(s.gapPct) ?? null;
+
+    // relative volume: Finviz gives "Relative Volume" → often mapped as relativeVolume/relVolume/rvol
+    const relv =
+      safeNum(s.relativeVolume) ??
+      safeNum(s.relVolume) ??
+      safeNum(s.rvol) ??
+      null;
+
+    // float (millions): accept floatM/float_m, or convert absolute float_shares → M
+    let floatM =
+      safeNum(s.floatM) ?? safeNum(s.float_m) ?? null;
+    if (floatM == null && s.float_shares != null) {
+      const abs = safeNum(s.float_shares);
+      if (abs != null) floatM = Math.round((abs / 1_000_000) * 10) / 10; // 1 decimal
+    }
+    if (floatM == null && s.float != null) {
+      floatM = safeNum(s.float);
+    }
+
+    return {
+      ticker: t,
+      price: safeNum(s.price),
+      gap_pct: gap,
+      change_pct: parseChange(s.changePercent ?? s.change_pct ?? s.change),
+      rvol: relv,
+      float_m: floatM,
+      ai_score: safeNum(s.ai_score), // usually null from Finviz API
+      volume: safeNum(s.volume),
+      ts: s.lastUpdated || s.ts || null,
+    };
+  }).filter((r) => !!r.ticker);
+
+  return { generatedAt: new Date().toISOString(), scores };
+}
+
+// ---------- component ----------
 export default function ScoresTable() {
-  const [data, setData] = useState<TodayScores>({ generatedAt: null, scores: [] });
-  const [priceMin, setPriceMin] = useState<number>(1);
-  const [priceMax, setPriceMax] = useState<number>(5);
-  const [gapMin, setGapMin] = useState<number>(5);
-  const [onlyNews, setOnlyNews] = useState<boolean>(false);
+  const [data, setData] = useState<ScoresPayload>({ generatedAt: null, scores: [] });
+  const [priceMin, setPriceMin] = useState(1);
+  const [priceMax, setPriceMax] = useState(5);
+  const [gapMin, setGapMin] = useState(5);
+  const [onlyNews, setOnlyNews] = useState(false);
 
-  // fetch /public/today_scores.json (served at /today_scores.json)
-  async function load() {
+  // fetch order:
+  // 1) /api/stocks  (Finviz live)  ✅
+  // 2) /today_scores.json          ↩︎ fallback
+  // 3) /today_candidates.csv       ↩︎ fallback
+  async function loadOnce() {
+    // --- 1) Finviz live via our API route ---
+    try {
+      const res = await fetch("/api/stocks", { cache: "no-store" });
+      if (res.ok) {
+        const j = await res.json();
+        if (j?.success && Array.isArray(j.data) && j.data.length) {
+          setData(mapFinvizStocksToScores(j.data));
+          return;
+        }
+      }
+    } catch {}
+
+    // --- 2) today_scores.json (if GitHub action produced it) ---
     try {
       const res = await fetch("/today_scores.json", { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const j = (await res.json()) as TodayScores;
-      setData(j);
-    } catch {
-      // fallback to candidates CSV if scores JSON not present
-      try {
-        const res = await fetch("/today_candidates.csv", { cache: "no-store" });
-        if (!res.ok) return;
-        const text = await res.text();
-        // very small CSV parser for (ticker,price,change,volume) headers
-        const [head, ...rows] = text.trim().split(/\r?\n/);
-        const cols = head.split(",").map((c) => c.trim().toLowerCase());
-        const iTicker = cols.indexOf("ticker");
-        const iPrice = cols.indexOf("price");
-        const iChange = cols.indexOf("change");
-        const iVol = cols.indexOf("volume");
-        const scores: ScoreRow[] = rows.map((r) => {
-          const parts = r.split(",");
-          return {
-            ticker: parts[iTicker]?.toUpperCase?.() ?? "",
-            price: safeNum(parts[iPrice]),
-            change_pct: parseChange(parts[iChange]),
-            volume: safeNum(parts[iVol]),
-            gap_pct: null,
-            rvol: null,
-            float_m: null,
-            ai_score: null,
-            ts: null,
-          };
-        });
-        setData({ generatedAt: null, scores });
-      } catch {
-        // ignore
+      if (res.ok) {
+        const j = await res.json();
+        // expect { generatedAt, scores: [...] }
+        if (j?.scores && Array.isArray(j.scores)) {
+          setData(j);
+          return;
+        }
       }
-    }
+    } catch {}
+
+    // --- 3) fallback to today_candidates.csv (no gap_pct; filter will still work if gapMin==0) ---
+    try {
+      const res = await fetch("/today_candidates.csv", { cache: "no-store" });
+      if (!res.ok) return;
+      const text = await res.text();
+      const [head, ...rows] = text.trim().split(/\r?\n/);
+      const cols = head.split(",").map((c) => c.trim().toLowerCase());
+      const iTicker = cols.indexOf("ticker");
+      const iPrice = cols.indexOf("price");
+      const iChange = cols.indexOf("change");
+      const iVol = cols.indexOf("volume");
+      const scores: ScoreRow[] = rows.map((r) => {
+        const parts = r.split(",");
+        return {
+          ticker: parts[iTicker]?.toUpperCase?.() ?? "",
+          price: safeNum(parts[iPrice]),
+          change_pct: parseChange(parts[iChange]),
+          volume: safeNum(parts[iVol]),
+          gap_pct: null,
+          rvol: null,
+          float_m: null,
+          ai_score: null,
+          ts: null,
+        };
+      }).filter((r) => r.ticker);
+      setData({ generatedAt: null, scores });
+    } catch {}
   }
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, ONE_MIN);
-    return () => clearInterval(t);
+    loadOnce();
+    const id = setInterval(loadOnce, 60_000); // refresh every 60s
+    return () => clearInterval(id);
   }, []);
 
-  // filter & sort
   const filtered = useMemo(() => {
     return (data.scores || [])
       .filter((r) => r.ticker)
@@ -85,12 +155,13 @@ export default function ScoresTable() {
         return r.price >= priceMin && r.price <= priceMax;
       })
       .filter((r) => {
+        // Use gap % first, then fall back to change % if gap is missing
         const g = r.gap_pct ?? r.change_pct ?? 0;
         return g >= gapMin;
       })
       .filter((r) => {
-        // If "News-only" mode is enabled, require a news flag added upstream
-        // (we use a simple heuristic: ai_score > 0.5 OR rvol >= 1.3)
+        // If "News-only" mode is enabled, require a news/momentum heuristic:
+        // either ai_score high or rvol >= 1.3
         if (!onlyNews) return true;
         return (r.ai_score ?? 0) > 0.5 || (r.rvol ?? 0) >= 1.3;
       })
@@ -99,150 +170,113 @@ export default function ScoresTable() {
 
   // summary tiles
   const totalVol = useMemo(() => {
-    const v = filtered.reduce((acc, r) => acc + (r.volume ?? 0), 0);
-    return formatMillions(v);
+    return filtered.reduce((a, r) => a + (r.volume ?? 0), 0);
   }, [filtered]);
 
   const avgGap = useMemo(() => {
-    const vals = filtered.map((r) => (r.gap_pct ?? r.change_pct ?? 0)).filter((x) => isFinite(x));
-    if (vals.length === 0) return "—";
-    const m = vals.reduce((a, b) => a + b, 0) / vals.length;
-    return `${m.toFixed(1)}%`;
+    const xs = filtered.map((r) => r.gap_pct ?? r.change_pct).filter((x) => x != null) as number[];
+    if (!xs.length) return 0;
+    return xs.reduce((a, b) => a + b, 0) / xs.length;
   }, [filtered]);
 
-  const hotCount = filtered.filter((r) => (r.ai_score ?? 0) >= 0.7 || (r.rvol ?? 0) >= 2).length;
-
   return (
-    <div className="space-y-4">
-      {/* Controls */}
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="text-sm">
-            Price Range: ${priceMin} – ${priceMax}
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={priceMin}
-              onChange={(e) => setPriceMin(+e.target.value || 0)}
-              className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1"
-            />
-            <span className="opacity-60">to</span>
-            <input
-              type="number"
-              value={priceMax}
-              onChange={(e) => setPriceMax(+e.target.value || 0)}
-              className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1"
-            />
-          </div>
-
-          <label className="text-sm">Gap % ≥</label>
-          <input
-            type="number"
-            value={gapMin}
-            onChange={(e) => setGapMin(+e.target.value || 0)}
-            className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1"
-          />
-
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={onlyNews}
-              onChange={(e) => setOnlyNews(e.target.checked)}
-            />
-            News / Momentum only
-          </label>
-
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-xs opacity-60">
-              Last Update {friendlyTime(data.generatedAt)} • Auto: 60s
-            </span>
-            <button
-              onClick={load}
-              className="rounded-xl border border-white/15 bg-white/5 px-3 py-1.5 hover:bg-white/10"
-            >
-              Refresh
-            </button>
-          </div>
+    <section className="rounded-2xl bg-white/5 border border-white/10 p-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="text-sm opacity-80">
+          Last Update {friendlyTime(data.generatedAt)} • Auto: 60s
+        </div>
+        <div className="ml-auto text-sm opacity-80">
+          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Total Vol: {formatInt(totalVol)}
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <Tile icon="🔥" label="High momentum" value={String(hotCount)} />
-        <Tile icon="💰" label="Combined volume" value={totalVol} />
-        <Tile icon="📊" label="Gap percentage" value={avgGap} />
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-3 mb-3">
+        <label className="text-sm">Price</label>
+        <input
+          type="number"
+          value={priceMin}
+          onChange={(e) => setPriceMin(+e.target.value || 0)}
+          className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1"
+        />
+        <span className="opacity-60">to</span>
+        <input
+          type="number"
+          value={priceMax}
+          onChange={(e) => setPriceMax(+e.target.value || 0)}
+          className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1"
+        />
+
+        <label className="text-sm">Gap % ≥</label>
+        <input
+          type="number"
+          value={gapMin}
+          onChange={(e) => setGapMin(+e.target.value || 0)}
+          className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1"
+        />
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={onlyNews}
+            onChange={(e) => setOnlyNews(e.target.checked)}
+          />
+          News / Momentum only
+        </label>
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl border border-white/10 overflow-hidden">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-white/5">
-            <tr className="text-left">
-              <Th>Symbol</Th>
+          <thead>
+            <tr className="text-left opacity-80">
+              <Th>Ticker</Th>
               <Th className="text-right">Price</Th>
               <Th className="text-right">Gap %</Th>
-              <Th className="text-right">AI</Th>
-              <Th className="text-right">Volume</Th>
-              <Th className="text-right">RVol</Th>
-              <Th>Badges</Th>
+              <Th className="text-right">Change %</Th>
+              <Th className="text-right">rVol</Th>
+              <Th className="text-right">Float (M)</Th>
+              <Th className="text-right">Vol</Th>
             </tr>
           </thead>
           <tbody>
-            {filtered.slice(0, 10).map((r) => (
-              <tr key={r.ticker} className="border-t border-white/10 hover:bg-white/5">
-                <Td className="font-semibold">{r.ticker}</Td>
-                <Td right>{fmtPrice(r.price)}</Td>
-                <Td right color={pctColor(r.gap_pct ?? r.change_pct)}>
-                  {fmtPct(r.gap_pct ?? r.change_pct)}
-                </Td>
-                <Td right>{r.ai_score != null ? (r.ai_score * 100).toFixed(0) + "%" : "—"}</Td>
-                <Td right>{formatMillions(r.volume)}</Td>
-                <Td right>{r.rvol != null ? r.rvol.toFixed(1) + "x" : "—"}</Td>
-                <Td>
-                  <Badges r={r} />
-                </Td>
+            {filtered.map((r) => (
+              <tr key={r.ticker} className="border-t border-white/10">
+                <Td>{r.ticker}</Td>
+                <TdR>{fmtNum(r.price)}</TdR>
+                <TdR>{fmtPct(r.gap_pct)}</TdR>
+                <TdR>{fmtPct(r.change_pct)}</TdR>
+                <TdR>{fmtNum(r.rvol)}</TdR>
+                <TdR>{fmtNum(r.float_m)}</TdR>
+                <TdR>{formatInt(r.volume)}</TdR>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="text-center py-8 opacity-70">
-                  No matches for current filters.
+                  No matches. Try lowering the Gap %, widening the price range,
+                  or disable “News / Momentum only”.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
   );
 }
 
-function safeNum(s?: string) {
-  const x = Number(String(s ?? "").replace(/[$,%\s]/g, ""));
-  return Number.isFinite(x) ? x : null;
+// ---------- formatting helpers ----------
+function fmtNum(v?: number | null, d = 2) {
+  if (v == null) return "—";
+  return Number(v).toFixed(d);
 }
-function parseChange(s?: string) {
-  if (!s) return null;
-  const m = String(s).match(/-?\d+(\.\d+)?/);
-  if (!m) return null;
-  return Number(m[0]);
+function fmtPct(v?: number | null) {
+  if (v == null) return "—";
+  return Number(v).toFixed(1) + "%";
 }
-function fmtPrice(x?: number | null) {
-  return x == null ? "—" : `$${x.toFixed(2)}`;
-}
-function fmtPct(x?: number | null) {
-  return x == null ? "—" : `${x.toFixed(1)}%`;
-}
-function pctColor(x?: number | null) {
-  if (x == null) return "";
-  if (x >= 10) return "text-green-300";
-  if (x >= 5) return "text-green-200";
-  if (x >= 0) return "text-green-100";
-  return "text-red-300";
-}
-function formatMillions(v?: number | null) {
-  if (!v || !isFinite(v)) return "—";
+function formatInt(v?: number | null) {
+  if (!v) return "—";
   if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
   if (v >= 1_000) return (v / 1_000).toFixed(1) + "k";
   return String(v);
@@ -256,54 +290,12 @@ function friendlyTime(iso: string | null) {
     return "—";
   }
 }
-
 function Th({ children, className = "" }: any) {
   return <th className={`px-3 py-2 font-medium ${className}`}>{children}</th>;
 }
-function Td({
-  children,
-  className = "",
-  right = false,
-  color = "",
-}: {
-  children: any;
-  className?: string;
-  right?: boolean;
-  color?: string;
-}) {
-  return (
-    <td className={`px-3 py-2 ${right ? "text-right" : ""} ${color} ${className}`}>
-      {children}
-    </td>
-  );
+function Td({ children, className = "" }: any) {
+  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
 }
-
-function Tile({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-      <div className="text-2xl">{icon}</div>
-      <div className="mt-1 text-sm opacity-70">{label}</div>
-      <div className="text-xl font-semibold mt-1">{value}</div>
-    </div>
-  );
-}
-
-function Badges({ r }: { r: ScoreRow }) {
-  const hot = (r.ai_score ?? 0) >= 0.7;
-  const momentum = (r.gap_pct ?? r.change_pct ?? 0) >= 10;
-  const highVol = (r.rvol ?? 0) >= 2 || (r.volume ?? 0) >= 5_000_000;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {hot && <Badge text="🔥 Hot Stock" />}
-      {momentum && <Badge text="⚡ Strong Momentum" />}
-      {highVol && <Badge text="📢 High Volume" />}
-    </div>
-  );
-}
-function Badge({ text }: { text: string }) {
-  return (
-    <span className="text-xs px-2 py-1 rounded-full bg-white/10 border border-white/15">
-      {text}
-    </span>
-  );
+function TdR({ children, className = "" }: any) {
+  return <td className={`px-3 py-2 text-right ${className}`}>{children}</td>;
 }
