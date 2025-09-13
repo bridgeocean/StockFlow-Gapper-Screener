@@ -8,9 +8,8 @@ import { migrateOldAuthKey, AUTH_KEY } from "../components/auth";
 
 export default function LoginPage() {
   const r = useRouter();
-
-  // Read ?next=... without useSearchParams (avoids Suspense requirement on Next 15)
   const nextRef = useRef<string | null>(null);
+
   useEffect(() => {
     migrateOldAuthKey();
     if (typeof window !== "undefined") {
@@ -32,6 +31,8 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
         body: JSON.stringify({ email, password: pass }),
       });
 
@@ -42,10 +43,23 @@ export default function LoginPage() {
         return;
       }
 
-      // Optional local flag for any purely client-side checks
+      // Verify cookie actually set (important on some setups)
+      const me = await fetch("/api/auth/me", { cache: "no-store" }).then(r => r.json()).catch(() => ({ authed: false }));
+      if (!me?.authed) {
+        setErr("Could not establish a session. Please try again.");
+        setBusy(false);
+        return;
+      }
+
+      // Optional local flag for any purely client checks
       try { localStorage.setItem(AUTH_KEY, "1"); } catch {}
 
-      r.replace(nextRef.current || "/dashboard");
+      // Hard navigation avoids any client router edge-cases
+      if (typeof window !== "undefined") {
+        window.location.assign(nextRef.current || "/dashboard");
+      } else {
+        r.replace(nextRef.current || "/dashboard");
+      }
     } catch {
       setErr("Network error, try again.");
     } finally {
