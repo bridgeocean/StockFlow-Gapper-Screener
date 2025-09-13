@@ -26,3 +26,17 @@ export function isLoggedInLocal(): boolean {
     return false;
   }
 }
+
+/**
+ * One-time migration helper for users who still have the old key
+ * ("stockflow_session") from the previous build. Safe to call on mount.
+ */
+export function migrateOldAuthKey() {
+  try {
+    if (typeof window === "undefined") return;
+    const legacy = localStorage.getItem("stockflow_session");
+    if (legacy && !localStorage.getItem(AUTH_KEY)) {
+      localStorage.setItem(AUTH_KEY, "1");
+    }
+  } catch {}
+}
