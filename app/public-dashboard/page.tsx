@@ -1,48 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import Papa from "papaparse";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
-// ---- Types from our repo payloads ----
-type ScoreRow = {
-  ticker: string;
-  score?: number;
-  gap_pct?: number;         // optional in scores JSON depending on script
-  rvol?: number;
-  rsi14m?: number;
-};
+// --- Data types ---
+type ScoreRow = { ticker: string; score?: number; gap_pct?: number; rvol?: number; rsi14m?: number; };
+type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[]; };
+type CandidateRow = { [k: string]: any; Ticker?: string; Symbol?: string; Price?: string; GapPct?: string; Perf10m?: string; RVol?: string; RelVol?: string; Float?: string; };
+type NewsItem = { ticker: string; headline: string; source?: string; url?: string; published?: string; };
+type NewsPayload = { generatedAt?: string; items: NewsItem[]; };
 
-type ScoresPayload = {
-  generatedAt: string | null;
-  scores: ScoreRow[];
-};
-
-type CandidateRow = {
-  Ticker?: string;          // raw from CSV (Finviz export)
-  Symbol?: string;          // sometimes Symbol instead of Ticker
-  Price?: string;
-  GapPct?: string | number; // % gap
-  Perf10m?: string | number;
-  RVol?: string | number;   // rel volume
-  Float?: string | number;  // millions
-  // allow any additional columns
-  [k: string]: any;
-};
-
-type NewsItem = {
-  ticker: string;
-  headline: string;
-  source?: string;
-  url?: string;
-  published?: string;       // ISO string
-};
-
-type NewsPayload = {
-  generatedAt?: string;
-  items: NewsItem[];
-};
-
-// ---- Helpers ----
+// --- Helpers ---
 const num = (v: any): number | undefined => {
   if (v === null || v === undefined) return undefined;
   if (typeof v === "number") return v;
@@ -57,133 +26,82 @@ const toISOorNull = (s?: string | null) => {
   return isNaN(d.getTime()) ? null : d.toISOString();
 };
 
-// Merge strategy: keep previously-seen tickers so the list doesn't “blink” on refresh
-function mergeByTicker<T extends { ticker: string }>(
-  prev: T[],
-  incoming: T[]
-): T[] {
+// Merge previous + incoming by ticker so list doesn't flicker
+function mergeByTicker<T extends { ticker: string }>(prev: T[], incoming: T[]): T[] {
   const map = new Map<string, T>();
   prev.forEach((r) => map.set(r.ticker, r));
-  incoming.forEach((r) => map.set(r.ticker, r)); // incoming overwrites
+  incoming.forEach((r) => map.set(r.ticker, r));
   return Array.from(map.values());
 }
 
-// ---- Component ----
-export default function PublicDashboard() {
+export default function Dashboard() {
+  const r = useRouter();
+
+  // Gate (very simple demo gate)
+  useEffect(() => {
+    const ok = sessionStorage.getItem("sf_auth_ok") === "1";
+    if (!ok) r.push("/");
+  }, [r]);
+
   // Raw payloads
   const [scores, setScores] = useState<ScoresPayload | null>(null);
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
   const [news, setNews] = useState<NewsPayload | null>(null);
 
-  // Merged view rows
-  const [rows, setRows] = useState<
-    Array<{
-      ticker: string;
-      price?: number;
-      gapPct?: number;
-      perf10mPct?: number;
-      rvol?: number;
-      floatM?: number;
-      score?: number;
-    }>
-  >([]);
-
-  // Persist rows across refresh (no flicker)
+  // Merged rows
+  type Row = {
+    ticker: string;
+    price?: number;
+    gapPct?: number;
+    perf10mPct?: number;
+    rvol?: number;
+    floatM?: number;
+    score?: number;
+    firstSeenAt?: string; // local time string
+  };
+  const [rows, setRows] = useState<Row[]>([]);
   const rowsRef = useRef(rows);
-  useEffect(() => {
-    rowsRef.current = rows;
-  }, [rows]);
+  const firstSeen = useRef<Map<string, string>>(new Map());
+  useEffect(() => { rowsRef.current = rows; }, [rows]);
 
-  // Filters (defaults per your spec)
+  // Filters (defaults; Volume Multiplier default to 1.3x)
   const [priceMin, setPriceMin] = useState(1);
   const [priceMax, setPriceMax] = useState(5);
-  const [minRvol, setMinRvol] = useState(5);       // 5x
-  const [minGap, setMinGap] = useState(5);         // 5%
-  const [minPerf, setMinPerf] = useState(10);      // 10%
-  const [maxFloat, setMaxFloat] = useState(20);    // 20M
+  const [minRvol, setMinRvol] = useState(1.3);
+  const [minGap, setMinGap] = useState(5);
+  const [minPerf, setMinPerf] = useState(10);
+  const [maxFloat, setMaxFloat] = useState(20);
   const [newsOnly, setNewsOnly] = useState(false);
 
-  // Status
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [liveMsg] = useState(
-    "Successfully connected to Live Feed API. Data is being updated in real-time from professional market sources."
-  );
 
-  // Fetchers
-  const fetchAll = async () => {
-    try {
-      // Scores JSON
-      const sRes = await fetch("/today_scores.json", { cache: "no-store" });
-      const sPayload = (await sRes.json()) as ScoresPayload;
-      setScores(sPayload);
-
-      // Candidates CSV
-      const cRes = await fetch("/today_candidates.csv", { cache: "no-store" });
-      const cText = await cRes.text();
-      const parsed = Papa.parse<CandidateRow>(cText, {
-        header: true,
-        dynamicTyping: false,
-        skipEmptyLines: true,
-      });
-      const cRows = (parsed.data || []).filter(Boolean);
-      setCandidates(cRows);
-
-      // News JSON (optional)
-      const nRes = await fetch("/today_news.json", { cache: "no-store" });
-      if (nRes.ok) {
-        const nPayload = (await nRes.json()) as NewsPayload;
-        setNews(nPayload);
-      } else {
-        setNews({ items: [] });
-      }
-
-      setLastUpdated(new Date().toLocaleTimeString());
-      // merge into display rows
-      const merged = buildMergedRows(sPayload, cRows, newsOnly ? (news?.items ?? []) : undefined);
-      setRows((prev) => mergeByTicker(prev, merged));
-    } catch {
-      // leave state as-is; page still usable
-    }
-  };
-
-  // Build merged records from scores + candidates (+ optional news filter)
+  // Build merged rows from payloads (filter news tickers if newsOnly)
   const buildMergedRows = (
     sPayload: ScoresPayload | null,
     cRows: CandidateRow[],
     newsItems?: NewsItem[]
-  ) => {
+  ): Row[] => {
     const sMap = new Map<string, ScoreRow>();
     (sPayload?.scores || []).forEach((s) => s.ticker && sMap.set(s.ticker.toUpperCase(), s));
 
-    const newsSet =
+    const allowedNews =
       newsOnly && newsItems
         ? new Set(newsItems.map((n) => n.ticker?.toUpperCase()).filter(Boolean))
         : null;
 
-    // Figure out the symbol column in CSV
     const symbolKey =
       ["Ticker", "Symbol", "ticker", "symbol"].find((k) => k in (cRows[0] || {})) || "Ticker";
 
-    const result: Array<{
-      ticker: string;
-      price?: number;
-      gapPct?: number;
-      perf10mPct?: number;
-      rvol?: number;
-      floatM?: number;
-      score?: number;
-    }> = [];
-
+    const result: Row[] = [];
     for (const r of cRows) {
       const t = String(r[symbolKey] ?? "").toUpperCase().trim();
       if (!t) continue;
-
-      if (newsSet && !newsSet.has(t)) continue;
+      if (allowedNews && !allowedNews.has(t)) continue;
 
       const price = num(r.Price);
       const gapPct = num(r.GapPct);
       const perf10mPct = num(r.Perf10m);
-      const rvol = num(r.RVol);
+      const rvol = num(r.RVol ?? r.RelVol);
       const floatM = num(r.Float);
       const sRow = sMap.get(t);
 
@@ -200,22 +118,61 @@ export default function PublicDashboard() {
     return result;
   };
 
-  // Initial + 60s refresh loop
+  const pull = async () => {
+    try {
+      const sRes = await fetch("/today_scores.json", { cache: "no-store" });
+      const sPayload = (await sRes.json()) as ScoresPayload;
+      setScores(sPayload);
+
+      const cRes = await fetch("/today_candidates.csv", { cache: "no-store" });
+      const cText = await cRes.text();
+      const parsed = Papa.parse<CandidateRow>(cText, { header: true, skipEmptyLines: true });
+      const cRows = (parsed.data || []).filter(Boolean);
+      setCandidates(cRows);
+
+      const nRes = await fetch("/today_news.json", { cache: "no-store" });
+      const nPayload = nRes.ok ? ((await nRes.json()) as NewsPayload) : { items: [] };
+      setNews(nPayload);
+
+      const merged = buildMergedRows(sPayload, cRows, newsOnly ? nPayload.items : undefined);
+
+      // add firstSeen timestamps
+      merged.forEach((m) => {
+        if (!firstSeen.current.has(m.ticker)) {
+          firstSeen.current.set(m.ticker, new Date().toLocaleTimeString());
+        }
+        m.firstSeenAt = firstSeen.current.get(m.ticker)!;
+      });
+
+      setRows((prev) => mergeByTicker(prev, merged));
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch {
+      // ignore transient errs
+    }
+  };
+
+  // Initial + 60s refresh
   useEffect(() => {
-    fetchAll();
-    const id = setInterval(fetchAll, 60_000); // 1 minute
+    pull();
+    const id = setInterval(pull, 60_000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Rebuild merged rows instantly when toggling “news only”
+  // Rebuild instantly when toggling “news only”
   useEffect(() => {
     const merged = buildMergedRows(scores, candidates, newsOnly ? (news?.items ?? []) : undefined);
+    merged.forEach((m) => {
+      if (!firstSeen.current.has(m.ticker)) {
+        firstSeen.current.set(m.ticker, new Date().toLocaleTimeString());
+      }
+      m.firstSeenAt = firstSeen.current.get(m.ticker)!;
+    });
     setRows((prev) => mergeByTicker(prev, merged));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newsOnly, candidates, scores, news]);
 
-  // Filtered view
+  // Filters
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (r.price === undefined) return false;
@@ -228,113 +185,83 @@ export default function PublicDashboard() {
     });
   }, [rows, priceMin, priceMax, minRvol, minGap, minPerf, maxFloat]);
 
-  // Stats
+  // Keep only news for tickers **currently shown**, max 10
+  const shownTickers = new Set(filtered.map((f) => f.ticker));
+  const newsShown = (news?.items || [])
+    .filter((n) => n.ticker && shownTickers.has(n.ticker.toUpperCase()))
+    .slice(0, 10);
+
   const avgGap =
     filtered.length > 0
-      ? (
-          filtered.reduce((a, r) => a + (r.gapPct ?? 0), 0) / filtered.length
-        ).toFixed(1)
+      ? (filtered.reduce((a, r) => a + (r.gapPct ?? 0), 0) / filtered.length).toFixed(1)
       : "0.0";
 
-  // Quick CSV export
-  const exportCSV = () => {
-    const header = ["Ticker", "Price", "GapPct", "Perf10mPct", "RVol", "FloatM", "Score"];
-    const body = filtered.map((r) => [
-      r.ticker,
-      r.price ?? "",
-      r.gapPct ?? "",
-      r.perf10mPct ?? "",
-      r.rvol ?? "",
-      r.floatM ?? "",
-      r.score ?? "",
-    ]);
-    const csv = [header, ...body].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "gapper_export.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  const onLogout = () => {
+    sessionStorage.removeItem("sf_auth_ok");
+    r.push("/");
   };
 
-  // News panel (shows latest headlines; timestamps & Read more)
-  const newsPanel = (
-    <div className="mt-6 rounded-xl border p-4">
-      <h3 className="font-semibold text-lg mb-2">📰 Market News</h3>
-      {news?.items?.length ? (
-        <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
-          {news.items.slice(0, 50).map((n, i) => {
-            const when = toISOorNull(n.published);
-            const tlabel = when ? new Date(when).toLocaleTimeString() : "";
-            return (
-              <div key={i} className="border-b pb-2">
-                <div className="text-sm text-gray-500">
-                  <span className="font-mono">{n.ticker}</span>{" "}
-                  {tlabel && <span>• {tlabel}</span>}
-                </div>
-                <div className="font-medium">{n.headline}</div>
-                <div className="text-sm">
-                  {n.source && <span>Source: {n.source}</span>}{" "}
-                  {n.url && (
-                    <>
-                      •{" "}
-                      <a
-                        className="underline"
-                        href={n.url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Read more →
-                      </a>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="text-sm text-gray-500">No news yet.</div>
-      )}
-    </div>
-  );
+  const onRefresh = () => pull();
 
-  // UI
   return (
-    <div className="max-w-7xl mx-auto p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">StockFlow</h1>
-          <div className="text-sm text-gray-500">by ThePhDPush</div>
-          <div className="mt-1 text-green-600">🟢 LIVE</div>
-          <div className="text-xs text-gray-500">
-            Last updated: {lastUpdated ?? "—"}
+    <div className="min-h-screen bg-gradient-to-b from-[#2a1459] via-[#180a36] to-black text-white">
+      {/* Top bar */}
+      <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => r.push("/")}
+            className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/15"
+            title="Home"
+          >
+            🏠
+          </button>
+          <div>
+            <div className="text-xl font-bold">StockFlow</div>
+            <div className="text-xs text-white/70">by ThePhDPush</div>
           </div>
         </div>
-        <div className="text-sm rounded-lg border p-3 max-w-md">
-          <div className="font-medium">Live Data</div>
-          <div className="text-gray-600">{liveMsg}</div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            className="rounded-xl bg-green-500 text-black px-4 py-2 font-semibold hover:brightness-110"
+          >
+            Refresh
+          </button>
+          <button
+            onClick={onLogout}
+            className="rounded-xl bg-red-500 text-white px-4 py-2 font-semibold hover:brightness-110"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+
+      {/* Live banner */}
+      <div className="max-w-7xl mx-auto px-5">
+        <div className="rounded-xl border border-green-500/30 bg-green-500/10 text-green-200 px-4 py-3">
+          <div className="font-semibold">Live Data</div>
+          <div className="text-sm">
+            Successfully connected to Live Feed API. Data is being updated in real-time from professional market sources.
+          </div>
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+      <div className="max-w-7xl mx-auto px-5 grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
         <KPI label="Filtered Stocks" value={filtered.length.toString()} sub="Active scanners" />
         <KPI label="Average Gap" value={`${avgGap}%`} sub="Gap percentage" />
         <KPI label="Hot Stocks" value={Math.min(filtered.length, 10).toString()} sub="High momentum" />
-        <KPI label="Refresh" value="60s" sub="Auto update" />
+        <KPI label="Last Update" value={lastUpdated ?? "—"} sub="Auto: 60s" />
       </div>
 
       {/* Filters */}
-      <div className="mt-6 rounded-xl border p-4">
+      <div className="max-w-7xl mx-auto px-5 mt-6 rounded-2xl bg-white/5 border border-white/10 p-4">
         <div className="flex items-center gap-4 flex-wrap">
           <button
-            className="px-3 py-1.5 rounded border hover:bg-gray-50"
+            className="px-3 py-1.5 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10"
             onClick={() => {
               setPriceMin(1); setPriceMax(5);
-              setMinRvol(5); setMinGap(5);
+              setMinRvol(1.3); setMinGap(5);
               setMinPerf(10); setMaxFloat(20);
               setNewsOnly(false);
             }}
@@ -342,189 +269,191 @@ export default function PublicDashboard() {
             🔄 Reset Filters
           </button>
 
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={newsOnly}
-              onChange={(e) => setNewsOnly(e.target.checked)}
-            />
+        <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={newsOnly} onChange={(e) => setNewsOnly(e.target.checked)} />
             📢 News Catalyst Only
           </label>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mt-4">
-          <Slider
+          <RangeSlider
             label={`Price Range: $${priceMin} - $${priceMax}`}
-            min={0.5}
-            max={20}
-            step={0.5}
+            min={0.5} max={20} step={0.5}
             value={[priceMin, priceMax]}
             onChange={(a, b) => { setPriceMin(a); setPriceMax(b); }}
           />
-          <Slider
-            label={`Volume Multiplier: ${minRvol}x+`}
-            min={1}
-            max={20}
-            step={1}
+          <SingleSlider
+            label={`Volume Multiplier: ${minRvol.toFixed(1)}x+`}
+            min={1} max={20} step={0.1}
             value={minRvol}
-            onChange={(v) => setMinRvol(v)}
+            onChange={setMinRvol}
           />
-          <Slider
+          <SingleSlider
             label={`Gap Percentage: ${minGap}%+`}
-            min={0}
-            max={50}
-            step={1}
+            min={0} max={50} step={1}
             value={minGap}
-            onChange={(v) => setMinGap(v)}
+            onChange={setMinGap}
           />
-          <Slider
+          <SingleSlider
             label={`Performance (10m): ${minPerf}%+`}
-            min={0}
-            max={50}
-            step={1}
+            min={0} max={50} step={1}
             value={minPerf}
-            onChange={(v) => setMinPerf(v)}
+            onChange={setMinPerf}
           />
-          <Slider
+          <SingleSlider
             label={`Float Max: ${maxFloat}M`}
-            min={1}
-            max={200}
-            step={1}
+            min={1} max={200} step={1}
             value={maxFloat}
-            onChange={(v) => setMaxFloat(v)}
+            onChange={setMaxFloat}
           />
         </div>
       </div>
 
-      {/* Table header */}
-      <div className="mt-6 flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          Showing top {Math.min(10, filtered.length)} of {filtered.length}{" "}
-          ({rowsRef.current.length} total tracked today)
+      {/* Table */}
+      <div className="max-w-7xl mx-auto px-5 mt-6">
+        <div className="text-sm text-white/70">
+          Showing top {Math.min(10, filtered.length)} of {filtered.length} ({rowsRef.current.length} tracked)
         </div>
-        <button onClick={exportCSV} className="px-3 py-1.5 rounded border hover:bg-gray-50">
-          📥 Export CSV
-        </button>
-      </div>
-
-      {/* Results table */}
-      <div className="mt-3 overflow-x-auto rounded-xl border">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <Th>Ticker</Th>
-              <Th>Price</Th>
-              <Th>Gap %</Th>
-              <Th>Perf 10m %</Th>
-              <Th>Rel Vol</Th>
-              <Th>Float (M)</Th>
-              <Th>AI Score</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered
-              .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-              .slice(0, 10)
-              .map((r) => (
-                <tr key={r.ticker} className="border-t">
-                  <Td className="font-mono">{r.ticker}</Td>
-                  <Td>{r.price !== undefined ? `$${r.price.toFixed(2)}` : "—"}</Td>
-                  <Td>{r.gapPct !== undefined ? `${r.gapPct.toFixed(1)}%` : "—"}</Td>
-                  <Td>{r.perf10mPct !== undefined ? `${r.perf10mPct.toFixed(1)}%` : "—"}</Td>
-                  <Td>{r.rvol !== undefined ? `${r.rvol.toFixed(1)}x` : "—"}</Td>
-                  <Td>{r.floatM !== undefined ? `${r.floatM.toFixed(1)}` : "—"}</Td>
-                  <Td>{r.score !== undefined ? r.score.toFixed(3) : "—"}</Td>
-                </tr>
-              ))}
-            {filtered.length === 0 && (
+        <div className="mt-2 overflow-x-auto rounded-2xl border border-white/10">
+          <table className="w-full text-sm">
+            <thead className="bg-white/10">
               <tr>
-                <Td colSpan={7} className="text-center text-gray-500 py-6">
-                  No matches yet. Try relaxing filters or check back after next refresh.
-                </Td>
+                <Th>Ticker</Th>
+                <Th>Price</Th>
+                <Th>Gap %</Th>
+                <Th>Perf 10m %</Th>
+                <Th>Rel Vol</Th>
+                <Th>Float (M)</Th>
+                <Th>AI Score</Th>
+                <Th>Badges</Th>
+                <Th>Since</Th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered
+                .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+                .slice(0, 10)
+                .map((r) => {
+                  const badges = [];
+                  if ((r.gapPct ?? 0) >= 15) badges.push("🔥 Hot Stock");
+                  if ((r.perf10mPct ?? 0) >= 10) badges.push("⚡ Strong Momentum");
+                  if ((r.rvol ?? 0) >= 5) badges.push("📢 High Volume");
+                  return (
+                    <tr key={r.ticker} className="border-t border-white/10">
+                      <Td className="font-mono">{r.ticker}</Td>
+                      <Td>{r.price !== undefined ? `$${r.price.toFixed(2)}` : "—"}</Td>
+                      <Td>{r.gapPct !== undefined ? `${r.gapPct.toFixed(1)}%` : "—"}</Td>
+                      <Td>{r.perf10mPct !== undefined ? `${r.perf10mPct.toFixed(1)}%` : "—"}</Td>
+                      <Td>{r.rvol !== undefined ? `${r.rvol.toFixed(1)}x` : "—"}</Td>
+                      <Td>{r.floatM !== undefined ? r.floatM.toFixed(1) : "—"}</Td>
+                      <Td>{r.score !== undefined ? r.score.toFixed(3) : "—"}</Td>
+                      <Td>
+                        <div className="flex flex-wrap gap-1">
+                          {badges.map((b, i) => (
+                            <span key={i} className="text-xs rounded-lg bg-white/10 border border-white/10 px-2 py-0.5">
+                              {b}
+                            </span>
+                          ))}
+                        </div>
+                      </Td>
+                      <Td className="text-xs text-white/70">{r.firstSeenAt ?? "—"}</Td>
+                    </tr>
+                  );
+                })}
+              {filtered.length === 0 && (
+                <tr>
+                  <Td colSpan={9} className="text-center text-white/60 py-6">
+                    No matches yet. Try relaxing filters or check back after next refresh.
+                  </Td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {newsPanel}
+      {/* News panel (only tickers that show up; limit 10) */}
+      <div className="max-w-7xl mx-auto px-5 mt-6 mb-12">
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+          <h3 className="font-semibold text-lg mb-2">📰 Market News</h3>
+          {newsShown.length ? (
+            <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
+              {newsShown.map((n, i) => {
+                const when = toISOorNull(n.published);
+                const tlabel = when ? new Date(when).toLocaleTimeString() : "";
+                return (
+                  <div key={i} className="border-b border-white/10 pb-2">
+                    <div className="text-sm text-white/60">
+                      <span className="font-mono">{n.ticker}</span> {tlabel && <span>• {tlabel}</span>}
+                    </div>
+                    <div className="font-medium">{n.headline}</div>
+                    <div className="text-sm">
+                      {n.source && <span>Source: {n.source}</span>}{" "}
+                      {n.url && (
+                        <>
+                          •{" "}
+                          <a className="underline" href={n.url} target="_blank" rel="noreferrer">
+                            Read more →
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-sm text-white/60">No news for the current tickers.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-// ---- Tiny UI helpers ----
+// --- Small UI helpers ---
 function KPI({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="rounded-xl border p-4">
-      <div className="text-sm text-gray-500">{label}</div>
+    <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+      <div className="text-sm text-white/70">{label}</div>
       <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs text-gray-500">{sub}</div>
+      <div className="text-xs text-white/60">{sub}</div>
     </div>
   );
 }
-
 function Th({ children }: { children: any }) {
-  return <th className="text-left px-3 py-2 text-xs font-semibold text-gray-600">{children}</th>;
+  return <th className="text-left px-3 py-2 text-xs font-semibold text-white/70">{children}</th>;
 }
 function Td({ children, className = "", colSpan }: { children: any; className?: string; colSpan?: number }) {
   return <td className={`px-3 py-2 ${className}`} colSpan={colSpan}>{children}</td>;
 }
 
-// Simple slider that supports single or range values
-function Slider({
-  label,
-  min,
-  max,
-  step,
-  value,
-  onChange,
-}: {
-  label: string;
-  min: number;
-  max: number;
-  step: number;
-  value: number | [number, number];
-  onChange: (v: number, v2?: number) => void;
-}) {
-  const isRange = Array.isArray(value);
-  const v1 = isRange ? value[0] : (value as number);
-  const v2 = isRange ? value[1] : undefined;
-
+function SingleSlider({
+  label, min, max, step, value, onChange,
+}: { label: string; min: number; max: number; step: number; value: number; onChange: (v: number) => void; }) {
   return (
     <div>
       <div className="text-sm font-medium mb-1">{label}</div>
-      {isRange ? (
-        <div className="flex items-center gap-3">
-          <input
-            type="range"
-            min={min}
-            max={max}
-            step={step}
-            value={v1}
-            onChange={(e) => onChange(Number(e.target.value), v2)}
-            className="w-full"
-          />
-          <input
-            type="range"
-            min={min}
-            max={max}
-            step={step}
-            value={v2}
-            onChange={(e) => onChange(v1, Number(e.target.value))}
-            className="w-full"
-          />
-        </div>
-      ) : (
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={v1}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full"
-        />
-      )}
+      <input
+        type="range"
+        min={min} max={max} step={step} value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full"
+      />
+    </div>
+  );
+}
+function RangeSlider({
+  label, min, max, step, value, onChange,
+}: { label: string; min: number; max: number; step: number; value: [number, number]; onChange: (v1: number, v2: number) => void; }) {
+  const [v1, v2] = value;
+  return (
+    <div>
+      <div className="text-sm font-medium mb-1">{label}</div>
+      <div className="flex items-center gap-3">
+        <input type="range" min={min} max={max} step={step} value={v1} onChange={(e) => onChange(Number(e.target.value), v2)} className="w-full" />
+        <input type="range" min={min} max={max} step={step} value={v2} onChange={(e) => onChange(v1, Number(e.target.value))} className="w-full" />
+      </div>
     </div>
   );
 }
