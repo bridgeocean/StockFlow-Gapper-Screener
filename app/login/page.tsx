@@ -9,9 +9,8 @@ import { migrateOldAuthKey, AUTH_KEY } from "../components/auth";
 export default function LoginPage() {
   const r = useRouter();
 
-  // Read ?next=/some/path without useSearchParams (avoids Suspense requirement)
+  // Read ?next=... without useSearchParams (avoids Suspense requirement on Next 15)
   const nextRef = useRef<string | null>(null);
-
   useEffect(() => {
     migrateOldAuthKey();
     if (typeof window !== "undefined") {
@@ -38,17 +37,16 @@ export default function LoginPage() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        setErr(data?.message || "Invalid credentials");
+        setErr(data?.message || "Invalid email or password");
         setBusy(false);
         return;
       }
 
-      // Optional client flag for any client-only checks
+      // Optional local flag for any purely client-side checks
       try { localStorage.setItem(AUTH_KEY, "1"); } catch {}
 
       r.replace(nextRef.current || "/dashboard");
-    } catch (e) {
-      console.error(e);
+    } catch {
       setErr("Network error, try again.");
     } finally {
       setBusy(false);
@@ -77,7 +75,7 @@ export default function LoginPage() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="bridgeocean@cyberservices.com"
+              placeholder="Email"
             />
           </div>
 
@@ -89,7 +87,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={pass}
               onChange={(e) => setPass(e.target.value)}
-              placeholder="admin123"
+              placeholder="Password"
             />
           </div>
 
