@@ -3,42 +3,66 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-/** ──────────────────────────────────────────────────────────────────────────
- *  Tunables (easy to tweak without touching the rest of the file)
- *  ────────────────────────────────────────────────────────────────────────── */
+/** ───────────────────────── Tunables (edit these freely) ───────────────────────── */
 const WEIGHTS = {
-  ai: 0.45,     // AI model confidence (0..1)
-  rvol: 0.30,   // Relative volume (1x baseline; saturates at ~3x)
-  gap: 0.15,    // Opening gap (saturates at 20%)
-  change: 0.10, // Intraday positive change (saturates at +10%)
+  rvol: 0.65,    // relative volume drives score
+  ai: 0.20,      // AI confidence (0..1)
+  gap: 0.10,     // opening gap (cap 20%)
+  change: 0.05,  // intraday +change (cap +10%)
 };
 
-const FLOAT_TARGET_M = 20;        // target float (M) — best liquidity pop
-const FLOAT_PENALTY_MAX = 12;     // max points to subtract for large floats
-const FLOAT_PENALTY_CAP_M = 200;  // 200M+ gets the full penalty
-const FLOAT_BONUS = 3;            // bonus points when float ≤ 20M
+const RVOL_TRADE = 5.0;          // rVol ≥ 5x + gates + recent news → TRADE
+const RVOL_TRADE_FALLBACK = 7.0; // no recent news path: require this rVol
+const GAP_MIN_TRADE = 5;         // %
+const GAP_MIN_TRADE_FALLBACK = 8;// % (no news)
+const CHANGE_MIN_TRADE = 5;      // %  ← lowered from +10% as requested
+const CHANGE_MIN_TRADE_FALLBACK = 6; // % (no news stays stricter)
 
-const TOP_N = 10;                 // show only the top N rows
+const RVOL_WATCH = 2.5;          // rVol ≥ 2.5x → WATCH gate (with Gap & Change below)
+const GAP_MIN_WATCH = 2;         // %
+const CHANGE_MIN_WATCH = 0;      // %
+
+const FLOAT_TARGET_M = 20;       // best around 20M
+const FLOAT_BONUS = 3;           // +3 if float ≤ 20M
+const FLOAT_PENALTY_MAX = 12;    // up to -12 pts above 20M (linear to 200M)
+const FLOAT_PENALTY_CAP_M = 200; // ≥200M gets full penalty
+
+const NEWS_WINDOW_MIN = 60;      // “recent” if published within this many minutes
+const NEWS_BONUS = 8;            // flat score bonus if recent news exists
+
+const TOP_N = 10;
 
 /** Types */
 type ScoreRow = {
   ticker: string;
   price?: number | null;
-  gap_pct?: number | null;      // % gap (Finviz "Gap")
-  change_pct?: number | null;   // % daily change
+  gap_pct?: number | null;      // % open gap
+  change_pct?: number | null;   // % intraday change
   rvol?: number | null;         // relative volume
   float_m?: number | null;      // float in millions
-  ai_score?: number | null;     // 0..1 (from today_scores.json)
-  rsi14m?: number | null;       // optional, from AI JSON
+  ai_score?: number | null;     // 0..1
+  rsi14m?: number | null;       // optional
   volume?: number | null;
   ts?: string | null;
 
-  // derived:
+  // derived
+  catalyst?: { recent: boolean; latestISO?: string | null };
   actionScore?: number;         // 0..100
   action?: "TRADE" | "WATCH" | "SKIP";
 };
 
 type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[] };
+
+type NewsItem = {
+  ticker: string;
+  headline: string;
+  summary?: string;
+  source?: string;
+  url?: string;
+  published?: string; // ISO or "HH:mm:ss"
+};
+
+type NewsPayload = { generatedAt?: string | null; items: NewsItem[] };
 
 /** Helpers */
 const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
@@ -48,6 +72,18 @@ const parseChange = (s: any) => {
   const m = String(s).trim().match(/^(-?\d+(?:\.\d+)?)%?$/);
   return m ? Number(m[1]) : safeNum(s);
 };
+
+function parseNewsTime(raw?: string): number | null {
+  if (!raw) return null;
+  try {
+    // Accept ISO or HH:mm:ss (assumed today UTC)
+    const isoLike = /T|Z/.test(raw) ? raw : `1970-01-01T${raw}Z`;
+    const ms = Date.parse(isoLike);
+    return Number.isFinite(ms) ? ms : null;
+  } catch {
+    return null;
+  }
+}
 
 function mapFinvizStocksToScores(rows: any[]): ScoresPayload {
   const scores: ScoreRow[] = rows
@@ -101,14 +137,16 @@ export default function ScoresTable({
   const [priceMin, setPriceMin] = useState(1);
   const [priceMax, setPriceMax] = useState(5);
   const [gapMin, setGapMin] = useState(5);
-  const [onlyStrong, setOnlyStrong] = useState(false); // AI/momentum filter
+  const [onlyStrong, setOnlyStrong] = useState(false);
 
-  // Fetch order: Finviz → AI JSON → fallbacks
+  // Fetch: Finviz → AI → News
   async function loadOnce() {
     let finvizRows: any[] = [];
     let aiMap: Record<string, any> = {};
     let aiGenerated: string | null = null;
+    let newsMap = new Map<string, { latestISO: string | null; recent: boolean }>();
 
+    // 1) Finviz
     try {
       const res = await fetch("/api/stocks", { cache: "no-store" });
       if (res.ok) {
@@ -117,6 +155,7 @@ export default function ScoresTable({
       }
     } catch {}
 
+    // 2) AI scores
     try {
       const res = await fetch("/today_scores.json", { cache: "no-store" });
       if (res.ok) {
@@ -126,6 +165,30 @@ export default function ScoresTable({
           if (t) aiMap[t] = s;
         });
         aiGenerated = j?.generatedAt ?? null;
+      }
+    } catch {}
+
+    // 3) News (for catalyst gates + score bonus)
+    try {
+      const res = await fetch("/news.json", { cache: "no-store" });
+      if (res.ok) {
+        const j = (await res.json()) as NewsPayload;
+        const now = Date.now();
+        (j?.items || []).forEach((n) => {
+          const t = String(n.ticker || "").toUpperCase();
+          if (!t) return;
+          const ms = parseNewsTime(n.published);
+          const recent = ms != null ? (now - ms) / 60000 <= NEWS_WINDOW_MIN : false;
+          const existing = newsMap.get(t);
+          const latestISO =
+            ms != null
+              ? new Date(ms).toISOString()
+              : existing?.latestISO ?? null;
+          newsMap.set(t, {
+            latestISO,
+            recent: existing ? existing.recent || recent : recent,
+          });
+        });
       }
     } catch {}
 
@@ -140,10 +203,13 @@ export default function ScoresTable({
           if (row.gap_pct == null && safeNum(ai.gap_pct) != null) row.gap_pct = safeNum(ai.gap_pct);
           if (row.rvol == null && safeNum(ai.rvol) != null) row.rvol = safeNum(ai.rvol);
         }
-        // derive decision
-        const derived = computeAction(row);
-        row.actionScore = derived.score;
-        row.action = derived.action;
+
+        const catalyst = newsMap.get(row.ticker) || { recent: false, latestISO: null };
+        row.catalyst = catalyst;
+
+        const { score, action } = computeScoreAndDecision(row);
+        row.actionScore = score;
+        row.action = action;
         return row;
       });
 
@@ -152,7 +218,6 @@ export default function ScoresTable({
       return;
     }
 
-    // Fallbacks omitted for brevity; keep Finviz-first flow
     setData({ generatedAt: aiGenerated, scores: [] });
   }
 
@@ -172,7 +237,7 @@ export default function ScoresTable({
         const ai = r.ai_score ?? 0;
         const rv = r.rvol ?? 0;
         const as = r.actionScore ?? 0;
-        return ai >= 0.6 || rv >= 1.5 || as >= 70;
+        return rv >= RVOL_WATCH || ai >= 0.6 || as >= 70;
       })
       .sort((a, b) =>
         (b.actionScore ?? 0) - (a.actionScore ?? 0) ||
@@ -182,7 +247,7 @@ export default function ScoresTable({
     return filtered.slice(0, TOP_N);
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
-  // notify News panel about current top tickers
+  // notify News panel of current tickers
   const tickRef = useRef<string>("");
   useEffect(() => {
     const topTickers = enriched.map((r) => r.ticker);
@@ -242,16 +307,15 @@ export default function ScoresTable({
               <Th className="text-right">RSI(14m)</Th>
               <Th className="text-right">Action Score</Th>
               <Th className="text-right">Decision</Th>
+              <Th className="text-right">Catalyst</Th>
               <Th className="text-right">Vol</Th>
             </tr>
           </thead>
           <tbody>
             {enriched.map((r) => {
-              // gradient: stronger for higher ActionScore (light-green -> transparent)
               const strength = clamp((r.actionScore ?? 0) / 100, 0, 1);
-              const alpha = 0.06 + strength * 0.24; // 0.06..0.30
+              const alpha = 0.06 + strength * 0.24;
               const bg = `linear-gradient(90deg, rgba(74,222,128,${alpha}) 0%, rgba(0,0,0,0) 55%)`;
-
               return (
                 <tr key={r.ticker} className="border-t border-white/10" style={{ background: bg }}>
                   <Td>{r.ticker}</Td>
@@ -264,16 +328,13 @@ export default function ScoresTable({
                   <TdR>{fmtNum(r.rsi14m)}</TdR>
                   <TdR className="font-semibold">{Math.round(r.actionScore ?? 0)}</TdR>
                   <TdR><Badge decision={r.action} /></TdR>
+                  <TdR>{r.catalyst?.recent ? <span className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs">NEWS • {timeOnly(r.catalyst.latestISO)}</span> : "—"}</TdR>
                   <TdR>{formatInt(r.volume)}</TdR>
                 </tr>
               );
             })}
             {enriched.length === 0 && (
-              <tr>
-                <td colSpan={11} className="text-center py-8 opacity-70">
-                  No matches. Try lowering Gap %, widening price range, or disabling AI / Momentum filter.
-                </td>
-              </tr>
+              <tr><td colSpan={12} className="text-center py-8 opacity-70">No matches.</td></tr>
             )}
           </tbody>
         </table>
@@ -282,66 +343,77 @@ export default function ScoresTable({
   );
 }
 
-/** ──────────────────────────────────────────────────────────────────────────
- *  Decision model: Action Score (0..100) + Decision label
+/** ───── Action Score + Decision (includes news catalyst) ─────
+ * Decision (ultimate):
+ *   TRADE:
+ *     - (rVol ≥ 5.0 && Gap ≥ 5% && Change ≥ +5% && has recent news)
+ *         OR
+ *     - (no recent news) rVol ≥ 7.0 && Gap ≥ 8% && Change ≥ +6%
  *
- *  Weights:
- *   - AI score (0..1) ..................... 45%
- *   - Relative volume (1x→0 .. 3x→1) ...... 30%
- *   - Gap % (0..20% → 0..1) ............... 15%
- *   - Intraday +Change (0..10% → 0..1) .... 10%
+ *   WATCH: rVol ≥ 2.5 && Gap ≥ 2% && Change ≥ 0%
+ *   SKIP: otherwise
  *
- *  Float adjustment (20M target):
- *   - Bonus: +3 points if float ≤ 20M
- *   - Penalty: up to -12 points as float rises from 20M → 200M (linear)
- *     (“penalize” means subtract points from the Action Score)
- *  Other micro rules:
- *   - Red day penalty: -5 if change_pct < 0
- *   - RSI(14m) stretched penalty: -5 if RSI ≥ 85 or ≤ 15
- *  ────────────────────────────────────────────────────────────────────────── */
-function computeAction(r: ScoreRow): { score: number; action: "TRADE" | "WATCH" | "SKIP" } {
-  // Normalize each term into 0..1 range
+ * Action Score (ranking & gradient):
+ *   65% rVol, 20% AI, 10% Gap, 5% Change, +NEWS_BONUS if recent news,
+ *   plus float bonus/penalty around 20M.
+ */
+function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" | "WATCH" | "SKIP" } {
   const ai = clamp((r.ai_score ?? 0), 0, 1);
+  const rvRaw = r.rvol ?? 1;
+  const rv = clamp((rvRaw - 1) / 2, 0, 1); // 1x→0, 3x→1
+  const gapVal = Math.abs(r.gap_pct ?? r.change_pct ?? 0);
+  const chgVal = r.change_pct ?? 0;
+  const gap = clamp(gapVal / 20, 0, 1);
+  const chg = clamp(Math.max(0, chgVal) / 10, 0, 1);
 
-  // rVol: 1x baseline → 0, 3x+ → 1 (you can widen by changing /2 to /3 for 4x cap, etc.)
-  const rv = clamp(((r.rvol ?? 1) - 1) / 2, 0, 1);
-
-  // Gap: use absolute gap up to 20%
-  const gap = clamp(Math.abs(r.gap_pct ?? r.change_pct ?? 0) / 20, 0, 1);
-
-  // Intraday change: only reward positive up to +10%
-  const chg = clamp(Math.max(0, r.change_pct ?? 0) / 10, 0, 1);
-
-  // Base weighted score
   let score =
     100 *
-    (WEIGHTS.ai * ai +
-      WEIGHTS.rvol * rv +
+    (WEIGHTS.rvol * rv +
+      WEIGHTS.ai * ai +
       WEIGHTS.gap * gap +
       WEIGHTS.change * chg);
 
-  // Float bonus/penalty around 20M
+  // Float adjustment
   const f = r.float_m ?? null;
   if (f != null) {
-    if (f <= FLOAT_TARGET_M) {
-      score += FLOAT_BONUS;
-    } else {
+    if (f <= FLOAT_TARGET_M) score += FLOAT_BONUS;
+    else {
       const capped = Math.min(f, FLOAT_PENALTY_CAP_M);
-      const frac =
-        (capped - FLOAT_TARGET_M) / (FLOAT_PENALTY_CAP_M - FLOAT_TARGET_M); // 0..1
+      const frac = (capped - FLOAT_TARGET_M) / (FLOAT_PENALTY_CAP_M - FLOAT_TARGET_M);
       score -= FLOAT_PENALTY_MAX * clamp(frac, 0, 1);
     }
   }
 
-  // Other micro adjustments
-  if ((r.change_pct ?? 0) < 0) score -= 5; // red day
+  // News boost
+  if (r.catalyst?.recent) score += NEWS_BONUS;
+
+  // Micro penalties
+  if (chgVal < 0) score -= 5;
   const rsi = r.rsi14m ?? null;
-  if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 5; // stretched
+  if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 5;
 
   score = clamp(score, 0, 100);
 
-  const action: "TRADE" | "WATCH" | "SKIP" =
-    score >= 75 ? "TRADE" : score >= 55 ? "WATCH" : "SKIP";
+  // Decision gates (news-aware)
+  let action: "TRADE" | "WATCH" | "SKIP";
+  const hasNews = !!r.catalyst?.recent;
+
+  if (
+    (hasNews &&
+      rvRaw >= RVOL_TRADE &&
+      gapVal >= GAP_MIN_TRADE &&
+      chgVal >= CHANGE_MIN_TRADE) ||
+    (!hasNews &&
+      rvRaw >= RVOL_TRADE_FALLBACK &&
+      gapVal >= GAP_MIN_TRADE_FALLBACK &&
+      chgVal >= CHANGE_MIN_TRADE_FALLBACK)
+  ) {
+    action = "TRADE";
+  } else if (rvRaw >= RVOL_WATCH && gapVal >= GAP_MIN_WATCH && chgVal >= CHANGE_MIN_WATCH) {
+    action = "WATCH";
+  } else {
+    action = "SKIP";
+  }
 
   return { score, action };
 }
@@ -356,6 +428,7 @@ function formatInt(v?: number | null) {
   return String(v);
 }
 function friendlyTime(iso: string | null) { if (!iso) return "—"; try { const d = new Date(iso); return d.toLocaleTimeString([], { hour12: false }); } catch { return "—"; } }
+function timeOnly(iso?: string | null) { if (!iso) return "—"; try { const d = new Date(iso); return d.toLocaleTimeString([], { hour12: false }); } catch { return "—"; } }
 function Th({ children, className = "" }: any) { return <th className={`px-3 py-2 font-medium ${className}`}>{children}</th>; }
 function Td({ children, className = "" }: any) { return <td className={`px-3 py-2 ${className}`}>{children}</td>; }
 function TdR({ children, className = "" }: any) { return <td className={`px-3 py-2 text-right ${className}`}>{children}</td>; }
