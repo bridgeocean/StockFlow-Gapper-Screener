@@ -4,9 +4,8 @@ export default function IconStockflow({
   className = "",
   size = 28,
 }: { className?: string; size?: number }) {
-  // A simple upward zigzag with an arrowhead. Sized via `size` prop.
+  // Up-right price action zigzag with arrow head pointing UP/RIGHT.
   const s = size;
-  const stroke = "currentColor";
   return (
     <svg
       width={s}
@@ -16,29 +15,23 @@ export default function IconStockflow({
       className={className}
       aria-label="StockFlow"
     >
-      {/* Soft rounded square backdrop (optional subtle ring) */}
       <rect
-        x="1"
-        y="1"
-        width="26"
-        height="26"
-        rx="8"
-        stroke="rgba(255,255,255,0.14)"
-        strokeWidth="1.2"
+        x="1" y="1" width="26" height="26" rx="8"
+        stroke="rgba(255,255,255,0.14)" strokeWidth="1.2"
         fill="rgba(255,255,255,0.06)"
       />
-      {/* Zigzag path */}
+      {/* Zigzag moving bottom-left to top-right */}
       <path
-        d="M6 19 L11 14 L14 17 L19 12"
-        stroke={stroke}
+        d="M6 18 L11 13 L14.5 16.5 L20 11"
+        stroke="currentColor"
         strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Arrow head pointing up/right */}
+      {/* Arrow head at the end, pointing up-right */}
       <path
-        d="M19 12 L19 8 M19 12 L23 12"
-        stroke={stroke}
+        d="M20 11 L23 11 M20 11 L20 8"
+        stroke="currentColor"
         strokeWidth="2.2"
         strokeLinecap="round"
       />
