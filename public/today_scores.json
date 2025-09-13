@@ -1,53 +1,67 @@
 {
-  "generatedAt": "2025-09-13T03:08:00Z",
-  "count": 7,
+  "generatedAt": "2025-09-13T03:27:06Z",
+  "count": 9,
   "scores": [
     {
-      "ticker": "...",
-      "price": null,
-      "score": 0.5,
-      "news_hits": 0,
-      "source": "finviz-fallback"
-    },
-    {
-      "ticker": "VNCE",
-      "price": null,
-      "score": 0.5,
+      "ticker": "TAIT",
+      "price": 2.79,
+      "score": 0.9996,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "ZENV",
-      "price": null,
-      "score": 0.5,
+      "ticker": "MNDO",
+      "price": 1.19,
+      "score": 0.954,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "CAMP",
-      "price": null,
-      "score": 0.0,
+      "ticker": "XRX",
+      "price": 3.68,
+      "score": 0.7661,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "CPOP",
-      "price": null,
-      "score": 0.0,
+      "ticker": "TUYA",
+      "price": 2.58,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "KXIN",
-      "price": null,
-      "score": 0.0,
+      "ticker": "VTEX",
+      "price": 4.08,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "RBNE",
-      "price": null,
-      "score": 0.0,
+      "ticker": "NOK",
+      "price": 4.51,
+      "score": 0.566,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.77,
+      "score": 0.566,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "DSWL",
+      "price": 4.15,
+      "score": 0.2149,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "ALIT",
+      "price": 3.68,
+      "score": 0.0305,
       "news_hits": 0,
       "source": "ml+polygon"
     }
