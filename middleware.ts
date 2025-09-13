@@ -1,14 +1,13 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const PROTECTED = ["/dashboard", "/public-dashboard", "/admin"];
+const PROTECTED = ["/dashboard", "/admin"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isProtected = PROTECTED.some((p) => pathname.startsWith(p));
   const isAuthed = req.cookies.get("sf_session")?.value === "1";
 
-  // Require auth for protected pages
   if (isProtected && !isAuthed) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
@@ -16,7 +15,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Already authed? Don’t let them sit on /login
   if (pathname === "/login" && isAuthed) {
     const next = req.nextUrl.searchParams.get("next") || "/dashboard";
     const url = req.nextUrl.clone();
@@ -29,5 +27,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/public-dashboard/:path*", "/admin/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/login", "/"], // include "/" so root redirect is covered
 };
