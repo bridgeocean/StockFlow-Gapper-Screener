@@ -1,5 +1,6 @@
 // app/components/Brand.tsx
-// Reusable StockFlow brand with an UPWARD zig-zag price-action arrow.
+// StockFlow brand mark with an UPWARD (up/right) zig-zag arrow.
+// Purely visual; safe to drop in without affecting logic.
 
 export default function Brand({
   size = 28,
@@ -21,7 +22,7 @@ export default function Brand({
         <polyline
           points="2,18 7,13 11,15 16,10 19,12"
           fill="none"
-          stroke="rgb(74, 222, 128)" /* tailwind's green-400 */
+          stroke="rgb(74, 222, 128)" /* tailwind green-400 */
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -36,6 +37,7 @@ export default function Brand({
           strokeLinejoin="round"
         />
       </svg>
+
       {showText && <span className="text-2xl font-bold">StockFlow</span>}
     </div>
   );
