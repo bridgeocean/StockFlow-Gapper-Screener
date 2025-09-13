@@ -1,6 +1,55 @@
 {
-  "generated_utc": "2025-09-10T19:22:05Z",
-  "asof_date_utc": "2025-09-10",
-  "universe": 4,
-  "rows": []
+  "generatedAt": "2025-09-13T03:08:00Z",
+  "count": 7,
+  "scores": [
+    {
+      "ticker": "...",
+      "price": null,
+      "score": 0.5,
+      "news_hits": 0,
+      "source": "finviz-fallback"
+    },
+    {
+      "ticker": "VNCE",
+      "price": null,
+      "score": 0.5,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "ZENV",
+      "price": null,
+      "score": 0.5,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "CAMP",
+      "price": null,
+      "score": 0.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "CPOP",
+      "price": null,
+      "score": 0.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "KXIN",
+      "price": null,
+      "score": 0.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "RBNE",
+      "price": null,
+      "score": 0.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    }
+  ]
 }
