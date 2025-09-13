@@ -3,10 +3,11 @@
 
 export const AUTH_KEY = "sf_auth_v1";
 
-// Hard-coded demo creds (you asked not to show on UI)
+// Preview creds (same as server)
 const DEMO_EMAIL = "bridgeocean@cyberservices.com";
 const DEMO_PASS = "admin123";
 
+// Optional local fallback (kept for compatibility)
 export function loginLocal(email: string, pass: string): boolean {
   if (email.trim().toLowerCase() === DEMO_EMAIL && pass === DEMO_PASS) {
     localStorage.setItem(AUTH_KEY, "1");
@@ -16,7 +17,7 @@ export function loginLocal(email: string, pass: string): boolean {
 }
 
 export function logoutLocal() {
-  localStorage.removeItem(AUTH_KEY);
+  try { localStorage.removeItem(AUTH_KEY); } catch {}
 }
 
 export function isLoggedInLocal(): boolean {
@@ -27,10 +28,7 @@ export function isLoggedInLocal(): boolean {
   }
 }
 
-/**
- * One-time migration helper for users who still have the old key
- * ("stockflow_session") from the previous build. Safe to call on mount.
- */
+// Old → new key migration (safe to call once on mount)
 export function migrateOldAuthKey() {
   try {
     if (typeof window === "undefined") return;
