@@ -29,9 +29,7 @@ export default function Landing() {
       {/* Header */}
       <header className="max-w-6xl mx-auto px-5 py-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="text-green-400">
-            <IconStockflow size={36} className="text-green-400" />
-          </div>
+          <IconStockflow size={36} className="text-green-400" />
           <div>
             <div className="text-xl font-bold">StockFlow</div>
             <div className="text-xs text-white/70">by ThePhDPush</div>
@@ -45,48 +43,43 @@ export default function Landing() {
         </button>
       </header>
 
-      {/* Hero */}
-      <main className="max-w-6xl mx-auto px-5">
-        <section className="grid md:grid-cols-2 gap-10 items-center mt-10">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
-              Professional <span className="text-[#b197fc]">Gap Scanner</span>
-              <br /> Find Gap Opportunities <br /> Before They Move
-            </h1>
-            <p className="mt-4 text-white/80">
-              Advanced stock scanner powered by real-time Live Feed data to identify gap-up
-              opportunities with institutional-grade filtering and analysis tools.
-            </p>
+      {/* Centered Hero */}
+      <main className="max-w-4xl mx-auto px-5 mt-10 text-center">
+        <div className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 mb-4">
+          <IconStockflow size={24} className="text-green-400 mr-2" />
+          <span className="text-sm text-white/80">Professional gap scanning tools</span>
+        </div>
 
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => setShowLogin(true)}
-                className="rounded-xl bg-[#b197fc] text-black px-5 py-2 font-semibold hover:brightness-110"
-              >
-                Start Scanning
-              </button>
-              <a
-                href="#features"
-                className="rounded-xl border border-white/20 px-5 py-2 font-semibold hover:bg-white/5"
-              >
-                Learn More
-              </a>
-            </div>
-          </div>
+        <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">
+          Professional <span className="text-[#b197fc]">Gap Scanner</span>
+          <br />
+          Find Gap Opportunities
+          <br />
+          <span className="text-[#6ee7b7]">Before They Move</span>
+        </h1>
 
-          {/* Visual */}
-          <div className="rounded-2xl bg-white/5 backdrop-blur border border-white/10 p-6 flex items-center justify-center">
-            <div className="text-center">
-              <div className="mb-3 inline-block text-green-400">
-                <IconStockflow size={64} className="text-green-400" />
-              </div>
-              <div className="text-white/80">Professional gap scanning tools</div>
-            </div>
-          </div>
-        </section>
+        <p className="mt-4 text-white/80 max-w-3xl mx-auto">
+          Advanced stock scanner powered by real-time Live Feed data to identify gap-up
+          opportunities with institutional-grade filtering and analysis tools.
+        </p>
+
+        <div className="mt-6 flex gap-3 justify-center">
+          <button
+            onClick={() => setShowLogin(true)}
+            className="rounded-xl bg-[#b197fc] text-black px-5 py-2 font-semibold hover:brightness-110"
+          >
+            Start Scanning
+          </button>
+          <a
+            href="#features"
+            className="rounded-xl border border-white/20 px-5 py-2 font-semibold hover:bg-white/5"
+          >
+            Learn More
+          </a>
+        </div>
 
         {/* Features */}
-        <section id="features" className="mt-16 grid md:grid-cols-3 gap-6">
+        <section id="features" className="mt-16 grid md:grid-cols-3 gap-6 text-left">
           {[
             {
               t: "Real-Time Gap Detection",
@@ -125,7 +118,7 @@ export default function Landing() {
         </footer>
       </main>
 
-      {/* Login modal (only when Launch/Start is clicked) */}
+      {/* Login modal */}
       {showLogin && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur flex items-center justify-center p-4 z-50">
           <form
