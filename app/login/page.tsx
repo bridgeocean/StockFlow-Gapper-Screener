@@ -1,13 +1,15 @@
 // app/login/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import IconStockflow from "../components/IconStockflow";
-import { loginLocal } from "../components/auth";
+import { loginLocal, migrateOldAuthKey } from "../components/auth";
 
 export default function LoginPage() {
   const r = useRouter();
+  useEffect(() => { migrateOldAuthKey(); }, []);
+
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState<string | null>(null);
