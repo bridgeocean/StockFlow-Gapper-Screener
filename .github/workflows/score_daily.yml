@@ -1,13 +1,10 @@
-name: Daily AI Score (Finviz → News/Filings → optional Polygon → JSON)
+# .github/workflows/score_daily.yml
+name: Daily AI Score (Finviz → News → optional Polygon → JSON)
 
 on:
-  # You can still run this manually
   workflow_dispatch:
-  # Two schedules to straddle U.S. DST. We gate at runtime so only the
-  # correct NY-time (08:20) proceeds; the other exits quickly.
   schedule:
-    - cron: "20 12 * * 1-5"  # 12:20 UTC ≈ 08:20 ET during DST (Mar–Nov)
-    - cron: "20 13 * * 1-5"  # 13:20 UTC ≈ 08:20 ET during Standard (Nov–Mar)
+    - cron: "20 12 * * 1-5"  # ~08:20 ET on weekdays; adjust as needed
 
 jobs:
   score:
@@ -15,99 +12,47 @@ jobs:
     permissions:
       contents: write
     env:
-      # REQUIRED (set in GitHub → Settings → Secrets and variables → Actions → Secrets)
       FINVIZ_EXPORT_URL: ${{ secrets.FINVIZ_EXPORT_URL }}
       FINVIZ_NEWS_EXPORT_URL: ${{ secrets.FINVIZ_NEWS_EXPORT_URL }}
-
-      # OPTIONAL (only if you have it; otherwise leave empty)
-      POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
-
-      # OPTIONAL filings (choose one style):
-      # 1) A single Finviz "latest filings" export URL (entire feed):
       FINVIZ_FILINGS_EXPORT_URL: ${{ secrets.FINVIZ_FILINGS_EXPORT_URL }}
-      #    e.g. https://elite.finviz.com/export/latest-filings?o=-filingDate&auth=...
-      # OR
-      # 2) A template per ticker; {ticker} will be replaced:
-      # FINVIZ_FILINGS_EXPORT_TEMPLATE: https://elite.finviz.com/export/latest-filings?t={ticker}&o=-filingDate&auth=...
-
-      # Model & outputs
+      POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
       MODEL_PATH: "ai_score.joblib"
       OUT_JSON: "public/today_scores.json"
       PRICE_MIN: "1"
       PRICE_MAX: "5"
+      DAILY_FALLBACK: "1"
 
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
 
-      # ---- Time gate: proceed only when it's ~08:20 in America/New_York ----
-      - name: Gate on 08:20 America/New_York
-        id: time_gate
-        shell: bash
-        run: |
-          python - << 'PY'
-          import sys, datetime as dt
-          try:
-              from zoneinfo import ZoneInfo     # py3.9+
-          except Exception:
-              print("zoneinfo unavailable"); sys.exit(1)
-
-          ny = dt.datetime.now(ZoneInfo("America/New_York"))
-          # Proceed only if it's 08:20 (±2 minutes) on a weekday
-          if ny.weekday() > 4:
-              print("Not a weekday in New York → exit 0.")
-              sys.exit(0)
-          window = (ny.hour == 8) and (18 <= ny.minute <= 22)  # 08:18–08:22
-          print("NY now:", ny.isoformat())
-          if not window:
-              print("Outside 08:20 NY window → exit 0.")
-              sys.exit(0)
-          print("Inside window → continue.")
-          PY
-
       - name: Set up Python
-        if: success()    # still runs when previous step exits 0
         uses: actions/setup-python@v5
         with: { python-version: "3.11" }
 
       - name: Install deps
-        if: success()
         run: |
           python -m pip install --upgrade pip
-          pip install -U pandas requests joblib scikit-learn python-dateutil
+          pip install -U pandas requests joblib scikit-learn
 
       - name: Fetch Finviz candidates
-        if: success()
         run: python scripts/fetch_finviz_candidates.py
 
       - name: Fetch Finviz news
-        if: success()
         run: python scripts/fetch_finviz_news.py
 
-      - name: Fetch Finviz filings (optional)
-        if: success()
-        run: |
-          python scripts/fetch_finviz_filings.py || echo "No filings pulled."
-
-      - name: Score (optional Polygon enrichment)
-        if: success()
+      - name: Score (ML if Polygon ok; Finviz fallback otherwise)
         run: python scripts/daily_ai_score.py
 
       - name: Commit & push JSON/CSVs
-        if: success()
         run: |
           git config user.email "bot@github"
           git config user.name  "actions-bot"
-          git add \
-            public/today_candidates.csv public/today_tickers.txt \
-            public/today_scores.json \
-            public/today_news.csv public/today_news.json \
-            public/today_filings.csv public/today_filings.json || true
-          git commit -m "Premarket: candidates, news, filings, today_scores" || echo "No changes"
+          git add public/today_candidates.csv public/today_tickers.txt public/today_scores.json public/today_news.json
+          git commit -m "Premarket: candidates, news, today_scores" || echo "No changes"
           git push || true
 
       - name: Upload artifact
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: premarket_payload
@@ -115,4 +60,3 @@ jobs:
             public/today_candidates.csv
             public/today_scores.json
             public/today_news.json
-            public/today_filings.json
