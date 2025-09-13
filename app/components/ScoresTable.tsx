@@ -15,7 +15,7 @@ const RVOL_TRADE = 5.0;          // rVol ≥ 5x + gates + recent news → TRADE
 const RVOL_TRADE_FALLBACK = 7.0; // no recent news path: require this rVol
 const GAP_MIN_TRADE = 5;         // %
 const GAP_MIN_TRADE_FALLBACK = 8;// % (no news)
-const CHANGE_MIN_TRADE = 5;      // %  ← lowered from +10% as requested
+const CHANGE_MIN_TRADE = 5;      // %  ← as requested
 const CHANGE_MIN_TRADE_FALLBACK = 6; // % (no news stays stricter)
 
 const RVOL_WATCH = 2.5;          // rVol ≥ 2.5x → WATCH gate (with Gap & Change below)
@@ -30,7 +30,7 @@ const FLOAT_PENALTY_CAP_M = 200; // ≥200M gets full penalty
 const NEWS_WINDOW_MIN = 60;      // “recent” if published within this many minutes
 const NEWS_BONUS = 8;            // flat score bonus if recent news exists
 
-const TOP_N = 10;
+const PAGE_SIZE = 10;            // 10 stocks per page (no cap on total)
 
 /** Types */
 type ScoreRow = {
@@ -45,7 +45,6 @@ type ScoreRow = {
   volume?: number | null;
   ts?: string | null;
 
-  // derived
   catalyst?: { recent: boolean; latestISO?: string | null };
   actionScore?: number;         // 0..100
   action?: "TRADE" | "WATCH" | "SKIP";
@@ -139,6 +138,9 @@ export default function ScoresTable({
   const [gapMin, setGapMin] = useState(5);
   const [onlyStrong, setOnlyStrong] = useState(false);
 
+  // pagination
+  const [page, setPage] = useState(1);
+
   // Fetch: Finviz → AI → News
   async function loadOnce() {
     let finvizRows: any[] = [];
@@ -227,7 +229,8 @@ export default function ScoresTable({
     return () => clearInterval(id);
   }, []);
 
-  const enriched = useMemo(() => {
+  // filter + sort (no slicing; we paginate after this)
+  const filteredAll = useMemo(() => {
     const filtered = (data.scores || [])
       .filter((r) => r.ticker)
       .filter((r) => r.price != null && r.price >= priceMin && r.price <= priceMax)
@@ -244,26 +247,40 @@ export default function ScoresTable({
         (b.ai_score ?? 0) - (a.ai_score ?? 0)
       );
 
-    return filtered.slice(0, TOP_N);
+    return filtered;
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
-  // notify News panel of current tickers
+  // keep page within bounds & reset on filter change
+  const totalPages = Math.max(1, Math.ceil(filteredAll.length / PAGE_SIZE));
+  useEffect(() => {
+    setPage((p) => Math.min(Math.max(1, p), totalPages));
+  }, [totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [priceMin, priceMax, gapMin, onlyStrong]);
+
+  const start = (page - 1) * PAGE_SIZE;
+  const end = Math.min(filteredAll.length, start + PAGE_SIZE);
+  const visible = filteredAll.slice(start, end);
+
+  // notify News panel of current visible tickers (current page)
   const tickRef = useRef<string>("");
   useEffect(() => {
-    const topTickers = enriched.map((r) => r.ticker);
+    const topTickers = visible.map((r) => r.ticker);
     const key = topTickers.join(",");
     if (key !== tickRef.current) {
       tickRef.current = key;
       onTopTickersChange?.(topTickers);
     }
-  }, [enriched, onTopTickersChange]);
+  }, [visible, onTopTickersChange]);
 
   // summary
-  const totalVol = useMemo(() => enriched.reduce((a, r) => a + (r.volume ?? 0), 0), [enriched]);
+  const totalVol = useMemo(() => visible.reduce((a, r) => a + (r.volume ?? 0), 0), [visible]);
   const avgGap = useMemo(() => {
-    const xs = enriched.map((r) => r.gap_pct ?? r.change_pct).filter((x) => x != null) as number[];
+    const xs = visible.map((r) => r.gap_pct ?? r.change_pct).filter((x) => x != null) as number[];
     return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
-  }, [enriched]);
+  }, [visible]);
 
   return (
     <section className="rounded-2xl bg-white/5 border border-white/10 p-4">
@@ -272,7 +289,7 @@ export default function ScoresTable({
           Last Update {friendlyTime(data.generatedAt)} • Auto: 60s
         </div>
         <div className="ml-auto text-sm opacity-80">
-          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Total Vol: {formatInt(totalVol)} • Showing {enriched.length} / {TOP_N}
+          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Page {page} of {totalPages} • Showing {visible.length ? `${start + 1}–${end}` : "0"} of {filteredAll.length}
         </div>
       </div>
 
@@ -290,6 +307,32 @@ export default function ScoresTable({
           <input type="checkbox" checked={onlyStrong} onChange={(e) => setOnlyStrong(e.target.checked)} />
           AI / Momentum filter
         </label>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setPage(1)}
+            disabled={page === 1}
+            className="px-2 py-1 rounded border border-white/15 disabled:opacity-40"
+            aria-label="First page"
+          >«</button>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-1 rounded border border-white/15 disabled:opacity-40"
+          >Prev</button>
+          <span className="text-sm opacity-80">Page {page} / {totalPages}</span>
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-3 py-1 rounded border border-white/15 disabled:opacity-40"
+          >Next</button>
+          <button
+            onClick={() => setPage(totalPages)}
+            disabled={page === totalPages}
+            className="px-2 py-1 rounded border border-white/15 disabled:opacity-40"
+            aria-label="Last page"
+          >»</button>
+        </div>
       </div>
 
       {/* Table */}
@@ -312,9 +355,9 @@ export default function ScoresTable({
             </tr>
           </thead>
           <tbody>
-            {enriched.map((r) => {
+            {visible.map((r) => {
               const strength = clamp((r.actionScore ?? 0) / 100, 0, 1);
-              const alpha = 0.06 + strength * 0.24;
+              const alpha = 0.06 + strength * 0.24; // 0.06..0.30
               const bg = `linear-gradient(90deg, rgba(74,222,128,${alpha}) 0%, rgba(0,0,0,0) 55%)`;
               return (
                 <tr key={r.ticker} className="border-t border-white/10" style={{ background: bg }}>
@@ -333,11 +376,38 @@ export default function ScoresTable({
                 </tr>
               );
             })}
-            {enriched.length === 0 && (
+            {visible.length === 0 && (
               <tr><td colSpan={12} className="text-center py-8 opacity-70">No matches.</td></tr>
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination (bottom duplicate for convenience on long lists) */}
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <button
+          onClick={() => setPage(1)}
+          disabled={page === 1}
+          className="px-2 py-1 rounded border border-white/15 disabled:opacity-40"
+          aria-label="First page"
+        >«</button>
+        <button
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page === 1}
+          className="px-3 py-1 rounded border border-white/15 disabled:opacity-40"
+        >Prev</button>
+        <span className="text-sm opacity-80">Page {page} / {totalPages}</span>
+        <button
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+          className="px-3 py-1 rounded border border-white/15 disabled:opacity-40"
+        >Next</button>
+        <button
+          onClick={() => setPage(totalPages)}
+          disabled={page === totalPages}
+          className="px-2 py-1 rounded border border-white/15 disabled:opacity-40"
+          aria-label="Last page"
+        >»</button>
       </div>
     </section>
   );
