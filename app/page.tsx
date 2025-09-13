@@ -78,36 +78,19 @@ export default function Landing() {
           </a>
         </div>
 
-        {/* Features */}
+        {/* Features with icons */}
         <section id="features" className="mt-16 grid md:grid-cols-3 gap-6 text-left">
           {[
-            {
-              t: "Real-Time Gap Detection",
-              d: "Instantly identify stocks gapping up with customizable percentage thresholds and volume confirmation.",
-            },
-            {
-              t: "Advanced Filtering",
-              d: "Filter by price range, volume multipliers, float size, and performance metrics to find your ideal setups.",
-            },
-            {
-              t: "Live Feed Integration",
-              d: "Direct integration with Live Feed API for real-time market data and professional-grade screening.",
-            },
-            {
-              t: "Smart Indicators",
-              d: "Visual indicators for hot stocks, momentum plays, and news catalysts to prioritize your watchlist.",
-            },
-            {
-              t: "Volume Analysis",
-              d: "Analyze relative volume patterns and ratios to confirm breakout potential and institutional interest.",
-            },
-            {
-              t: "Risk Management",
-              d: "Built-in risk indicators and float analysis to help you manage position sizing and risk exposure.",
-            },
+            { icon: "📈", t: "Real-Time Gap Detection", d: "Instantly identify stocks gapping up with customizable percentage thresholds and volume confirmation." },
+            { icon: "🎛️", t: "Advanced Filtering", d: "Filter by price range, volume multipliers, float size, and performance metrics to find your ideal setups." },
+            { icon: "🔌", t: "Live Feed Integration", d: "Direct integration with Live Feed API for real-time market data and professional-grade screening." },
+            { icon: "✨", t: "Smart Indicators", d: "Visual indicators for hot stocks, momentum plays, and news catalysts to prioritize your watchlist." },
+            { icon: "📊", t: "Volume Analysis", d: "Analyze relative volume patterns and ratios to confirm breakout potential and institutional interest." },
+            { icon: "🛡️", t: "Risk Management", d: "Built-in risk indicators and float analysis to help you manage position sizing and risk exposure." },
           ].map((f, i) => (
             <div key={i} className="rounded-2xl bg-white/5 border border-white/10 p-5">
-              <div className="text-lg font-bold">{f.t}</div>
+              <div className="text-2xl">{f.icon}</div>
+              <div className="text-lg font-bold mt-1">{f.t}</div>
               <div className="text-sm text-white/80 mt-2">{f.d}</div>
             </div>
           ))}
