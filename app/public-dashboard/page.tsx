@@ -1,75 +1,77 @@
-"use client";
-import { useEffect, useState } from "react";
+// app/public-dashboard/page.tsx
+import dynamic from "next/dynamic";
 
-type ScoreRow = { ticker: string; score: number | null };
-type ScoresPayload = {
-  generatedAt: string | null;
-  scores: ScoreRow[];
-  tickers?: string[];
-  priceBand?: { min: number; max: number };
-};
+// Avoid SSR issues for client components
+const NewsPanel = dynamic(() => import("../components/NewsPanel"), { ssr: false });
 
-type NewsItem = { ticker: string; headline: string; source?: string | null; link?: string | null; datetime?: string | null };
-type NewsPayload = { generatedAt: string | null; count: number; items: NewsItem[] };
+export const revalidate = 0;
 
-export default function PublicDashboard() {
-  const [scores, setScores] = useState<ScoresPayload | null>(null);
-  const [news, setNews] = useState<NewsPayload | null>(null);
+async function getScores() {
+  // The scores JSON is committed at public/today_scores.json by the Action
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/today_scores.json`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return { generatedAt: null, scores: [] as any[] };
+    return res.json();
+  } catch {
+    return { generatedAt: null, scores: [] as any[] };
+  }
+}
 
-  useEffect(() => {
-    fetch("/api/today-scores").then(r => r.json()).then(setScores).catch(() => setScores({ generatedAt: null, scores: [] }));
-    fetch("/api/today-news").then(r => r.json()).then(setNews).catch(() => setNews({ generatedAt: null, count: 0, items: [] }));
-  }, []);
+export default async function PublicDashboard() {
+  const { generatedAt, scores } = await getScores();
 
   return (
-    <main style={{ padding: 24, display: "grid", gap: 24 }}>
-      <h1>Premarket Gappers (Finviz • AI add-on)</h1>
-
-      <section style={{ display: "grid", gap: 8 }}>
-        <h2>Scores</h2>
-        {!scores || !scores.scores?.length ? (
-          <div>No scores yet.</div>
-        ) : (
-          <table style={{ borderCollapse: "collapse", width: "100%" }}>
-            <thead>
-              <tr><th style={{ textAlign: "left" }}>Ticker</th><th style={{ textAlign: "left" }}>AI Score</th></tr>
-            </thead>
-            <tbody>
-              {scores.scores.map((r) => (
-                <tr key={r.ticker}>
-                  <td style={{ padding: "6px 8px" }}>{r.ticker}</td>
-                  <td style={{ padding: "6px 8px" }}>{r.score == null ? "—" : r.score.toFixed(3)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        <small style={{ opacity: 0.7 }}>
-          Updated: {scores?.generatedAt || "n/a"}{scores?.priceBand ? ` • Price band $${scores.priceBand.min}-${scores.priceBand.max}` : ""}
-        </small>
-      </section>
-
-      <section style={{ display: "grid", gap: 8 }}>
-        <h2>Catalyst News (Finviz)</h2>
-        {!news || !news.items?.length ? (
-          <div>No news yet.</div>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            {news.items.slice(0, 100).map((n, i) => (
-              <div key={i} style={{ padding: 8, border: "1px solid #eee", borderRadius: 8 }}>
-                <div style={{ fontWeight: 600 }}>{n.ticker}</div>
-                <div style={{ margin: "4px 0" }}>
-                  {n.link ? <a href={n.link} target="_blank" rel="noreferrer">{n.headline || "(no headline)"}</a> : (n.headline || "(no headline)")}
-                </div>
-                <div style={{ opacity: 0.7, fontSize: 12 }}>
-                  {n.source || "Finviz"}{n.datetime ? ` • ${n.datetime}` : ""}
-                </div>
-              </div>
-            ))}
+    <main className="mx-auto max-w-6xl p-4 space-y-6">
+      <header className="flex items-baseline justify-between">
+        <h1 className="text-2xl font-semibold">Gapper Screener — Public Dashboard</h1>
+        {generatedAt && (
+          <div className="text-xs opacity-60">
+            Scores updated {new Date(generatedAt).toLocaleString()}
           </div>
         )}
-        <small style={{ opacity: 0.7 }}>Updated: {news?.generatedAt || "n/a"}</small>
-      </section>
+      </header>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {/* Scores table (2/3 width) */}
+        <section className="md:col-span-2 rounded-2xl border p-4 shadow-sm">
+          <div className="font-semibold mb-3">Today’s Scores</div>
+          {!scores?.length ? (
+            <div className="text-sm opacity-70">No scores yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left border-b">
+                    <th className="py-2 pr-3">Ticker</th>
+                    <th className="py-2 pr-3">Score</th>
+                    <th className="py-2 pr-3">Gap %</th>
+                    <th className="py-2 pr-3">RSI(14m)</th>
+                    <th className="py-2 pr-3">RelVol</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scores.map((r: any, i: number) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="py-2 pr-3 font-mono">{r.ticker}</td>
+                      <td className="py-2 pr-3">{r.score?.toFixed?.(3) ?? r.score}</td>
+                      <td className="py-2 pr-3">{r.gap_pct ?? r.gapPct ?? ""}</td>
+                      <td className="py-2 pr-3">{r.rsi14m ?? ""}</td>
+                      <td className="py-2 pr-3">{r.rvol ?? r.relvol ?? ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* News panel (1/3 width) */}
+        <aside className="md:col-span-1">
+          <NewsPanel />
+        </aside>
+      </div>
     </main>
   );
 }
