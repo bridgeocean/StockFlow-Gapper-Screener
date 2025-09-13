@@ -3,121 +3,157 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+/** ──────────────────────────────────────────────────────────────────────────
+ *  Tunables (easy to tweak without touching the rest of the file)
+ *  ────────────────────────────────────────────────────────────────────────── */
+const WEIGHTS = {
+  ai: 0.45,     // AI model confidence (0..1)
+  rvol: 0.30,   // Relative volume (1x baseline; saturates at ~3x)
+  gap: 0.15,    // Opening gap (saturates at 20%)
+  change: 0.10, // Intraday positive change (saturates at +10%)
+};
+
+const FLOAT_TARGET_M = 20;        // target float (M) — best liquidity pop
+const FLOAT_PENALTY_MAX = 12;     // max points to subtract for large floats
+const FLOAT_PENALTY_CAP_M = 200;  // 200M+ gets the full penalty
+const FLOAT_BONUS = 3;            // bonus points when float ≤ 20M
+
+const TOP_N = 10;                 // show only the top N rows
+
+/** Types */
 type ScoreRow = {
   ticker: string;
   price?: number | null;
-  gap_pct?: number | null;
-  change_pct?: number | null;
-  rvol?: number | null;
-  float_m?: number | null;
-  ai_score?: number | null;
-  rsi14m?: number | null;
+  gap_pct?: number | null;      // % gap (Finviz "Gap")
+  change_pct?: number | null;   // % daily change
+  rvol?: number | null;         // relative volume
+  float_m?: number | null;      // float in millions
+  ai_score?: number | null;     // 0..1 (from today_scores.json)
+  rsi14m?: number | null;       // optional, from AI JSON
   volume?: number | null;
   ts?: string | null;
-  actionScore?: number;
+
+  // derived:
+  actionScore?: number;         // 0..100
   action?: "TRADE" | "WATCH" | "SKIP";
 };
 
 type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[] };
 
+/** Helpers */
+const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+const safeNum = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : null);
+const parseChange = (s: any) => {
+  if (s == null) return null;
+  const m = String(s).trim().match(/^(-?\d+(?:\.\d+)?)%?$/);
+  return m ? Number(m[1]) : safeNum(s);
+};
+
+function mapFinvizStocksToScores(rows: any[]): ScoresPayload {
+  const scores: ScoreRow[] = rows
+    .map((s) => {
+      const t = (s.symbol || s.ticker || "").toString().toUpperCase();
+      if (!t) return null;
+
+      const gap =
+        safeNum(s.gap) ?? safeNum(s.gap_pct) ?? parseChange(s.gapPct) ?? null;
+
+      const relv =
+        safeNum(s.relativeVolume) ??
+        safeNum(s.relVolume) ??
+        safeNum(s.rvol) ??
+        null;
+
+      let floatM = safeNum(s.floatM) ?? safeNum(s.float_m) ?? null;
+      if (floatM == null && s.float_shares != null) {
+        const abs = safeNum(s.float_shares);
+        if (abs != null) floatM = Math.round((abs / 1_000_000) * 10) / 10;
+      }
+      if (floatM == null && s.float != null) floatM = safeNum(s.float);
+
+      return {
+        ticker: t,
+        price: safeNum(s.price),
+        gap_pct: gap,
+        change_pct: parseChange(s.changePercent ?? s.change_pct ?? s.change),
+        rvol: relv,
+        float_m: floatM,
+        ai_score: null,
+        rsi14m: null,
+        volume: safeNum(s.volume),
+        ts: s.lastUpdated || s.ts || null,
+      };
+    })
+    .filter(Boolean) as ScoreRow[];
+
+  return { generatedAt: new Date().toISOString(), scores };
+}
+
+/** Component */
 export default function ScoresTable({
   onTopTickersChange,
 }: {
   onTopTickersChange?: (tickers: string[]) => void;
 }) {
   const [data, setData] = useState<ScoresPayload>({ generatedAt: null, scores: [] });
+
+  // simple controls
   const [priceMin, setPriceMin] = useState(1);
   const [priceMax, setPriceMax] = useState(5);
   const [gapMin, setGapMin] = useState(5);
-  const [onlyStrong, setOnlyStrong] = useState(false);
+  const [onlyStrong, setOnlyStrong] = useState(false); // AI/momentum filter
 
-  // ---- fetching (Finviz + AI) ----
-  const safeNum = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : null);
-  const parseChange = (s: any) => {
-    if (s == null) return null;
-    const m = String(s).trim().match(/^(-?\d+(?:\.\d+)?)%?$/);
-    return m ? Number(m[1]) : safeNum(s);
-  };
-  function mapFinviz(rows: any[]): ScoresPayload {
-    const scores: ScoreRow[] = rows
-      .map((s) => {
-        const t = (s.symbol || s.ticker || "").toString().toUpperCase();
-        if (!t) return null;
-        const gap = safeNum(s.gap) ?? safeNum(s.gap_pct) ?? parseChange(s.gapPct) ?? null;
-        const rvol = safeNum(s.relativeVolume) ?? safeNum(s.relVolume) ?? safeNum(s.rvol) ?? null;
-        let floatM = safeNum(s.floatM) ?? safeNum(s.float_m) ?? null;
-        if (floatM == null && s.float_shares != null) {
-          const abs = safeNum(s.float_shares);
-          if (abs != null) floatM = Math.round((abs / 1_000_000) * 10) / 10;
-        }
-        if (floatM == null && s.float != null) floatM = safeNum(s.float);
-        return {
-          ticker: t,
-          price: safeNum(s.price),
-          gap_pct: gap,
-          change_pct: parseChange(s.changePercent ?? s.change_pct ?? s.change),
-          rvol,
-          float_m: floatM,
-          ai_score: null,
-          rsi14m: null,
-          volume: safeNum(s.volume),
-          ts: s.lastUpdated || s.ts || null,
-        };
-      })
-      .filter(Boolean) as ScoreRow[];
-    return { generatedAt: new Date().toISOString(), scores };
-  }
-
+  // Fetch order: Finviz → AI JSON → fallbacks
   async function loadOnce() {
-    let finviz: any[] = [];
+    let finvizRows: any[] = [];
     let aiMap: Record<string, any> = {};
-    let aiGen: string | null = null;
+    let aiGenerated: string | null = null;
 
     try {
-      const r = await fetch("/api/stocks", { cache: "no-store" });
-      if (r.ok) {
-        const j = await r.json();
-        if (j?.success && Array.isArray(j.data)) finviz = j.data;
+      const res = await fetch("/api/stocks", { cache: "no-store" });
+      if (res.ok) {
+        const j = await res.json();
+        if (j?.success && Array.isArray(j.data)) finvizRows = j.data;
       }
     } catch {}
 
     try {
-      const r = await fetch("/today_scores.json", { cache: "no-store" });
-      if (r.ok) {
-        const j = await r.json();
+      const res = await fetch("/today_scores.json", { cache: "no-store" });
+      if (res.ok) {
+        const j = await res.json();
         (j?.scores || []).forEach((s: any) => {
           const t = String(s.ticker || "").toUpperCase();
           if (t) aiMap[t] = s;
         });
-        aiGen = j?.generatedAt ?? null;
+        aiGenerated = j?.generatedAt ?? null;
       }
     } catch {}
 
-    if (finviz.length) {
-      const payload = mapFinviz(finviz);
-      const safe = (v: any) => (Number.isFinite(Number(v)) ? Number(v) : null);
+    if (finvizRows.length) {
+      const payload = mapFinvizStocksToScores(finvizRows);
 
       payload.scores = payload.scores.map((row) => {
         const ai = aiMap[row.ticker];
         if (ai) {
-          row.ai_score = safe(ai.score);
-          row.rsi14m = safe(ai.rsi14m);
-          if (row.gap_pct == null && safe(ai.gap_pct) != null) row.gap_pct = safe(ai.gap_pct);
-          if (row.rvol == null && safe(ai.rvol) != null) row.rvol = safe(ai.rvol);
+          row.ai_score = safeNum(ai.score);
+          row.rsi14m = safeNum(ai.rsi14m);
+          if (row.gap_pct == null && safeNum(ai.gap_pct) != null) row.gap_pct = safeNum(ai.gap_pct);
+          if (row.rvol == null && safeNum(ai.rvol) != null) row.rvol = safeNum(ai.rvol);
         }
-        const d = computeAction(row);
-        row.actionScore = d.score;
-        row.action = d.action;
+        // derive decision
+        const derived = computeAction(row);
+        row.actionScore = derived.score;
+        row.action = derived.action;
         return row;
       });
 
-      payload.generatedAt = payload.generatedAt || aiGen || null;
+      payload.generatedAt = payload.generatedAt || aiGenerated || null;
       setData(payload);
       return;
     }
 
-    // fallbacks identical to before omitted for brevity
-    setData({ generatedAt: null, scores: [] });
+    // Fallbacks omitted for brevity; keep Finviz-first flow
+    setData({ generatedAt: aiGenerated, scores: [] });
   }
 
   useEffect(() => {
@@ -138,12 +174,16 @@ export default function ScoresTable({
         const as = r.actionScore ?? 0;
         return ai >= 0.6 || rv >= 1.5 || as >= 70;
       })
-      .sort((a, b) => (b.actionScore ?? 0) - (a.actionScore ?? 0) || (b.ai_score ?? 0) - (a.ai_score ?? 0));
-    return filtered.slice(0, 10);
+      .sort((a, b) =>
+        (b.actionScore ?? 0) - (a.actionScore ?? 0) ||
+        (b.ai_score ?? 0) - (a.ai_score ?? 0)
+      );
+
+    return filtered.slice(0, TOP_N);
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
   // notify News panel about current top tickers
-  const tickRef = useRef<string>(""); // cache to avoid noisy updates
+  const tickRef = useRef<string>("");
   useEffect(() => {
     const topTickers = enriched.map((r) => r.ticker);
     const key = topTickers.join(",");
@@ -167,7 +207,7 @@ export default function ScoresTable({
           Last Update {friendlyTime(data.generatedAt)} • Auto: 60s
         </div>
         <div className="ml-auto text-sm opacity-80">
-          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Total Vol: {formatInt(totalVol)} • Showing {enriched.length} / 10
+          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Total Vol: {formatInt(totalVol)} • Showing {enriched.length} / {TOP_N}
         </div>
       </div>
 
@@ -207,9 +247,11 @@ export default function ScoresTable({
           </thead>
           <tbody>
             {enriched.map((r) => {
+              // gradient: stronger for higher ActionScore (light-green -> transparent)
               const strength = clamp((r.actionScore ?? 0) / 100, 0, 1);
-              const alpha = 0.06 + strength * 0.24;
+              const alpha = 0.06 + strength * 0.24; // 0.06..0.30
               const bg = `linear-gradient(90deg, rgba(74,222,128,${alpha}) 0%, rgba(0,0,0,0) 55%)`;
+
               return (
                 <tr key={r.ticker} className="border-t border-white/10" style={{ background: bg }}>
                   <Td>{r.ticker}</Td>
@@ -227,7 +269,11 @@ export default function ScoresTable({
               );
             })}
             {enriched.length === 0 && (
-              <tr><td colSpan={11} className="text-center py-8 opacity-70">No matches.</td></tr>
+              <tr>
+                <td colSpan={11} className="text-center py-8 opacity-70">
+                  No matches. Try lowering Gap %, widening price range, or disabling AI / Momentum filter.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -236,25 +282,79 @@ export default function ScoresTable({
   );
 }
 
-/* ------- decision model & helpers (unchanged from last version) ------- */
-function clamp(v: number, lo = 0, hi = 1) { return Math.min(hi, Math.max(lo, v)); }
+/** ──────────────────────────────────────────────────────────────────────────
+ *  Decision model: Action Score (0..100) + Decision label
+ *
+ *  Weights:
+ *   - AI score (0..1) ..................... 45%
+ *   - Relative volume (1x→0 .. 3x→1) ...... 30%
+ *   - Gap % (0..20% → 0..1) ............... 15%
+ *   - Intraday +Change (0..10% → 0..1) .... 10%
+ *
+ *  Float adjustment (20M target):
+ *   - Bonus: +3 points if float ≤ 20M
+ *   - Penalty: up to -12 points as float rises from 20M → 200M (linear)
+ *     (“penalize” means subtract points from the Action Score)
+ *  Other micro rules:
+ *   - Red day penalty: -5 if change_pct < 0
+ *   - RSI(14m) stretched penalty: -5 if RSI ≥ 85 or ≤ 15
+ *  ────────────────────────────────────────────────────────────────────────── */
 function computeAction(r: ScoreRow): { score: number; action: "TRADE" | "WATCH" | "SKIP" } {
+  // Normalize each term into 0..1 range
   const ai = clamp((r.ai_score ?? 0), 0, 1);
-  const gap = clamp(Math.abs(r.gap_pct ?? r.change_pct ?? 0) / 20, 0, 1);
+
+  // rVol: 1x baseline → 0, 3x+ → 1 (you can widen by changing /2 to /3 for 4x cap, etc.)
   const rv = clamp(((r.rvol ?? 1) - 1) / 2, 0, 1);
+
+  // Gap: use absolute gap up to 20%
+  const gap = clamp(Math.abs(r.gap_pct ?? r.change_pct ?? 0) / 20, 0, 1);
+
+  // Intraday change: only reward positive up to +10%
   const chg = clamp(Math.max(0, r.change_pct ?? 0) / 10, 0, 1);
-  let score = 100 * (0.50 * ai + 0.20 * gap + 0.20 * rv + 0.10 * chg);
-  if ((r.float_m ?? 0) > 0 && (r.float_m as number) <= 20) score += 3;
-  if ((r.change_pct ?? 0) < 0) score -= 5;
+
+  // Base weighted score
+  let score =
+    100 *
+    (WEIGHTS.ai * ai +
+      WEIGHTS.rvol * rv +
+      WEIGHTS.gap * gap +
+      WEIGHTS.change * chg);
+
+  // Float bonus/penalty around 20M
+  const f = r.float_m ?? null;
+  if (f != null) {
+    if (f <= FLOAT_TARGET_M) {
+      score += FLOAT_BONUS;
+    } else {
+      const capped = Math.min(f, FLOAT_PENALTY_CAP_M);
+      const frac =
+        (capped - FLOAT_TARGET_M) / (FLOAT_PENALTY_CAP_M - FLOAT_TARGET_M); // 0..1
+      score -= FLOAT_PENALTY_MAX * clamp(frac, 0, 1);
+    }
+  }
+
+  // Other micro adjustments
+  if ((r.change_pct ?? 0) < 0) score -= 5; // red day
   const rsi = r.rsi14m ?? null;
-  if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 5;
+  if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 5; // stretched
+
   score = clamp(score, 0, 100);
-  const action = score >= 75 ? "TRADE" : score >= 55 ? "WATCH" : "SKIP";
+
+  const action: "TRADE" | "WATCH" | "SKIP" =
+    score >= 75 ? "TRADE" : score >= 55 ? "WATCH" : "SKIP";
+
   return { score, action };
 }
+
+/** UI helpers */
 function fmtNum(v?: number | null, d = 2) { if (v == null) return "—"; return Number(v).toFixed(d); }
 function fmtPct(v?: number | null) { if (v == null) return "—"; return Number(v).toFixed(1) + "%"; }
-function formatInt(v?: number | null) { if (!v) return "—"; if (v >= 1_000_000) return (v/1_000_000).toFixed(1)+"M"; if (v>=1_000) return (v/1_000).toFixed(1)+"k"; return String(v); }
+function formatInt(v?: number | null) {
+  if (!v) return "—";
+  if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
+  if (v >= 1_000) return (v / 1_000).toFixed(1) + "k";
+  return String(v);
+}
 function friendlyTime(iso: string | null) { if (!iso) return "—"; try { const d = new Date(iso); return d.toLocaleTimeString([], { hour12: false }); } catch { return "—"; } }
 function Th({ children, className = "" }: any) { return <th className={`px-3 py-2 font-medium ${className}`}>{children}</th>; }
 function Td({ children, className = "" }: any) { return <td className={`px-3 py-2 ${className}`}>{children}</td>; }
