@@ -1,11 +1,13 @@
 // app/components/IconStockflow.tsx
-import * as React from "react";
+// Small, reusable UPWARD zig-zag icon (for headers, badges, etc.)
 
 export default function IconStockflow({
   size = 28,
   className = "",
-}: { size?: number; className?: string }) {
-  // Upward zigzag with an upward arrowhead
+}: {
+  size?: number;
+  className?: string;
+}) {
   return (
     <svg
       width={size}
@@ -13,10 +15,9 @@ export default function IconStockflow({
       viewBox="0 0 24 24"
       className={className}
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="StockFlow"
+      aria-hidden="true"
     >
-      {/* Glow/soft background */}
+      {/* Soft glow/back-stroke */}
       <path
         d="M4 16 L9 11 L12 14 L18 8"
         stroke="currentColor"
@@ -25,7 +26,8 @@ export default function IconStockflow({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Main zigzag up */}
+
+      {/* Main zigzag UP */}
       <path
         d="M4 16 L9 11 L12 14 L18 8"
         stroke="currentColor"
@@ -33,7 +35,8 @@ export default function IconStockflow({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Upward arrow head */}
+
+      {/* Arrow head pointing UP */}
       <path
         d="M18 8 L18 12"
         stroke="currentColor"
