@@ -11,10 +11,21 @@ type CandidateRow = { [k: string]: any };
 type NewsItem = { ticker: string; headline: string; source?: string; url?: string; published?: string; };
 type NewsPayload = { generatedAt?: string; items: NewsItem[]; };
 
+type Alert = {
+  id: string;
+  level: "HIGH" | "MEDIUM" | "LOW";
+  at: string; // HH:MM:SS
+  ticker: string;
+  price?: number;
+  changePct?: number;
+  gapPct?: number;
+  read?: boolean;
+};
+
 const num = (v: any): number | undefined => {
   if (v === null || v === undefined) return undefined;
   if (typeof v === "number") return v;
-  const s = String(v).replace(/[%,$\s]/g, "");
+  const s = String(v).replace(/[%,$\s,]/g, "");
   const n = Number(s);
   return Number.isFinite(n) ? n : undefined;
 };
@@ -43,6 +54,7 @@ export default function Dashboard() {
   const [scores, setScores] = useState<ScoresPayload | null>(null);
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
   const [news, setNews] = useState<NewsPayload | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
 
   type Row = {
     ticker: string;
@@ -51,15 +63,15 @@ export default function Dashboard() {
     perf10mPct?: number;
     rvol?: number;
     floatM?: number;
+    volume?: number;
     score?: number;
     firstSeenAt?: string;
   };
   const [rows, setRows] = useState<Row[]>([]);
   const rowsRef = useRef(rows);
-  const firstSeen = useRef<Map<string, string>>(new Map());
   useEffect(() => { rowsRef.current = rows; }, [rows]);
 
-  // Filters (defaults per your brief)
+  // Filters (defaults)
   const [priceMin, setPriceMin] = useState(1);
   const [priceMax, setPriceMax] = useState(5);
   const [minRvol, setMinRvol] = useState(1.0);
@@ -69,6 +81,11 @@ export default function Dashboard() {
   const [newsOnly, setNewsOnly] = useState(false);
 
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  const pickSymKey = (row: CandidateRow) => {
+    for (const k of ["Ticker", "ticker", "Symbol", "symbol"]) if (k in row) return k;
+    return "Ticker";
+  };
 
   const buildMergedRows = (
     sPayload: ScoresPayload | null,
@@ -83,36 +100,58 @@ export default function Dashboard() {
         ? new Set(newsItems.map((n) => n.ticker?.toUpperCase()).filter(Boolean))
         : null;
 
-    const pickSymbolKey = (row: CandidateRow) => {
-      for (const k of ["Ticker", "ticker", "Symbol", "symbol"]) if (k in row) return k;
-      return "Ticker";
-    };
-    const symKey = pickSymbolKey(cRows[0] || {});
-
+    const symKey = pickSymKey(cRows[0] || {});
     const result: Row[] = [];
+
     for (const r of cRows) {
       const t = String(r[symKey] ?? "").toUpperCase().trim();
       if (!t) continue;
       if (allowedNews && !allowedNews.has(t)) continue;
 
       const price = num(r.Price ?? r.price);
-      const gapPct = num(r.GapPct ?? r.gapPct ?? r.Change ?? r.change);
+      const gapPct = num(r.GapPct ?? r.gapPct ?? r.Change ?? r.change); // change → gap%
       const perf10mPct = num(r.Perf10m ?? r.perf10m);
       const rvol = num(r.RVol ?? r.RelVol ?? r.rvol ?? r.relvol);
       const floatM = num(r.Float ?? r.float);
+      const volume = num(r.Volume ?? r.volume);
       const sRow = sMap.get(t);
 
       result.push({
         ticker: t,
-        price,
-        gapPct,
-        perf10mPct,
-        rvol,
-        floatM,
+        price, gapPct, perf10mPct, rvol, floatM, volume,
         score: sRow?.score,
       });
     }
     return result;
+  };
+
+  const addAlertsForNew = (merged: Row[]) => {
+    const prev = new Set(rowsRef.current.map((x) => x.ticker));
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    const ts = `${hh}:${mm}:${ss}`;
+
+    const added: Alert[] = [];
+    for (const m of merged) {
+      if (!prev.has(m.ticker)) {
+        const g = m.gapPct ?? 0;
+        const lvl: Alert["level"] = g >= 40 ? "HIGH" : g >= 15 ? "MEDIUM" : "LOW";
+        added.push({
+          id: `${m.ticker}-${Date.now()}`,
+          level: lvl,
+          at: ts,
+          ticker: m.ticker,
+          price: m.price,
+          changePct: m.perf10mPct,
+          gapPct: m.gapPct,
+        });
+      }
+    }
+    if (added.length) {
+      setAlerts((a) => [...added, ...a].slice(0, 20)); // keep recent
+    }
   };
 
   const pull = async () => {
@@ -124,25 +163,27 @@ export default function Dashboard() {
       const cRes = await fetch("/today_candidates.csv", { cache: "no-store" });
       const cText = cRes.ok ? await cRes.text() : "";
       const parsed = Papa.parse<CandidateRow>(cText, { header: true, skipEmptyLines: true });
-      setCandidates((parsed.data || []).filter(Boolean));
+      const cRows = (parsed.data || []).filter(Boolean);
+      setCandidates(cRows);
 
       const nRes = await fetch("/today_news.json", { cache: "no-store" });
       const nPayload = nRes.ok ? ((await nRes.json()) as NewsPayload) : { items: [] };
       setNews(nPayload);
 
-      const merged = buildMergedRows(sPayload, (parsed.data || []).filter(Boolean), newsOnly ? nPayload.items : undefined);
+      const merged = buildMergedRows(sPayload, cRows, newsOnly ? nPayload.items : undefined);
 
+      // first-seen timestamps & merge-in
       merged.forEach((m) => {
-        if (!firstSeen.current.has(m.ticker)) {
-          firstSeen.current.set(m.ticker, new Date().toLocaleTimeString());
-        }
-        m.firstSeenAt = firstSeen.current.get(m.ticker)!;
+        // stamp later in render
       });
+
+      // Alerts for newly appearing tickers
+      addAlertsForNew(merged);
 
       setRows((prev) => mergeByTicker(prev, merged));
       setLastUpdated(new Date().toLocaleTimeString());
     } catch {
-      // ignore transient fetch errors
+      // swallow transient errors
     }
   };
 
@@ -154,18 +195,22 @@ export default function Dashboard() {
 
   useEffect(() => {
     const merged = buildMergedRows(scores, candidates, newsOnly ? (news?.items ?? []) : undefined);
-    merged.forEach((m) => {
-      if (!firstSeen.current.has(m.ticker)) {
-        firstSeen.current.set(m.ticker, new Date().toLocaleTimeString());
-      }
-      m.firstSeenAt = firstSeen.current.get(m.ticker)!;
-    });
     setRows((prev) => mergeByTicker(prev, merged));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newsOnly, candidates, scores, news]);
 
+  // First-seen clock (session-only)
+  const firstSeen = useRef<Map<string, string>>(new Map());
+  const rowsWithSince = useMemo(() => {
+    const now = new Date().toLocaleTimeString();
+    return rows.map((r) => {
+      if (!firstSeen.current.has(r.ticker)) firstSeen.current.set(r.ticker, now);
+      return { ...r, firstSeenAt: firstSeen.current.get(r.ticker) };
+    });
+  }, [rows]);
+
   const filtered = useMemo(() => {
-    return rows.filter((r) => {
+    return rowsWithSince.filter((r) => {
       if (r.price === undefined) return false;
       if (r.price < priceMin || r.price > priceMax) return false;
       if (r.rvol !== undefined && r.rvol < minRvol) return false;
@@ -174,24 +219,30 @@ export default function Dashboard() {
       if (r.floatM !== undefined && r.floatM > maxFloat) return false;
       return true;
     });
-  }, [rows, priceMin, priceMax, minRvol, minGap, minPerf, maxFloat]);
+  }, [rowsWithSince, priceMin, priceMax, minRvol, minGap, minPerf, maxFloat]);
+
+  // Metrics
+  const avgGap =
+    filtered.length > 0
+      ? (filtered.reduce((a, r) => a + (r.gapPct ?? 0), 0) / filtered.length).toFixed(1)
+      : "0.0";
+  const totalVol =
+    filtered.reduce((a, r) => a + (r.volume ?? 0), 0);
 
   const shownTickers = new Set(filtered.map((f) => f.ticker));
   const newsShown = (news?.items || [])
     .filter((n) => n.ticker && shownTickers.has(n.ticker.toUpperCase()))
     .slice(0, 10);
 
-  const avgGap =
-    filtered.length > 0
-      ? (filtered.reduce((a, r) => a + (r.gapPct ?? 0), 0) / filtered.length).toFixed(1)
-      : "0.0";
-
   const onLogout = () => {
     sessionStorage.removeItem("sf_auth_ok");
     r.push("/");
   };
-
   const onRefresh = () => pull();
+
+  // Alerts controls
+  const markAllRead = () => setAlerts((a) => a.map((x) => ({ ...x, read: true })));
+  const clearAll = () => setAlerts([]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#2a1459] via-[#180a36] to-black text-white">
@@ -229,12 +280,23 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="max-w-7xl mx-auto px-5 grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-        <KPI label="Filtered Stocks" value={filtered.length.toString()} sub="Active scanners" />
-        <KPI label="Average Gap" value={`${avgGap}%`} sub="Gap percentage" />
-        <KPI label="Hot Stocks" value={Math.min(filtered.length, 10).toString()} sub="High momentum" />
-        <KPI label="Tracked" value={rowsRef.current.length.toString()} sub="Seen this session" />
+      {/* KPIs (🔥 High momentum / 📊 Gap percentage / 💰 Total volume) */}
+      <div className="max-w-7xl mx-auto px-5 grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+        <KPI
+          label={<span>🔥 High momentum</span>}
+          value={Math.min(filtered.length, 10).toString()}
+          sub={<span className="text-white/70">Top movers by filters</span>}
+        />
+        <KPI
+          label={<span>📊 Gap percentage</span>}
+          value={`${avgGap}%`}
+          sub={<span className="text-white/70">Average of shown</span>}
+        />
+        <KPI
+          label={<span>💰 Total volume</span>}
+          value={Intl.NumberFormat().format(totalVol)}
+          sub={<span className="text-white/70">Combined volume</span>}
+        />
       </div>
 
       {/* Filters */}
@@ -356,8 +418,69 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* News (limit 10; only for shown tickers) */}
-      <div className="max-w-7xl mx-auto px-5 mt-6 mb-12">
+      {/* Alerts + News side-by-side */}
+      <div className="max-w-7xl mx-auto px-5 mt-6 mb-12 grid md:grid-cols-2 gap-6">
+        {/* Real-Time Alerts */}
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-lg">Real-Time Alerts</h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={markAllRead}
+                className="text-xs rounded-lg border border-white/15 px-2 py-1 hover:bg-white/10"
+              >
+                Mark All Read
+              </button>
+              <button
+                onClick={clearAll}
+                className="text-xs rounded-lg border border-white/15 px-2 py-1 hover:bg-white/10"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+          <div className="text-sm text-white/70 mb-3">{alerts.filter(a => !a.read).length} unread</div>
+          <div className="space-y-3 max-h-[360px] overflow-auto pr-1">
+            {alerts.slice(0, 10).map((a) => (
+              <div
+                key={a.id}
+                className={`rounded-xl border p-3 ${
+                  a.level === "HIGH"
+                    ? "border-red-400/40 bg-red-400/10"
+                    : a.level === "MEDIUM"
+                    ? "border-amber-300/40 bg-amber-300/10"
+                    : "border-white/15 bg-white/5"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold">
+                    🚀 {a.level} • <span className="font-mono">{a.at}</span>
+                  </div>
+                  <button
+                    className="text-xs underline"
+                    onClick={() => setAlerts((arr) => arr.map(x => x.id === a.id ? {...x, read: true} : x))}
+                  >
+                    Mark Read
+                  </button>
+                </div>
+                <div className="mt-1">
+                  🚀 NEW GAPPER: <span className="font-mono">{a.ticker}</span>{" "}
+                  gapping {a.gapPct !== undefined ? `${a.gapPct.toFixed(1)}%` : "—"}
+                </div>
+                <div className="text-sm text-white/80 mt-1">
+                  Price: {a.price !== undefined ? `$${a.price.toFixed(2)}` : "—"} • Change:{" "}
+                  {a.changePct !== undefined ? `${a.changePct.toFixed(1)}%` : "—"} • Gap:{" "}
+                  {a.gapPct !== undefined ? `${a.gapPct.toFixed(1)}%` : "—"}
+                </div>
+              </div>
+            ))}
+            {alerts.length === 0 && (
+              <div className="text-sm text-white/60">No alerts yet</div>
+            )}
+          </div>
+        </div>
+
+        {/* Market News (limited to shown tickers) */}
         <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
           <h3 className="font-semibold text-lg mb-2">📰 Market News</h3>
           {newsShown.length ? (
@@ -395,12 +518,12 @@ export default function Dashboard() {
   );
 }
 
-function KPI({ label, value, sub }: { label: string; value: string; sub: string }) {
+function KPI({ label, value, sub }: { label: React.ReactNode; value: string; sub: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-      <div className="text-sm text-white/70">{label}</div>
+      <div className="text-sm">{label}</div>
       <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs text-white/60">{sub}</div>
+      <div className="text-xs">{sub}</div>
     </div>
   );
 }
