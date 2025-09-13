@@ -1,37 +1,58 @@
-"use client";
+// app/components/IconStockflow.tsx
+import * as React from "react";
 
 export default function IconStockflow({
-  className = "",
   size = 28,
-}: { className?: string; size?: number }) {
-  const s = size;
+  className = "",
+}: { size?: number; className?: string }) {
+  // Upward zigzag with an upward arrowhead
   return (
     <svg
-      width={s}
-      height={s}
-      viewBox="0 0 28 28"
-      fill="none"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
       className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
       aria-label="StockFlow"
     >
-      <rect
-        x="1" y="1" width="26" height="26" rx="8"
-        stroke="rgba(255,255,255,0.14)" strokeWidth="1.2"
-        fill="rgba(255,255,255,0.06)"
-      />
+      {/* Glow/soft background */}
       <path
-        d="M6 18 L11 13 L14.5 16.5 L20 11"
+        d="M4 16 L9 11 L12 14 L18 8"
+        stroke="currentColor"
+        strokeOpacity="0.25"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {/* Main zigzag up */}
+      <path
+        d="M4 16 L9 11 L12 14 L18 8"
         stroke="currentColor"
         strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* up-right arrow head */}
+      {/* Upward arrow head */}
       <path
-        d="M20 11 L23 11 M20 11 L20 8"
+        d="M18 8 L18 12"
         stroke="currentColor"
         strokeWidth="2.2"
         strokeLinecap="round"
+      />
+      <path
+        d="M18 8 L14.8 9.6"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18 8 L19.6 11.2"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
