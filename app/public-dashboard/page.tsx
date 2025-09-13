@@ -3,9 +3,9 @@
 import Papa from "papaparse";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { isLoggedInLocal } from "../components/auth";
 import IconStockflow from "../components/IconStockflow";
 
+/* ---------- types ---------- */
 type ScoreRow = { ticker: string; score?: number; gap_pct?: number; rvol?: number; rsi14m?: number; };
 type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[]; };
 type CandidateRow = { [k: string]: any };
@@ -13,16 +13,15 @@ type NewsItem = { ticker: string; headline: string; source?: string; url?: strin
 type NewsPayload = { generatedAt?: string; items: NewsItem[]; };
 type Alert = { id: string; level: "HIGH" | "MEDIUM" | "LOW"; at: number; price?: number; changePct?: number; gapPct?: number; read?: boolean; };
 
+/* ---------- utils ---------- */
 const num = (v: any): number | undefined => {
   if (v === null || v === undefined) return undefined;
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
 };
-
 const pct = (v?: number) => (v === undefined ? undefined : (v * 100).toFixed(1) + "%");
 const fmt = (v?: number, d = 2) => (v === undefined ? "-" : v.toFixed(d));
 const fmtInt = (v?: number) => (v === undefined ? "-" : Math.round(v).toLocaleString());
-
 const fetchCSV = async (url: string) =>
   new Promise<any[]>((resolve, reject) => {
     Papa.parse(url, {
@@ -41,11 +40,9 @@ function mergeByTicker<T extends { ticker: string }>(prev: T[], incoming: T[]): 
   return Array.from(map.values());
 }
 
+/* ---------- page ---------- */
 export default function PublicDashboard() {
   const r = useRouter();
-
-  // ✅ unified auth check (redirect to /login if not signed in)
-  useEffect(() => { if (!isLoggedInLocal()) r.replace("/login"); }, [r]);
 
   const [scores, setScores] = useState<ScoresPayload | null>(null);
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
@@ -54,42 +51,34 @@ export default function PublicDashboard() {
   const [rows, setRows] = useState<any[]>([]);
   const rowsRef = useRef(rows); useEffect(() => { rowsRef.current = rows; }, [rows]);
 
-  // Filter state (defaults)
+  // Filters (with reasonable defaults)
   const [priceMin, setPriceMin] = useState(1);
   const [priceMax, setPriceMax] = useState(5);
   const [minGap, setMinGap] = useState(5);
   const [newsOnly, setNewsOnly] = useState(false);
+  const [minRelVol, setMinRelVol] = useState(1.3);
+  const [minPerf10m, setMinPerf10m] = useState(10);
+  const [maxFloatM, setMaxFloatM] = useState(20);
 
-  // Extra filter state
-  const [minRelVol, setMinRelVol] = useState(1.3); // default 1.3x
-  const [minPerf10m, setMinPerf10m] = useState(10); // default 10%
-  const [maxFloatM, setMaxFloatM] = useState(20);   // default 20M
-
-  // Derived flags for showing tags on cards
+  // Tag visibility, persisted
   const [hasRelVol, setHasRelVol] = useState(true);
   const [hasPerf10m, setHasPerf10m] = useState(true);
   const [hasFloatM, setHasFloatM] = useState(true);
-
-  // Toggles for tag visibility (persist user choice)
   useEffect(() => {
     const saved = localStorage.getItem("sf_pd_tagprefs");
     if (saved) {
       try {
         const { hasRel, hasPerf, hasFloat } = JSON.parse(saved);
-        setHasRelVol(!!hasRel);
-        setHasPerf10m(!!hasPerf);
-        setHasFloatM(!!hasFloat);
+        setHasRelVol(!!hasRel); setHasPerf10m(!!hasPerf); setHasFloatM(!!hasFloat);
       } catch {}
     }
   }, []);
-
-  const saveTagPrefs = (hasRel: boolean, hasPerf: boolean, hasFloat: boolean) => {
-    localStorage.setItem("sf_pd_tagprefs", JSON.stringify({ hasRel, hasPerf, hasFloat }));
-    setHasRelVol(!!hasRel);
-    setHasPerf10m(!!hasPerf);
-    setHasFloatM(!!hasFloat);
+  const saveTagPrefs = (a: boolean, b: boolean, c: boolean) => {
+    localStorage.setItem("sf_pd_tagprefs", JSON.stringify({ hasRel: a, hasPerf: b, hasFloat: c }));
+    setHasRelVol(a); setHasPerf10m(b); setHasFloatM(c);
   };
 
+  // Build merged rows
   const buildMergedRows = (
     sPayload: ScoresPayload | null,
     cRows: CandidateRow[],
@@ -106,7 +95,6 @@ export default function PublicDashboard() {
       .map((r) => {
         const t = (r.Ticker || r.ticker || "").toUpperCase();
         if (!t) return null;
-
         if (allowedNews && !allowedNews.has(t)) return null;
 
         const s = sMap.get(t);
@@ -119,20 +107,12 @@ export default function PublicDashboard() {
         return {
           ticker: t,
           name: r.Name || r.name || "",
-          price,
-          gapPct,
-          rvol,
-          rsi14m,
-          perf10m,
+          price, gapPct, rvol, rsi14m, perf10m,
           floatM: num(r.FloatM || r.floatM || r.float_millions),
           volM: num(r.VolM || r.volM || r.volume_millions),
           sector: r.Sector || r.sector,
           industry: r.Industry || r.industry,
-          // AI score bits
-          aiScore: s?.score,
-          aiGapPct: s?.gap_pct,
-          aiRvol: s?.rvol,
-          aiRsi14m: s?.rsi14m,
+          aiScore: s?.score, aiGapPct: s?.gap_pct, aiRvol: s?.rvol, aiRsi14m: s?.rsi14m,
         };
       })
       .filter(Boolean) as any[];
@@ -140,7 +120,7 @@ export default function PublicDashboard() {
     setRows(merged);
   };
 
-  // Fetchers
+  // Fetch data (scores, candidates, news)
   useEffect(() => {
     let cancelled = false;
 
@@ -150,7 +130,6 @@ export default function PublicDashboard() {
           fetchCSV("/scores.csv"),
           fetchCSV("/candidates.csv"),
         ]);
-
         if (cancelled) return;
 
         const scoresPayload: ScoresPayload = {
@@ -168,7 +147,6 @@ export default function PublicDashboard() {
         const cands = candidatesRows.map((r) => ({ ...r, ticker: (r.Ticker || r.ticker || "").toUpperCase() }));
         setCandidates(cands);
 
-        // Try news.json but don’t break UI if missing
         try {
           const res = await fetch("/news.json");
           if (res.ok) {
@@ -187,11 +165,11 @@ export default function PublicDashboard() {
     };
 
     run();
-    const id = setInterval(run, 60_000); // refresh 1 min
+    const id = setInterval(run, 60_000);
     return () => { cancelled = true; clearInterval(id); };
   }, [newsOnly]);
 
-  // Derived metrics for header badges
+  // Derived
   const filtered = useMemo(() => {
     return rows.filter((r) => {
       if (r.price === undefined || r.gapPct === undefined) return false;
@@ -216,23 +194,20 @@ export default function PublicDashboard() {
     return xs.reduce((a, b) => a + b, 0);
   }, [filtered]);
 
-  // Example alert generator (fake in UI)
+  // Example alerts (client-only demo)
   useEffect(() => {
     if (!rowsRef.current.length) return;
     const now = Date.now();
-    const makeAlert = (i: number, level: "HIGH" | "MEDIUM" | "LOW") => ({
-      id: `a${now}-${i}`,
-      level,
-      at: now,
+    const mk = (i: number, level: "HIGH" | "MEDIUM" | "LOW"): Alert => ({
+      id: `a${now}-${i}`, level, at: now,
       price: rowsRef.current[i]?.price,
       changePct: rowsRef.current[i]?.perf10m ? rowsRef.current[i].perf10m / 100 : undefined,
-      gapPct: rowsRef.current[i]?.gapPct,
-      read: false,
+      gapPct: rowsRef.current[i]?.gapPct, read: false,
     });
     const a: Alert[] = [];
-    if (rowsRef.current[0]) a.push(makeAlert(0, "HIGH"));
-    if (rowsRef.current[1]) a.push(makeAlert(1, "MEDIUM"));
-    if (rowsRef.current[2]) a.push(makeAlert(2, "LOW"));
+    if (rowsRef.current[0]) a.push(mk(0, "HIGH"));
+    if (rowsRef.current[1]) a.push(mk(1, "MEDIUM"));
+    if (rowsRef.current[2]) a.push(mk(2, "LOW"));
     setAlerts(a);
   }, [rows.length]);
 
@@ -273,6 +248,7 @@ export default function PublicDashboard() {
         </div>
       </section>
 
+      {/* Body */}
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5 px-5 mt-6">
         {/* Filters */}
         <aside className="rounded-xl bg-white/5 border border-white/10 p-4">
@@ -340,7 +316,7 @@ export default function PublicDashboard() {
           </div>
         </aside>
 
-        {/* Results (2 cols) */}
+        {/* Results */}
         <section className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-sm text-white/60">
