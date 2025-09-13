@@ -1,16 +1,16 @@
 // app/dashboard/page.tsx
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import IconStockflow from "../components/IconStockflow";
-import NewsPanel from "../components/NewsPanel";
 import ScoresTable from "../components/ScoresTable";
+import NewsPanel from "../components/NewsPanel";
+import { useRouter } from "next/navigation";
 import { AUTH_KEY } from "../components/auth";
 
 export default function DashboardPage() {
   const r = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [topTickers, setTopTickers] = useState<string[]>([]);
 
   async function doLogout() {
     try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
@@ -26,29 +26,20 @@ export default function DashboardPage() {
           <div className="font-semibold">StockFlow</div>
           <span className="ml-3 px-2 py-0.5 rounded bg-green-900/40 text-green-300 text-xs">LIVE</span>
         </div>
-
         <div className="flex items-center gap-3">
           <a href="/" className="text-sm hover:underline">Home</a>
-          <button
-            onClick={() => setRefreshKey((k) => k + 1)}
-            className="text-sm px-3 py-1 rounded bg-green-600 text-black hover:brightness-110"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={doLogout}
-            className="text-sm px-3 py-1 rounded bg-red-600 text-white hover:brightness-110"
-          >
-            Logout
-          </button>
+          <button onClick={() => location.reload()} className="text-sm px-3 py-1 rounded bg-green-600 text-black hover:brightness-110">Refresh</button>
+          <button onClick={doLogout} className="text-sm px-3 py-1 rounded bg-red-600 text-white hover:brightness-110">Logout</button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-5">
-        {/* Your existing AI components */}
-        <ScoresTable key={`scores-${refreshKey}`} />
-        <div className="mt-6" />
-        <NewsPanel key={`news-${refreshKey}`} />
+      <div className="max-w-7xl mx-auto px-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <section className="lg:col-span-2">
+          <ScoresTable onTopTickersChange={setTopTickers} />
+        </section>
+        <aside>
+          <NewsPanel tickers={topTickers} />
+        </aside>
       </div>
     </main>
   );
