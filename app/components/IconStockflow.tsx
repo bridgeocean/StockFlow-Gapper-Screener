@@ -4,7 +4,6 @@ export default function IconStockflow({
   className = "",
   size = 28,
 }: { className?: string; size?: number }) {
-  // Up-right price action zigzag with arrow head pointing UP/RIGHT.
   const s = size;
   return (
     <svg
@@ -20,7 +19,6 @@ export default function IconStockflow({
         stroke="rgba(255,255,255,0.14)" strokeWidth="1.2"
         fill="rgba(255,255,255,0.06)"
       />
-      {/* Zigzag moving bottom-left to top-right */}
       <path
         d="M6 18 L11 13 L14.5 16.5 L20 11"
         stroke="currentColor"
@@ -28,7 +26,7 @@ export default function IconStockflow({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Arrow head at the end, pointing up-right */}
+      {/* up-right arrow head */}
       <path
         d="M20 11 L23 11 M20 11 L20 8"
         stroke="currentColor"
