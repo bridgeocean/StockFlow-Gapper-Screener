@@ -1,0 +1,25 @@
+name: Push AI Scores
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 13-20 * * 1-5"  # every 5 minutes Mon–Fri during 13:00–20:59 UTC
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post scores
+        run: |
+          cat > scores.json <<'JSON'
+          {
+            "generatedAt": null,
+            "scores": [
+              { "ticker": "ABCD", "score": 0.74, "gap_pct": 6.2, "rvol": 3.1, "rsi14m": 58, "price": 3.45, "volume": 1234567 }
+            ]
+          }
+          JSON
+
+          curl -X POST "https://v0-finviz-gapper.vercel.app/api/scores" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${{ secrets.SCORES_API_KEY }}" \
+            --data @scores.json
