@@ -3,34 +3,29 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-/** ───────────────────────── Tunables (edit these freely) ───────────────────────── */
-const WEIGHTS = {
-  rvol: 0.65,    // relative volume drives score
-  ai: 0.20,      // AI confidence (0..1)
-  gap: 0.10,     // opening gap (cap 20%)
-  change: 0.05,  // intraday +change (cap +10%)
-};
+/** ───────────────────────── Tunables ───────────────────────── */
+const WEIGHTS = { rvol: 0.65, ai: 0.20, gap: 0.10, change: 0.05 };
 
-const RVOL_TRADE = 5.0;          // rVol ≥ 5x + gates + recent news → TRADE
-const RVOL_TRADE_FALLBACK = 7.0; // no recent news path: require this rVol
-const GAP_MIN_TRADE = 5;         // %
-const GAP_MIN_TRADE_FALLBACK = 8;// % (no news)
-const CHANGE_MIN_TRADE = 5;      // %  ← your request
-const CHANGE_MIN_TRADE_FALLBACK = 6; // % (no news)
+const RVOL_TRADE = 5.0;
+const RVOL_TRADE_FALLBACK = 7.0;
+const GAP_MIN_TRADE = 5;
+const GAP_MIN_TRADE_FALLBACK = 8;
+const CHANGE_MIN_TRADE = 5;          // <= your request
+const CHANGE_MIN_TRADE_FALLBACK = 6;
 
-const RVOL_WATCH = 2.5;          // rVol ≥ 2.5x → WATCH (with Gap & Change below)
-const GAP_MIN_WATCH = 2;         // %
-const CHANGE_MIN_WATCH = 0;      // %
+const RVOL_WATCH = 2.5;
+const GAP_MIN_WATCH = 2;
+const CHANGE_MIN_WATCH = 0;
 
-const FLOAT_TARGET_M = 20;       // best around 20M
-const FLOAT_BONUS = 3;           // +3 if float ≤ 20M
-const FLOAT_PENALTY_MAX = 12;    // up to -12 pts above 20M (linear to 200M)
-const FLOAT_PENALTY_CAP_M = 200; // ≥200M gets full penalty
+const FLOAT_TARGET_M = 20;
+const FLOAT_BONUS = 3;
+const FLOAT_PENALTY_MAX = 12;
+const FLOAT_PENALTY_CAP_M = 200;
 
-const NEWS_WINDOW_MIN = 60;      // “recent” if published within this many minutes
-const NEWS_BONUS = 8;            // score bonus if recent news exists
+const NEWS_WINDOW_MIN = 60;
+const NEWS_BONUS = 8;
 
-const PAGE_SIZE = 10;            // 10 stocks per page (no cap on total)
+const PAGE_SIZE = 10;
 
 /** Types */
 type ScoreRow = {
@@ -126,9 +121,9 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 2) AI scores — now from /api/scores (live Redis)
+    // 2) AI scores — from the static JSON (committed by GitHub Action)
     try {
-      const res = await fetch("/api/scores", { cache: "no-store" });
+      const res = await fetch("/today_scores.json", { cache: "no-store" });
       if (res.ok) {
         const j = await res.json();
         (j?.scores || []).forEach((s: any) => {
@@ -139,7 +134,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 3) News catalysts from /public/news.json (can convert to API later)
+    // 3) News catalysts
     try {
       const res = await fetch("/news.json", { cache: "no-store" });
       if (res.ok) {
@@ -190,7 +185,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
     return () => clearInterval(id);
   }, []);
 
-  // filter + sort (all rows)
   const filteredAll = useMemo(() => {
     return (data.scores || [])
       .filter((r) => r.ticker)
@@ -209,7 +203,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       );
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
-  // pagination
   const totalPages = Math.max(1, Math.ceil(filteredAll.length / PAGE_SIZE));
   useEffect(() => { setPage((p) => Math.min(Math.max(1, p), totalPages)); }, [totalPages]);
   useEffect(() => { setPage(1); }, [priceMin, priceMax, gapMin, onlyStrong]);
@@ -218,7 +211,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   const end = Math.min(filteredAll.length, start + PAGE_SIZE);
   const visible = filteredAll.slice(start, end);
 
-  // notify News panel of *current page* tickers
   const tickRef = useRef<string>("");
   useEffect(() => {
     const topTickers = visible.map((r) => r.ticker);
@@ -229,7 +221,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
     }
   }, [visible, onTopTickersChange]);
 
-  // summary for the page
   const totalVol = useMemo(() => visible.reduce((a, r) => a + (r.volume ?? 0), 0), [visible]);
   const avgGap = useMemo(() => {
     const xs = visible.map((r) => r.gap_pct ?? r.change_pct).filter((x) => x != null) as number[];
