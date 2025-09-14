@@ -15,10 +15,10 @@ const RVOL_TRADE = 5.0;          // rVol ≥ 5x + gates + recent news → TRADE
 const RVOL_TRADE_FALLBACK = 7.0; // no recent news path: require this rVol
 const GAP_MIN_TRADE = 5;         // %
 const GAP_MIN_TRADE_FALLBACK = 8;// % (no news)
-const CHANGE_MIN_TRADE = 5;      // %  ← as requested
-const CHANGE_MIN_TRADE_FALLBACK = 6; // % (no news stays stricter)
+const CHANGE_MIN_TRADE = 5;      // %  ← your request
+const CHANGE_MIN_TRADE_FALLBACK = 6; // % (no news)
 
-const RVOL_WATCH = 2.5;          // rVol ≥ 2.5x → WATCH gate (with Gap & Change below)
+const RVOL_WATCH = 2.5;          // rVol ≥ 2.5x → WATCH (with Gap & Change below)
 const GAP_MIN_WATCH = 2;         // %
 const CHANGE_MIN_WATCH = 0;      // %
 
@@ -28,7 +28,7 @@ const FLOAT_PENALTY_MAX = 12;    // up to -12 pts above 20M (linear to 200M)
 const FLOAT_PENALTY_CAP_M = 200; // ≥200M gets full penalty
 
 const NEWS_WINDOW_MIN = 60;      // “recent” if published within this many minutes
-const NEWS_BONUS = 8;            // flat score bonus if recent news exists
+const NEWS_BONUS = 8;            // score bonus if recent news exists
 
 const PAGE_SIZE = 10;            // 10 stocks per page (no cap on total)
 
@@ -36,31 +36,21 @@ const PAGE_SIZE = 10;            // 10 stocks per page (no cap on total)
 type ScoreRow = {
   ticker: string;
   price?: number | null;
-  gap_pct?: number | null;      // % open gap
-  change_pct?: number | null;   // % intraday change
-  rvol?: number | null;         // relative volume
-  float_m?: number | null;      // float in millions
-  ai_score?: number | null;     // 0..1
-  rsi14m?: number | null;       // optional
+  gap_pct?: number | null;
+  change_pct?: number | null;
+  rvol?: number | null;
+  float_m?: number | null;
+  ai_score?: number | null;
+  rsi14m?: number | null;
   volume?: number | null;
   ts?: string | null;
-
   catalyst?: { recent: boolean; latestISO?: string | null };
-  actionScore?: number;         // 0..100
+  actionScore?: number;
   action?: "TRADE" | "WATCH" | "SKIP";
 };
 
 type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[] };
-
-type NewsItem = {
-  ticker: string;
-  headline: string;
-  summary?: string;
-  source?: string;
-  url?: string;
-  published?: string; // ISO or "HH:mm:ss"
-};
-
+type NewsItem = { ticker: string; headline: string; url?: string; published?: string; summary?: string; source?: string };
 type NewsPayload = { generatedAt?: string | null; items: NewsItem[] };
 
 /** Helpers */
@@ -71,84 +61,63 @@ const parseChange = (s: any) => {
   const m = String(s).trim().match(/^(-?\d+(?:\.\d+)?)%?$/);
   return m ? Number(m[1]) : safeNum(s);
 };
-
 function parseNewsTime(raw?: string): number | null {
   if (!raw) return null;
   try {
-    // Accept ISO or HH:mm:ss (assumed today UTC)
     const isoLike = /T|Z/.test(raw) ? raw : `1970-01-01T${raw}Z`;
     const ms = Date.parse(isoLike);
     return Number.isFinite(ms) ? ms : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function mapFinvizStocksToScores(rows: any[]): ScoresPayload {
-  const scores: ScoreRow[] = rows
-    .map((s) => {
-      const t = (s.symbol || s.ticker || "").toString().toUpperCase();
-      if (!t) return null;
+  const scores: ScoreRow[] = rows.map((s) => {
+    const t = (s.symbol || s.ticker || "").toString().toUpperCase();
+    if (!t) return null as any;
 
-      const gap =
-        safeNum(s.gap) ?? safeNum(s.gap_pct) ?? parseChange(s.gapPct) ?? null;
+    const gap = safeNum(s.gap) ?? safeNum(s.gap_pct) ?? parseChange(s.gapPct) ?? null;
+    const relv = safeNum(s.relativeVolume) ?? safeNum(s.relVolume) ?? safeNum(s.rvol) ?? null;
 
-      const relv =
-        safeNum(s.relativeVolume) ??
-        safeNum(s.relVolume) ??
-        safeNum(s.rvol) ??
-        null;
+    let floatM = safeNum(s.floatM) ?? safeNum(s.float_m) ?? null;
+    if (floatM == null && s.float_shares != null) {
+      const abs = safeNum(s.float_shares);
+      if (abs != null) floatM = Math.round((abs / 1_000_000) * 10) / 10;
+    }
+    if (floatM == null && s.float != null) floatM = safeNum(s.float);
 
-      let floatM = safeNum(s.floatM) ?? safeNum(s.float_m) ?? null;
-      if (floatM == null && s.float_shares != null) {
-        const abs = safeNum(s.float_shares);
-        if (abs != null) floatM = Math.round((abs / 1_000_000) * 10) / 10;
-      }
-      if (floatM == null && s.float != null) floatM = safeNum(s.float);
-
-      return {
-        ticker: t,
-        price: safeNum(s.price),
-        gap_pct: gap,
-        change_pct: parseChange(s.changePercent ?? s.change_pct ?? s.change),
-        rvol: relv,
-        float_m: floatM,
-        ai_score: null,
-        rsi14m: null,
-        volume: safeNum(s.volume),
-        ts: s.lastUpdated || s.ts || null,
-      };
-    })
-    .filter(Boolean) as ScoreRow[];
+    return {
+      ticker: t,
+      price: safeNum(s.price),
+      gap_pct: gap,
+      change_pct: parseChange(s.changePercent ?? s.change_pct ?? s.change),
+      rvol: relv,
+      float_m: floatM,
+      ai_score: null,
+      rsi14m: null,
+      volume: safeNum(s.volume),
+      ts: s.lastUpdated || s.ts || null,
+    };
+  }).filter(Boolean) as ScoreRow[];
 
   return { generatedAt: new Date().toISOString(), scores };
 }
 
 /** Component */
-export default function ScoresTable({
-  onTopTickersChange,
-}: {
-  onTopTickersChange?: (tickers: string[]) => void;
-}) {
+export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange?: (tickers: string[]) => void; }) {
   const [data, setData] = useState<ScoresPayload>({ generatedAt: null, scores: [] });
-
-  // simple controls
   const [priceMin, setPriceMin] = useState(1);
   const [priceMax, setPriceMax] = useState(5);
   const [gapMin, setGapMin] = useState(5);
   const [onlyStrong, setOnlyStrong] = useState(false);
-
-  // pagination
   const [page, setPage] = useState(1);
 
-  // Fetch: Finviz → AI (/api/scores) → News
   async function loadOnce() {
     let finvizRows: any[] = [];
     let aiMap: Record<string, any> = {};
     let aiGenerated: string | null = null;
     let newsMap = new Map<string, { latestISO: string | null; recent: boolean }>();
 
-    // 1) Finviz
+    // 1) Finviz (your existing API)
     try {
       const res = await fetch("/api/stocks", { cache: "no-store" });
       if (res.ok) {
@@ -157,7 +126,7 @@ export default function ScoresTable({
       }
     } catch {}
 
-    // 2) AI scores (now from the live API)
+    // 2) AI scores — now from /api/scores (live Redis)
     try {
       const res = await fetch("/api/scores", { cache: "no-store" });
       if (res.ok) {
@@ -170,7 +139,7 @@ export default function ScoresTable({
       }
     } catch {}
 
-    // 3) News (for catalyst gates + score bonus)
+    // 3) News catalysts from /public/news.json (can convert to API later)
     try {
       const res = await fetch("/news.json", { cache: "no-store" });
       if (res.ok) {
@@ -182,14 +151,8 @@ export default function ScoresTable({
           const ms = parseNewsTime(n.published);
           const recent = ms != null ? (now - ms) / 60000 <= NEWS_WINDOW_MIN : false;
           const existing = newsMap.get(t);
-          const latestISO =
-            ms != null
-              ? new Date(ms).toISOString()
-              : existing?.latestISO ?? null;
-          newsMap.set(t, {
-            latestISO,
-            recent: existing ? existing.recent || recent : recent,
-          });
+          const latestISO = ms != null ? new Date(ms).toISOString() : existing?.latestISO ?? null;
+          newsMap.set(t, { latestISO, recent: existing ? existing.recent || recent : recent });
         });
       }
     } catch {}
@@ -205,9 +168,7 @@ export default function ScoresTable({
           if (row.gap_pct == null && safeNum(ai.gap_pct) != null) row.gap_pct = safeNum(ai.gap_pct);
           if (row.rvol == null && safeNum(ai.rvol) != null) row.rvol = safeNum(ai.rvol);
         }
-
-        const catalyst = newsMap.get(row.ticker) || { recent: false, latestISO: null };
-        row.catalyst = catalyst;
+        row.catalyst = newsMap.get(row.ticker) || { recent: false, latestISO: null };
 
         const { score, action } = computeScoreAndDecision(row);
         row.actionScore = score;
@@ -229,9 +190,9 @@ export default function ScoresTable({
     return () => clearInterval(id);
   }, []);
 
-  // filter + sort (no slicing; we paginate after this)
+  // filter + sort (all rows)
   const filteredAll = useMemo(() => {
-    const filtered = (data.scores || [])
+    return (data.scores || [])
       .filter((r) => r.ticker)
       .filter((r) => r.price != null && r.price >= priceMin && r.price <= priceMax)
       .filter((r) => (r.gap_pct ?? r.change_pct ?? 0) >= gapMin)
@@ -246,25 +207,18 @@ export default function ScoresTable({
         (b.actionScore ?? 0) - (a.actionScore ?? 0) ||
         (b.ai_score ?? 0) - (a.ai_score ?? 0)
       );
-
-    return filtered;
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
-  // keep page within bounds & reset on filter change
+  // pagination
   const totalPages = Math.max(1, Math.ceil(filteredAll.length / PAGE_SIZE));
-  useEffect(() => {
-    setPage((p) => Math.min(Math.max(1, p), totalPages));
-  }, [totalPages]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [priceMin, priceMax, gapMin, onlyStrong]);
+  useEffect(() => { setPage((p) => Math.min(Math.max(1, p), totalPages)); }, [totalPages]);
+  useEffect(() => { setPage(1); }, [priceMin, priceMax, gapMin, onlyStrong]);
 
   const start = (page - 1) * PAGE_SIZE;
   const end = Math.min(filteredAll.length, start + PAGE_SIZE);
   const visible = filteredAll.slice(start, end);
 
-  // notify News panel of current visible tickers (current page)
+  // notify News panel of *current page* tickers
   const tickRef = useRef<string>("");
   useEffect(() => {
     const topTickers = visible.map((r) => r.ticker);
@@ -275,7 +229,7 @@ export default function ScoresTable({
     }
   }, [visible, onTopTickersChange]);
 
-  // summary
+  // summary for the page
   const totalVol = useMemo(() => visible.reduce((a, r) => a + (r.volume ?? 0), 0), [visible]);
   const avgGap = useMemo(() => {
     const xs = visible.map((r) => r.gap_pct ?? r.change_pct).filter((x) => x != null) as number[];
@@ -285,9 +239,7 @@ export default function ScoresTable({
   return (
     <section className="rounded-2xl bg-white/5 border border-white/10 p-4">
       <div className="flex items-center gap-3 mb-4">
-        <div className="text-sm opacity-80">
-          Last Update {friendlyTime(data.generatedAt)} • Auto: 60s
-        </div>
+        <div className="text-sm opacity-80">Last Update {friendlyTime(data.generatedAt)} • Auto: 60s</div>
         <div className="ml-auto text-sm opacity-80">
           Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Page {page} of {totalPages} • Showing {visible.length ? `${start + 1}–${end}` : "0"} of {filteredAll.length}
         </div>
@@ -299,21 +251,19 @@ export default function ScoresTable({
         <input type="number" value={priceMin} onChange={(e) => setPriceMin(+e.target.value || 0)} className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1" />
         <span className="opacity-60">to</span>
         <input type="number" value={priceMax} onChange={(e) => setPriceMax(+e.target.value || 0)} className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1" />
-
         <label className="text-sm">Gap % ≥</label>
         <input type="number" value={gapMin} onChange={(e) => setGapMin(+e.target.value || 0)} className="w-20 rounded-lg bg-black/40 border border-white/15 px-2 py-1" />
-
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={onlyStrong} onChange={(e) => setOnlyStrong(e.target.checked)} />
           AI / Momentum filter
         </label>
 
         <div className="ml-auto flex items-center gap-2">
-          <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40" aria-label="First page">«</button>
+          <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40">«</button>
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Prev</button>
           <span className="text-sm opacity-80">Page {page} / {totalPages}</span>
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Next</button>
-          <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40" aria-label="Last page">»</button>
+          <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40">»</button>
         </div>
       </div>
 
@@ -322,24 +272,18 @@ export default function ScoresTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left opacity-80">
-              <Th>Ticker</Th>
-              <Th className="text-right">Price</Th>
-              <Th className="text-right">Gap %</Th>
-              <Th className="text-right">Change %</Th>
-              <Th className="text-right">rVol</Th>
-              <Th className="text-right">Float (M)</Th>
-              <Th className="text-right">AI</Th>
-              <Th className="text-right">RSI(14m)</Th>
-              <Th className="text-right">Action Score</Th>
-              <Th className="text-right">Decision</Th>
-              <Th className="text-right">Catalyst</Th>
-              <Th className="text-right">Vol</Th>
+              <Th>Ticker</Th><Th className="text-right">Price</Th>
+              <Th className="text-right">Gap %</Th><Th className="text-right">Change %</Th>
+              <Th className="text-right">rVol</Th><Th className="text-right">Float (M)</Th>
+              <Th className="text-right">AI</Th><Th className="text-right">RSI(14m)</Th>
+              <Th className="text-right">Action Score</Th><Th className="text-right">Decision</Th>
+              <Th className="text-right">Catalyst</Th><Th className="text-right">Vol</Th>
             </tr>
           </thead>
           <tbody>
             {visible.map((r) => {
               const strength = clamp((r.actionScore ?? 0) / 100, 0, 1);
-              const alpha = 0.06 + strength * 0.24; // 0.06..0.30
+              const alpha = 0.06 + strength * 0.24;
               const bg = `linear-gradient(90deg, rgba(74,222,128,${alpha}) 0%, rgba(0,0,0,0) 55%)`;
               return (
                 <tr key={r.ticker} className="border-t border-white/10" style={{ background: bg }}>
@@ -365,49 +309,30 @@ export default function ScoresTable({
         </table>
       </div>
 
-      {/* Pagination (bottom duplicate for convenience on long lists) */}
+      {/* Bottom pager */}
       <div className="mt-4 flex items-center justify-end gap-2">
-        <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40" aria-label="First page">«</button>
+        <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40">«</button>
         <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Prev</button>
         <span className="text-sm opacity-80">Page {page} / {totalPages}</span>
         <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Next</button>
-        <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40" aria-label="Last page">»</button>
+        <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40">»</button>
       </div>
     </section>
   );
 }
 
-/** ───── Action Score + Decision (includes news catalyst) ─────
- * Decision (ultimate):
- *   TRADE:
- *     - (rVol ≥ 5.0 && Gap ≥ 5% && Change ≥ +5% && has recent news)
- *         OR
- *     - (no recent news) rVol ≥ 7.0 && Gap ≥ 8% && Change ≥ +6%
- *
- *   WATCH: rVol ≥ 2.5 && Gap ≥ 2% && Change ≥ 0%
- *   SKIP: otherwise
- *
- * Action Score (ranking & gradient):
- *   65% rVol, 20% AI, 10% Gap, 5% Change, +NEWS_BONUS if recent news,
- *   plus float bonus/penalty around 20M.
- */
+/** ───── Scoring + Decision (news-aware) ───── */
 function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" | "WATCH" | "SKIP" } {
   const ai = clamp((r.ai_score ?? 0), 0, 1);
   const rvRaw = r.rvol ?? 1;
-  const rv = clamp((rvRaw - 1) / 2, 0, 1); // 1x→0, 3x→1
+  const rv = clamp((rvRaw - 1) / 2, 0, 1);
   const gapVal = Math.abs(r.gap_pct ?? r.change_pct ?? 0);
   const chgVal = r.change_pct ?? 0;
   const gap = clamp(gapVal / 20, 0, 1);
   const chg = clamp(Math.max(0, chgVal) / 10, 0, 1);
 
-  let score =
-    100 *
-    (WEIGHTS.rvol * rv +
-      WEIGHTS.ai * ai +
-      WEIGHTS.gap * gap +
-      WEIGHTS.change * chg);
+  let score = 100 * (WEIGHTS.rvol * rv + WEIGHTS.ai * ai + WEIGHTS.gap * gap + WEIGHTS.change * chg);
 
-  // Float adjustment
   const f = r.float_m ?? null;
   if (f != null) {
     if (f <= FLOAT_TARGET_M) score += FLOAT_BONUS;
@@ -417,37 +342,21 @@ function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" 
       score -= FLOAT_PENALTY_MAX * clamp(frac, 0, 1);
     }
   }
-
-  // News boost
   if (r.catalyst?.recent) score += NEWS_BONUS;
-
-  // Micro penalties
   if (chgVal < 0) score -= 5;
   const rsi = r.rsi14m ?? null;
   if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 5;
 
   score = clamp(score, 0, 100);
 
-  // Decision gates (news-aware)
-  let action: "TRADE" | "WATCH" | "SKIP";
   const hasNews = !!r.catalyst?.recent;
-
+  let action: "TRADE" | "WATCH" | "SKIP";
   if (
-    (hasNews &&
-      rvRaw >= RVOL_TRADE &&
-      gapVal >= GAP_MIN_TRADE &&
-      chgVal >= CHANGE_MIN_TRADE) ||
-    (!hasNews &&
-      rvRaw >= RVOL_TRADE_FALLBACK &&
-      gapVal >= GAP_MIN_TRADE_FALLBACK &&
-      chgVal >= CHANGE_MIN_TRADE_FALLBACK)
-  ) {
-    action = "TRADE";
-  } else if (rvRaw >= RVOL_WATCH && gapVal >= GAP_MIN_WATCH && chgVal >= CHANGE_MIN_WATCH) {
-    action = "WATCH";
-  } else {
-    action = "SKIP";
-  }
+    (hasNews && rvRaw >= RVOL_TRADE && gapVal >= GAP_MIN_TRADE && chgVal >= CHANGE_MIN_TRADE) ||
+    (!hasNews && rvRaw >= RVOL_TRADE_FALLBACK && gapVal >= GAP_MIN_TRADE_FALLBACK && chgVal >= CHANGE_MIN_TRADE_FALLBACK)
+  ) action = "TRADE";
+  else if (rvRaw >= RVOL_WATCH && gapVal >= GAP_MIN_WATCH && chgVal >= CHANGE_MIN_WATCH) action = "WATCH";
+  else action = "SKIP";
 
   return { score, action };
 }
