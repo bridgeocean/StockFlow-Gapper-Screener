@@ -141,7 +141,7 @@ export default function ScoresTable({
   // pagination
   const [page, setPage] = useState(1);
 
-  // Fetch: Finviz → AI → News
+  // Fetch: Finviz → AI (/api/scores) → News
   async function loadOnce() {
     let finvizRows: any[] = [];
     let aiMap: Record<string, any> = {};
@@ -157,9 +157,9 @@ export default function ScoresTable({
       }
     } catch {}
 
-    // 2) AI scores
+    // 2) AI scores (now from the live API)
     try {
-      const res = await fetch("/today_scores.json", { cache: "no-store" });
+      const res = await fetch("/api/scores", { cache: "no-store" });
       if (res.ok) {
         const j = await res.json();
         (j?.scores || []).forEach((s: any) => {
@@ -309,29 +309,11 @@ export default function ScoresTable({
         </label>
 
         <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => setPage(1)}
-            disabled={page === 1}
-            className="px-2 py-1 rounded border border-white/15 disabled:opacity-40"
-            aria-label="First page"
-          >«</button>
-          <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-3 py-1 rounded border border-white/15 disabled:opacity-40"
-          >Prev</button>
+          <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40" aria-label="First page">«</button>
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Prev</button>
           <span className="text-sm opacity-80">Page {page} / {totalPages}</span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-3 py-1 rounded border border-white/15 disabled:opacity-40"
-          >Next</button>
-          <button
-            onClick={() => setPage(totalPages)}
-            disabled={page === totalPages}
-            className="px-2 py-1 rounded border border-white/15 disabled:opacity-40"
-            aria-label="Last page"
-          >»</button>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Next</button>
+          <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40" aria-label="Last page">»</button>
         </div>
       </div>
 
@@ -385,29 +367,11 @@ export default function ScoresTable({
 
       {/* Pagination (bottom duplicate for convenience on long lists) */}
       <div className="mt-4 flex items-center justify-end gap-2">
-        <button
-          onClick={() => setPage(1)}
-          disabled={page === 1}
-          className="px-2 py-1 rounded border border-white/15 disabled:opacity-40"
-          aria-label="First page"
-        >«</button>
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-          className="px-3 py-1 rounded border border-white/15 disabled:opacity-40"
-        >Prev</button>
+        <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40" aria-label="First page">«</button>
+        <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Prev</button>
         <span className="text-sm opacity-80">Page {page} / {totalPages}</span>
-        <button
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          disabled={page === totalPages}
-          className="px-3 py-1 rounded border border-white/15 disabled:opacity-40"
-        >Next</button>
-        <button
-          onClick={() => setPage(totalPages)}
-          disabled={page === totalPages}
-          className="px-2 py-1 rounded border border-white/15 disabled:opacity-40"
-          aria-label="Last page"
-        >»</button>
+        <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Next</button>
+        <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40" aria-label="Last page">»</button>
       </div>
     </section>
   );
