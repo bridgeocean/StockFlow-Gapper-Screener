@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Redis } from "ioredis";
 
-export const runtime = "nodejs"; // ensure Node runtime
+export const runtime = "nodejs"; // ensure Node runtime on Vercel
 
 // ---------- CONFIG ----------
 const SCORES_KEY = "today_scores";           // Redis key
@@ -23,15 +23,12 @@ async function getRedis(): Promise<Redis> {
   if (!url) throw new Error("REDIS_URL env var is missing");
 
   const { default: IORedis } = await import("ioredis");
-  // REDIS_URL may be like: rediss://user:password@host:port
   const client = new IORedis(url, {
-    // optional: safer defaults for serverless
     maxRetriesPerRequest: 2,
     enableAutoPipelining: true,
     tls: url.startsWith("rediss://") ? {} : undefined,
   });
 
-  // basic connectivity check (non-blocking)
   client.on("error", (e) => console.error("[redis] error:", e?.message));
   global.__redisClient = client;
   return client;
@@ -60,12 +57,11 @@ export async function GET() {
         const data = JSON.parse(raw);
         return ok(data, 200);
       } catch {
-        // if someone wrote a non-JSON string, return as-is
         return ok({ generatedAt: null, scores: [] }, 200);
       }
     }
 
-    // Fallback: serve public/today_scores.json if present (so UI still works)
+    // Fallback to static file if KV empty (keeps UI from breaking)
     try {
       const fs = await import("node:fs/promises");
       const path = process.cwd() + "/public/today_scores.json";
@@ -83,8 +79,7 @@ export async function GET() {
 // POST: write new scores (requires API key)
 export async function POST(req: NextRequest) {
   try {
-    if (!WRITE_API_KEY)
-      return bad("SCORES_API_KEY not set on server", 500);
+    if (!WRITE_API_KEY) return bad("SCORES_API_KEY not set on server", 500);
 
     const key = req.headers.get(API_KEY_HEADER) || "";
     if (key !== WRITE_API_KEY) return bad("Unauthorized", 401);
@@ -100,7 +95,10 @@ export async function POST(req: NextRequest) {
     const redis = await getRedis();
     await redis.set(SCORES_KEY, JSON.stringify(payload));
 
-    return ok({ ok: true, stored: { count: payload.scores.length, generatedAt: payload.generatedAt } }, 200);
+    return ok(
+      { ok: true, stored: { count: payload.scores.length, generatedAt: payload.generatedAt } },
+      200
+    );
   } catch (err: any) {
     return bad(err?.message || "POST failed", 500);
   }
