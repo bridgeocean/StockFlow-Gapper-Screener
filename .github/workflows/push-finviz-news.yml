@@ -1,0 +1,68 @@
+name: Push Finviz News
+on:
+  workflow_dispatch:
+  schedule:
+    # Every 5 minutes during RTH in UTC (13–20 Mon–Fri). Adjust as you like.
+    - cron: "*/5 13-20 * * 1-5"
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ vars.APP_URL }}   # set this in GitHub: Settings → Secrets and variables → Actions → Variables
+    steps:
+      - name: Check APP_URL
+        run: |
+          if [ -z "${APP_URL}" ]; then
+            echo "::error ::APP_URL repository variable is not set. Go to Settings → Secrets and variables → Actions → Variables and add APP_URL=https://<your-vercel-url>"
+            exit 1
+          fi
+          echo "Using APP_URL=${APP_URL}"
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Fetch stocks JSON
+        run: |
+          set -e
+          curl -fsS "${APP_URL}/api/stocks" -H "accept: application/json" -o stocks.json || {
+            echo "::error ::curl failed calling ${APP_URL}/api/stocks"
+            exit 1
+          }
+          head -c 400 stocks.json || true
+          echo
+          if ! jq -e . stocks.json > /dev/null 2>&1; then
+            echo "::error ::/api/stocks did not return valid JSON. First bytes:"
+            head -c 400 stocks.json
+            exit 1
+          fi
+
+      - name: Extract first 20 tickers (symbol/ticker fallback)
+        id: tick
+        run: |
+          TICKERS=$(jq -r '
+            (.data // .stocks // .items // [])
+            | map(.symbol // .ticker // .Symbol // .Ticker)
+            | map(select(type=="string"))
+            | map(ascii_upcase)
+            | unique | .[:20]
+            | join(",")
+          ' stocks.json)
+
+          if [ -z "$TICKERS" ]; then
+            echo "::warning ::No tickers found in /api/stocks. Falling back to demo list."
+            TICKERS="BLNE,CCCC,CHEK,BRY"
+          fi
+          echo "TICKERS=$TICKERS"
+          echo "TICKERS=$TICKERS" >> $GITHUB_ENV
+
+      - name: POST /api/news/update (Finviz)
+        run: |
+          arr=$(printf '["%s"]' "${TICKERS//,/\",\"}")
+          body=$(jq -n --argjson tickers "$arr" --arg source "finviz" --argjson max 6 --argjson hrs 24 \
+            '{tickers: $tickers, source: $source, maxPerTicker: $max, maxAgeHours: $hrs}')
+          echo "Posting: $body"
+          curl -fsS -X POST "${APP_URL}/api/news/update" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${{ secrets.SCORES_API_KEY }}" \
+            --data "$body"
