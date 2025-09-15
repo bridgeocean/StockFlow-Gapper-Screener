@@ -1,0 +1,26 @@
+name: Fetch Yahoo News
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 13-20 * * 1-5"   # every 5 min during RTH (UTC example)
+
+env:
+  APP_URL: "https://YOUR-APP.vercel.app"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get tickers from scanner
+        run: |
+          curl -sS "$APP_URL/api/stocks" > stocks.json
+          # pick first 20 symbols; adjust selectors if your /api/stocks shape differs
+          TICKERS=$(jq -r '.data | map(.symbol // .ticker) | map(select(. != null)) | .[:20] | join(",")' stocks.json)
+          echo "TICKERS=$TICKERS" >> $GITHUB_ENV
+
+      - name: POST /api/news/update
+        run: |
+          curl -sS -X POST "$APP_URL/api/news/update" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${{ secrets.SCORES_API_KEY }}" \
+            --data "{\"tickers\":[\"${TICKERS//,/\",\"}\"],\"maxPerTicker\":5,\"maxAgeHours\":24}"
