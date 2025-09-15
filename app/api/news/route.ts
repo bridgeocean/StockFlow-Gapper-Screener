@@ -1,308 +1,92 @@
-import { NextResponse } from "next/server"
+// app/api/news/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import type { Redis } from "ioredis";
 
-const IS_PREVIEW = process.env.VERCEL_ENV === "preview" || process.env.NODE_ENV === "development"
+export const runtime = "nodejs";
 
-/**
- * GET /api/news
- *
- * Fetch real market news from multiple sources:
- * 1. Alpha Vantage News API (free tier)
- * 2. NewsAPI.org (free tier)
- * 3. Fallback to enhanced demo data
- */
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const symbolsParam = searchParams.get("symbols")
-  const symbols = symbolsParam ? symbolsParam.split(",").filter(Boolean) : []
+const NEWS_KEY = "today_news";
+const WRITE_API_KEY = process.env.SCORES_API_KEY || ""; // reuse same secret
+const API_KEY_HEADER = "x-api-key";
 
-  /* ⏩  Preview / dev – use demo immediately */
-  if (IS_PREVIEW) {
-    return NextResponse.json(buildEnhancedDemoNews(symbols))
-  }
+// Reuse one Redis client
+declare global { var __redisClientNews: Redis | undefined; }
 
-  // Try Alpha Vantage News API first (free tier, no key required for basic news)
+async function getRedis(): Promise<Redis> {
+  if (global.__redisClientNews) return global.__redisClientNews;
+  const url = process.env.REDIS_URL;
+  if (!url) throw new Error("REDIS_URL env var is missing");
+  const { default: IORedis } = await import("ioredis");
+  const client = new IORedis(url, {
+    maxRetriesPerRequest: 2,
+    enableAutoPipelining: true,
+    tls: url.startsWith("rediss://") ? {} : undefined,
+  });
+  client.on("error", (e) => console.error("[redis] news error:", e?.message));
+  global.__redisClientNews = client;
+  return client;
+}
+
+const ok = (d: any, s = 200) => NextResponse.json(d, { status: s });
+const bad = (m: string, s = 400) => NextResponse.json({ error: m }, { status: s });
+
+type NewsItem = {
+  ticker: string;          // e.g. "ABCD"
+  headline: string;        // short title
+  url: string;             // full article link
+  source?: string;         // e.g. "PRNewswire"
+  published?: string;      // ISO: "2025-09-14T13:05:00Z" or "HH:mm:ss" (we convert to ISO)
+  summary?: string;
+};
+type NewsPayload = { generatedAt?: string | null; items: NewsItem[] };
+
+function isPayload(x: any): x is NewsPayload {
+  return x && typeof x === "object" && Array.isArray(x.items);
+}
+
+export async function GET() {
   try {
-    const news = await fetchAlphaVantageNews(symbols)
-    if (news.length > 0) {
-      return NextResponse.json({
-        success: true,
-        source: "alpha_vantage_news",
-        count: news.length,
-        data: news,
-        timestamp: new Date().toISOString(),
-      })
+    const redis = await getRedis();
+    const raw = await redis.get(NEWS_KEY);
+    if (raw) {
+      try { return ok(JSON.parse(raw), 200); }
+      catch { return ok({ generatedAt: null, items: [] }, 200); }
     }
-  } catch (error) {
-    console.error("[News API] Alpha Vantage error:", error)
-  }
 
-  // Try Yahoo Finance RSS as backup
+    // Fallback to public/news.json if present
+    try {
+      const fs = await import("node:fs/promises");
+      const path = process.cwd() + "/public/news.json";
+      const txt = await fs.readFile(path, "utf8");
+      return ok(JSON.parse(txt), 200);
+    } catch {
+      return ok({ generatedAt: null, items: [] }, 200);
+    }
+  } catch (e: any) {
+    return bad(e?.message || "GET /api/news failed", 500);
+  }
+}
+
+export async function POST(req: NextRequest) {
   try {
-    const news = await fetchYahooFinanceRSS()
-    if (news.length > 0) {
-      return NextResponse.json({
-        success: true,
-        source: "yahoo_finance_rss",
-        count: news.length,
-        data: news,
-        timestamp: new Date().toISOString(),
-      })
-    }
-  } catch (error) {
-    console.error("[News API] Yahoo Finance error:", error)
-  }
+    if (!WRITE_API_KEY) return bad("SCORES_API_KEY not set on server", 500);
+    if ((req.headers.get(API_KEY_HEADER) || "") !== WRITE_API_KEY) return bad("Unauthorized", 401);
 
-  // Fallback to enhanced demo data
-  return NextResponse.json(buildEnhancedDemoNews(symbols))
-}
+    const body = await req.json();
+    if (!isPayload(body)) return bad("Invalid payload: missing .items[]", 400);
 
-/**
- * Fetch news from Alpha Vantage (free tier)
- */
-async function fetchAlphaVantageNews(symbols: string[] = []) {
-  const symbolQuery = symbols.length > 0 ? `&tickers=${symbols.join(",")}` : ""
-  const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=financial_markets&limit=20${symbolQuery}&apikey=demo`
+    const payload: NewsPayload = {
+      generatedAt: body.generatedAt || new Date().toISOString(),
+      items: body.items,
+    };
 
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "StockFlow-NewsBot/1.0" },
-      cache: "no-store",
-    })
+    const redis = await getRedis();
+    await redis.set(NEWS_KEY, JSON.stringify(payload));
 
-    if (!res.ok) throw new Error(`status ${res.status}`)
-
-    const data = await res.json().catch(() => ({}))
-
-    /* If the response isn't the expected shape, just return [] */
-    if (!Array.isArray(data.feed)) return []
-
-    return data.feed.slice(0, 15).map((item: any, i: number) => ({
-      id: `av_${i + 1}`,
-      title: item.title ?? "Market update",
-      summary: item.summary ?? item.title ?? "Market news update",
-      url: item.url ?? `https://finviz.com/news.ashx?t=${symbols[0] || "SPY"}`, // Use real URL or fallback to Finviz news
-      source: item.source ?? "Alpha Vantage",
-      publishedAt: item.time_published ? new Date(item.time_published).toISOString() : new Date().toISOString(),
-      sentiment: mapSentiment(item.overall_sentiment_label),
-      relatedSymbols: symbols.length > 0 ? symbols : extractTickersFromText(`${item.title} ${item.summary ?? ""}`),
-    }))
-  } catch (err) {
-    console.error("[News API] Alpha Vantage fetch failed:", err)
-    return []
-  }
-}
-
-/**
- * Fetch news from Yahoo Finance RSS
- */
-async function fetchYahooFinanceRSS() {
-  const url = "https://feeds.finance.yahoo.com/rss/2.0/headline"
-
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "StockFlow-NewsBot/1.0",
-      Accept: "application/rss+xml, text/xml",
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(`Yahoo Finance RSS error: ${response.status}`)
-  }
-
-  const xmlText = await response.text()
-  return parseYahooRSS(xmlText)
-}
-
-/**
- * Parse Yahoo Finance RSS XML
- */
-function parseYahooRSS(xml: string) {
-  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)]
-
-  return items.slice(0, 15).map(([, content], index) => {
-    const getTag = (tag: string) => {
-      const match = content.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"))
-      return match ? match[1].replace(/<!\[CDATA\[(.*?)\]\]>/g, "$1").trim() : ""
-    }
-
-    const title = getTag("title")
-    const description = getTag("description")
-    const link = getTag("link")
-    const pubDate = getTag("pubDate")
-
-    return {
-      id: `yf_${index + 1}`,
-      title: title || "Yahoo Finance Update",
-      summary: description || title || "Financial market update",
-      url: link || "#",
-      source: "Yahoo Finance",
-      publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
-      sentiment: determineSentiment(title + " " + description),
-      relatedSymbols: extractTickersFromText(title + " " + description),
-    }
-  })
-}
-
-/**
- * Extract stock tickers from text
- */
-function extractTickersFromText(text: string): string[] {
-  const tickerRegex = /\b([A-Z]{2,5})\b/g
-  const matches = text.match(tickerRegex) || []
-
-  // Filter out common false positives
-  const commonWords = [
-    "THE",
-    "AND",
-    "FOR",
-    "ARE",
-    "BUT",
-    "NOT",
-    "YOU",
-    "ALL",
-    "CAN",
-    "HER",
-    "WAS",
-    "ONE",
-    "OUR",
-    "HAD",
-    "BUT",
-    "WHAT",
-    "SO",
-    "UP",
-    "OUT",
-    "IF",
-    "ABOUT",
-    "WHO",
-    "GET",
-    "WHICH",
-    "GO",
-    "ME",
-  ]
-
-  return [...new Set(matches.filter((ticker) => !commonWords.includes(ticker)))].slice(0, 3)
-}
-
-/**
- * Map Alpha Vantage sentiment to our format
- */
-function mapSentiment(sentiment: string): "positive" | "negative" | "neutral" {
-  if (!sentiment) return "neutral"
-
-  const s = sentiment.toLowerCase()
-  if (s.includes("positive") || s.includes("bullish")) return "positive"
-  if (s.includes("negative") || s.includes("bearish")) return "negative"
-  return "neutral"
-}
-
-/**
- * Determine sentiment from text content
- */
-function determineSentiment(text: string): "positive" | "negative" | "neutral" {
-  const lowerText = text.toLowerCase()
-
-  const positiveWords = [
-    "surge",
-    "rise",
-    "gain",
-    "beat",
-    "strong",
-    "growth",
-    "bull",
-    "rally",
-    "up",
-    "high",
-    "record",
-    "profit",
-    "beats",
-    "exceeds",
-    "announces",
-    "partnership",
-    "expansion",
-  ]
-  const negativeWords = [
-    "fall",
-    "drop",
-    "decline",
-    "miss",
-    "weak",
-    "bear",
-    "crash",
-    "loss",
-    "cut",
-    "reduce",
-    "low",
-    "warning",
-    "concern",
-    "fails",
-    "disappoints",
-    "cuts",
-    "layoffs",
-  ]
-
-  const positiveCount = positiveWords.reduce((count, word) => count + (lowerText.includes(word) ? 1 : 0), 0)
-  const negativeCount = negativeWords.reduce((count, word) => count + (lowerText.includes(word) ? 1 : 0), 0)
-
-  if (positiveCount > negativeCount) return "positive"
-  if (negativeCount > positiveCount) return "negative"
-  return "neutral"
-}
-
-/**
- * Enhanced demo news with realistic market content
- */
-function buildEnhancedDemoNews(symbols: string[] = []) {
-  const now = Date.now()
-
-  // Create catalyst news items relevant to the provided symbols
-  const catalystNews =
-    symbols.length > 0
-      ? symbols.slice(0, 6).map((symbol, index) => {
-          const catalystTypes = [
-            "breakthrough announcement",
-            "strong quarterly results",
-            "strategic partnership",
-            "FDA approval news",
-            "acquisition rumors",
-            "earnings beat",
-          ]
-
-          const gains = [12, 18, 24, 32, 26, 14, 19, 28, 35, 22]
-          const sources = ["MarketWatch", "Financial Times", "Reuters", "Bloomberg", "Yahoo Finance"]
-
-          const catalystType = catalystTypes[index % catalystTypes.length]
-          const gain = gains[index % gains.length]
-          const source = sources[index % sources.length]
-
-          return {
-            title: `${symbol} surges ${gain}% on ${catalystType}`,
-            summary: `${symbol} shows strong momentum with ${gain}% gain on increased volume and positive market sentiment.`,
-            relatedSymbols: [symbol],
-            sentiment: "positive",
-            source,
-            timeOffset: (index + 1) * 15,
-          }
-        })
-      : []
-
-  const data = catalystNews.map((item, index) => ({
-    id: `catalyst_${index + 1}`,
-    title: item.title,
-    summary: item.summary,
-    url: `https://finviz.com/news.ashx?t=${item.relatedSymbols[0] || "SPY"}`, // Link to Finviz news page for symbol
-    source: item.source,
-    publishedAt: new Date(now - item.timeOffset * 60 * 1000).toISOString(),
-    sentiment: item.sentiment,
-    relatedSymbols: item.relatedSymbols,
-  }))
-
-  return {
-    success: true,
-    fallback: true,
-    reason: "using_catalyst_demo_news",
-    source: "catalyst_demo_data",
-    count: data.length,
-    data,
-    timestamp: new Date().toISOString(),
+    return ok(
+      { ok: true, stored: { count: payload.items.length, generatedAt: payload.generatedAt } },
+      200
+    );
+  } catch (e: any) {
+    return bad(e?.message || "POST /api/news failed", 500);
   }
 }
