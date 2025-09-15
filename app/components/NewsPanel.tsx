@@ -19,7 +19,6 @@ type NewsPayload = {
 function parseNewsTime(raw?: string): number | null {
   if (!raw) return null;
   try {
-    // accept full ISO or bare "HH:mm:ss"
     const isoLike = /T|Z/.test(raw) ? raw : `1970-01-01T${raw}Z`;
     const ms = Date.parse(isoLike);
     return Number.isFinite(ms) ? ms : null;
@@ -57,7 +56,7 @@ export default function NewsPanel({
         setPayload(j);
       }
     } catch {
-      // silent
+      // ignore
     }
   }
 
@@ -70,7 +69,6 @@ export default function NewsPanel({
   const items = useMemo(() => {
     const want = new Set((tickers || []).map((t) => String(t).toUpperCase()));
     const list = (payload.items || []).filter((n) => want.has(String(n.ticker || "").toUpperCase()));
-    // newest first
     return list
       .map((n) => ({ ...n, _ts: parseNewsTime(n.published) }))
       .sort((a, b) => (b._ts ?? 0) - (a._ts ?? 0));
