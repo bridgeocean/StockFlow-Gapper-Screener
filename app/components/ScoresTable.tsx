@@ -1,4 +1,3 @@
-// app/components/ScoresTable.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,7 +9,7 @@ const RVOL_TRADE = 5.0;
 const RVOL_TRADE_FALLBACK = 7.0;
 const GAP_MIN_TRADE = 5;
 const GAP_MIN_TRADE_FALLBACK = 8;
-const CHANGE_MIN_TRADE = 5;          // <= your request
+const CHANGE_MIN_TRADE = 5;
 const CHANGE_MIN_TRADE_FALLBACK = 6;
 
 const RVOL_WATCH = 2.5;
@@ -39,13 +38,21 @@ type ScoreRow = {
   rsi14m?: number | null;
   volume?: number | null;
   ts?: string | null;
-  catalyst?: { recent: boolean; latestISO?: string | null };
+  catalyst?: { recent: boolean; latestISO?: string | null; latestUrl?: string | null };
   actionScore?: number;
   action?: "TRADE" | "WATCH" | "SKIP";
 };
 
 type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[] };
-type NewsItem = { ticker: string; headline: string; url?: string; published?: string; summary?: string; source?: string };
+
+type NewsItem = {
+  ticker: string;
+  headline: string;
+  summary?: string;
+  source?: string;
+  url?: string;
+  published?: string; // ISO or HH:mm:ss
+};
 type NewsPayload = { generatedAt?: string | null; items: NewsItem[] };
 
 /** Helpers */
@@ -110,9 +117,9 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
     let finvizRows: any[] = [];
     let aiMap: Record<string, any> = {};
     let aiGenerated: string | null = null;
-    let newsMap = new Map<string, { latestISO: string | null; recent: boolean }>();
+    const newsMap = new Map<string, { latestISO: string | null; latestUrl: string | null; recent: boolean }>();
 
-    // 1) Finviz (your existing API)
+    // 1) Finviz
     try {
       const res = await fetch("/api/stocks", { cache: "no-store" });
       if (res.ok) {
@@ -121,9 +128,9 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 2) AI scores — from the static JSON (committed by GitHub Action)
+    // 2) AI scores
     try {
-      const res = await fetch("/today_scores.json", { cache: "no-store" });
+      const res = await fetch("/api/scores", { cache: "no-store" });
       if (res.ok) {
         const j = await res.json();
         (j?.scores || []).forEach((s: any) => {
@@ -134,9 +141,9 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 3) News catalysts
+    // 3) News (now from /api/news)
     try {
-      const res = await fetch("/news.json", { cache: "no-store" });
+      const res = await fetch("/api/news", { cache: "no-store" });
       if (res.ok) {
         const j = (await res.json()) as NewsPayload;
         const now = Date.now();
@@ -145,9 +152,14 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           if (!t) return;
           const ms = parseNewsTime(n.published);
           const recent = ms != null ? (now - ms) / 60000 <= NEWS_WINDOW_MIN : false;
-          const existing = newsMap.get(t);
-          const latestISO = ms != null ? new Date(ms).toISOString() : existing?.latestISO ?? null;
-          newsMap.set(t, { latestISO, recent: existing ? existing.recent || recent : recent });
+          const prev = newsMap.get(t);
+          const latestISO = ms != null ? new Date(ms).toISOString() : prev?.latestISO ?? null;
+          const latestUrl = n.url || prev?.latestUrl || null;
+          newsMap.set(t, {
+            latestISO,
+            latestUrl,
+            recent: prev ? prev.recent || recent : recent,
+          });
         });
       }
     } catch {}
@@ -163,7 +175,9 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           if (row.gap_pct == null && safeNum(ai.gap_pct) != null) row.gap_pct = safeNum(ai.gap_pct);
           if (row.rvol == null && safeNum(ai.rvol) != null) row.rvol = safeNum(ai.rvol);
         }
-        row.catalyst = newsMap.get(row.ticker) || { recent: false, latestISO: null };
+
+        const catalyst = newsMap.get(row.ticker) || { recent: false, latestISO: null, latestUrl: null };
+        row.catalyst = catalyst;
 
         const { score, action } = computeScoreAndDecision(row);
         row.actionScore = score;
@@ -276,6 +290,9 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
               const strength = clamp((r.actionScore ?? 0) / 100, 0, 1);
               const alpha = 0.06 + strength * 0.24;
               const bg = `linear-gradient(90deg, rgba(74,222,128,${alpha}) 0%, rgba(0,0,0,0) 55%)`;
+              const hasNews = !!r.catalyst?.recent && !!r.catalyst?.latestISO;
+              const link = r.catalyst?.latestUrl || undefined;
+
               return (
                 <tr key={r.ticker} className="border-t border-white/10" style={{ background: bg }}>
                   <Td>{r.ticker}</Td>
@@ -288,7 +305,20 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
                   <TdR>{fmtNum(r.rsi14m)}</TdR>
                   <TdR className="font-semibold">{Math.round(r.actionScore ?? 0)}</TdR>
                   <TdR><Badge decision={r.action} /></TdR>
-                  <TdR>{r.catalyst?.recent ? <span className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs">NEWS • {timeOnly(r.catalyst.latestISO)}</span> : "—"}</TdR>
+                  <TdR>
+                    {hasNews ? (
+                      link ? (
+                        <a href={link} target="_blank" rel="noopener noreferrer"
+                           className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs underline">
+                          NEWS • {timeOnly(r.catalyst?.latestISO)}
+                        </a>
+                      ) : (
+                        <span className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs">
+                          NEWS • {timeOnly(r.catalyst?.latestISO)}
+                        </span>
+                      )
+                    ) : "—"}
+                  </TdR>
                   <TdR>{formatInt(r.volume)}</TdR>
                 </tr>
               );
