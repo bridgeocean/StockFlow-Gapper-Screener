@@ -1,7 +1,7 @@
 name: Sync pnpm lockfile
 
 on:
-  workflow_dispatch:        # allow manual run from Actions tab
+  workflow_dispatch:        # allows manual run
   push:
     paths:
       - "package.json"      # auto-run when package.json changes
