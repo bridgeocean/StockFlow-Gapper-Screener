@@ -1,48 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import IconStockflow from "../components/IconStockflow";
 import ScoresTable from "../components/ScoresTable";
 import NewsPanel from "../components/NewsPanel";
-import { useRouter } from "next/navigation";
-import { AUTH_KEY } from "../components/auth";
 
 export default function DashboardPage() {
-  const r = useRouter();
-  const [pageTickers, setPageTickers] = useState<string[]>([]);
-
-  async function doLogout() {
-    try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
-    try { localStorage.removeItem(AUTH_KEY); } catch {}
-    r.replace("/login");
-  }
+  const [visibleTickers, setVisibleTickers] = useState<string[]>([]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#1b0f3a] via-[#110726] to-black text-white">
-      <header className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <IconStockflow className="text-green-400" />
-          <div className="font-semibold">StockFlow</div>
-          <span className="ml-3 px-2 py-0.5 rounded bg-green-900/40 text-green-300 text-xs">LIVE</span>
+    <div className="mx-auto max-w-7xl p-4 space-y-4">
+      {/* Main grid: table + news */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left: scanner/table */}
+        <div className="lg:col-span-2">
+          <ScoresTable onTopTickersChange={setVisibleTickers} />
         </div>
-        <div className="flex items-center gap-3">
-          <a href="/" className="text-sm hover:underline">Home</a>
-          <button onClick={() => location.reload()} className="text-sm px-3 py-1 rounded bg-green-600 text-black hover:brightness-110">Refresh</button>
-          <button onClick={doLogout} className="text-sm px-3 py-1 rounded bg-red-600 text-white hover:brightness-110">Logout</button>
-        </div>
-      </header>
 
-      {/* Wider table, slimmer news.
-         On xl+, this creates two columns: [flex table][fixed ~420px news].
-         On smaller screens, they stack. */}
-      <div className="max-w-7xl mx-auto px-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-5">
-        <section>
-          <ScoresTable onTopTickersChange={setPageTickers} />
-        </section>
-        <aside>
-          <NewsPanel tickers={pageTickers} />
-        </aside>
+        {/* Right: market news that matches the current page's 10 tickers */}
+        <div className="lg:col-span-1">
+          <NewsPanel tickers={visibleTickers} />
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
