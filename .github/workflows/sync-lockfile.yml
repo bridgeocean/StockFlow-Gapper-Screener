@@ -1,24 +1,34 @@
 name: Sync pnpm lockfile
 
 on:
-  workflow_dispatch:        # allows manual run
+  workflow_dispatch:        # allow manual run from Actions tab
   push:
     paths:
       - "package.json"      # auto-run when package.json changes
+
+permissions:
+  contents: write           # needed to push lockfile
 
 jobs:
   lock:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
 
-      - name: Install to update lockfile
-        run: pnpm install
+      # IMPORTANT: disable frozen lockfile in CI so the lockfile gets updated
+      - name: Install deps and update lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Commit updated lockfile (if changed)
         run: |
