@@ -111,7 +111,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
     let aiGenerated: string | null = null;
     const newsMap = new Map<string, { latestISO: string | null; latestUrl: string | null; recent: boolean }>();
 
-    // 1) Finviz or your server feed
+    // 1) Stocks feed (your server reads Finviz + filters)
     try {
       const res = await fetch("/api/stocks", { cache: "no-store" });
       if (res.ok) {
@@ -120,7 +120,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 2) AI scores (live)
+    // 2) AI scores
     try {
       const res = await fetch("/api/scores", { cache: "no-store" });
       if (res.ok) {
@@ -133,7 +133,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 3) News (live)
+    // 3) News (from /api/news)
     try {
       const res = await fetch("/api/news", { cache: "no-store" });
       if (res.ok) {
@@ -266,7 +266,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left opacity-80">
+            <tr className="text-left text-white/90">
               <Th>Ticker</Th><Th className="text-right">Price</Th>
               <Th className="text-right">Gap %</Th><Th className="text-right">Change %</Th>
               <Th className="text-right">rVol</Th><Th className="text-right">Float (M)</Th>
@@ -275,10 +275,10 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
               <Th className="text-right">Catalyst</Th><Th className="text-right">Vol</Th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-white/90">
             {visible.map((r) => {
               const strength = clamp((r.actionScore ?? 0) / 100, 0, 1);
-              const alpha = 0.10 + strength * 0.38; // stronger, more visible
+              const alpha = 0.10 + strength * 0.38; // stronger
               const bg = `linear-gradient(90deg, rgba(16,185,129,${alpha}) 0%, rgba(0,0,0,0) 62%)`;
               const leftAccent = strength > 0.25 ? `inset 3px 0 0 0 rgba(16,185,129, ${0.25 + strength * 0.4})` : "none";
               const hasNews = !!r.catalyst?.recent && !!r.catalyst?.latestISO;
@@ -356,14 +356,14 @@ function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" 
 
   const f = r.float_m ?? null;
   if (f != null) {
-    if (f <= FLOAT_TARGET_M) score += FLOAT_BONUS;
+    if (f <= 20) score += 3;
     else {
-      const capped = Math.min(f, FLOAT_PENALTY_CAP_M);
-      const frac = (capped - FLOAT_TARGET_M) / (FLOAT_PENALTY_CAP_M - FLOAT_TARGET_M);
-      score -= FLOAT_PENALTY_MAX * clamp(frac, 0, 1);
+      const capped = Math.min(f, 200);
+      const frac = (capped - 20) / (200 - 20);
+      score -= 12 * clamp(frac, 0, 1);
     }
   }
-  if (r.catalyst?.recent) score += NEWS_BONUS;
+  if (r.catalyst?.recent) score += 8;
   if (chgVal < 0) score -= 5;
   const rsi = r.rsi14m ?? null;
   if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 5;
@@ -373,10 +373,10 @@ function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" 
   const hasNews = !!r.catalyst?.recent;
   let action: "TRADE" | "WATCH" | "SKIP";
   if (
-    (hasNews && rvRaw >= RVOL_TRADE && gapVal >= GAP_MIN_TRADE && chgVal >= CHANGE_MIN_TRADE) ||
-    (!hasNews && rvRaw >= RVOL_TRADE_FALLBACK && gapVal >= GAP_MIN_TRADE_FALLBACK && chgVal >= CHANGE_MIN_TRADE_FALLBACK)
+    (hasNews && rvRaw >= 5 && gapVal >= 5 && chgVal >= 5) ||
+    (!hasNews && rvRaw >= 7 && gapVal >= 8 && chgVal >= 6)
   ) action = "TRADE";
-  else if (rvRaw >= RVOL_WATCH && gapVal >= GAP_MIN_WATCH && chgVal >= CHANGE_MIN_WATCH) action = "WATCH";
+  else if (rvRaw >= 2.5 && gapVal >= 2 && chgVal >= 0) action = "WATCH";
   else action = "SKIP";
 
   return { score, action };
