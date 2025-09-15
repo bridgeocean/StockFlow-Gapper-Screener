@@ -1,0 +1,42 @@
+name: Push Market News
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 13-20 * * 1-5"
+env:
+  APP_URL: "https://YOUR-APP.vercel.app"   # <- replace
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build news JSON (demo — replace with your news feed)
+        run: |
+          cat > news.json <<'JSON'
+          {
+            "generatedAt": null,
+            "items": [
+              {
+                "ticker": "ABCD",
+                "headline": "ABCD announces positive Phase 2 results",
+                "url": "https://example.com/story-1",
+                "source": "PRNewswire",
+                "published": "2025-09-14T13:05:00Z",
+                "summary": "Topline data showed ..."
+              },
+              {
+                "ticker": "EFGH",
+                "headline": "EFGH wins large DoD contract",
+                "url": "https://example.com/story-2",
+                "source": "Company",
+                "published": "2025-09-14T13:10:30Z"
+              }
+            ]
+          }
+          JSON
+
+      - name: POST news to API (uses repo secret)
+        run: |
+          curl -sS -X POST "$APP_URL/api/news" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${{ secrets.SCORES_API_KEY }}" \
+            --data @news.json
