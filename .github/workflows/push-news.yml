@@ -4,37 +4,28 @@ on:
   schedule:
     - cron: "*/5 13-20 * * 1-5"
 env:
-  APP_URL: "https://YOUR-APP.vercel.app"   # <- replace
+  APP_URL: "https://v0-finviz-gapper.vercel.app"   # <-- replace
 jobs:
   push:
     runs-on: ubuntu-latest
     steps:
-      - name: Build news JSON (demo — replace with your news feed)
+      - name: Build news JSON (demo)
         run: |
           cat > news.json <<'JSON'
           {
             "generatedAt": null,
             "items": [
               {
-                "ticker": "ABCD",
-                "headline": "ABCD announces positive Phase 2 results",
-                "url": "https://example.com/story-1",
+                "ticker": "BLNE",
+                "headline": "BLNE posts strong guidance",
+                "url": "https://example.com/blne-guidance",
                 "source": "PRNewswire",
-                "published": "2025-09-14T13:05:00Z",
-                "summary": "Topline data showed ..."
-              },
-              {
-                "ticker": "EFGH",
-                "headline": "EFGH wins large DoD contract",
-                "url": "https://example.com/story-2",
-                "source": "Company",
-                "published": "2025-09-14T13:10:30Z"
+                "published": "2025-09-14T20:25:00Z"
               }
             ]
           }
           JSON
-
-      - name: POST news to API (uses repo secret)
+      - name: POST news
         run: |
           curl -sS -X POST "$APP_URL/api/news" \
             -H "content-type: application/json" \
