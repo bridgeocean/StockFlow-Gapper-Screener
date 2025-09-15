@@ -9,7 +9,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen w-full relative text-white">
-      {/* Background */}
+      {/* Background (behind everything) */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10"
@@ -19,7 +19,7 @@ export default function DashboardPage() {
         }}
       />
 
-      {/* Give room for a fixed header */}
+      {/* IMPORTANT: pad for a fixed/sticky header height */}
       <div className="mx-auto max-w-7xl px-4 pt-16 md:pt-20 space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
