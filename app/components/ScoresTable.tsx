@@ -38,13 +38,19 @@ type ScoreRow = {
   rsi14m?: number | null;
   volume?: number | null;
   ts?: string | null;
-  catalyst?: { recent: boolean; latestISO?: string | null; latestUrl?: string | null };
+  catalyst?: {
+    recent: boolean;
+    latestISO?: string | null;
+    latestUrl?: string | null;
+    latestHeadline?: string | null;
+    latestTag?: string | null;
+  };
   actionScore?: number;
   action?: "TRADE" | "WATCH" | "SKIP";
 };
 
 type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[] };
-type NewsItem = { ticker: string; headline: string; url?: string; published?: string; summary?: string; source?: string };
+type NewsItem = { ticker: string; headline: string; url?: string; published?: string; source?: string; tag?: string };
 type NewsPayload = { generatedAt?: string | null; items: NewsItem[] };
 
 /** Helpers */
@@ -109,9 +115,15 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
     let finvizRows: any[] = [];
     let aiMap: Record<string, any> = {};
     let aiGenerated: string | null = null;
-    const newsMap = new Map<string, { latestISO: string | null; latestUrl: string | null; recent: boolean }>();
+    const newsMap = new Map<string, {
+      latestISO: string | null;
+      latestUrl: string | null;
+      recent: boolean;
+      latestHeadline: string | null;
+      latestTag: string | null;
+    }>();
 
-    // 1) Stocks feed (your server reads Finviz + filters)
+    // 1) Stocks list
     try {
       const res = await fetch("/api/stocks", { cache: "no-store" });
       if (res.ok) {
@@ -133,26 +145,33 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 3) News (from /api/news)
+    // 3) News (Finviz cache)
     try {
       const res = await fetch("/api/news", { cache: "no-store" });
       if (res.ok) {
         const j = (await res.json()) as NewsPayload;
         const now = Date.now();
+        // pick the most recent item per ticker
+        const byT: Record<string, NewsItem[]> = {};
         (j?.items || []).forEach((n) => {
           const t = String(n.ticker || "").toUpperCase();
           if (!t) return;
-          const ms = parseNewsTime(n.published);
-          const recent = ms != null ? (now - ms) / 60000 <= NEWS_WINDOW_MIN : false;
-          const prev = newsMap.get(t);
-          const latestISO = ms != null ? new Date(ms).toISOString() : prev?.latestISO ?? null;
-          const latestUrl = n.url || prev?.latestUrl || null;
-          newsMap.set(t, {
-            latestISO,
-            latestUrl,
-            recent: prev ? prev.recent || recent : recent,
-          });
+          byT[t] ??= [];
+          byT[t].push(n);
         });
+        for (const [t, arr] of Object.entries(byT)) {
+          arr.sort((a, b) => (parseNewsTime(b.published) ?? 0) - (parseNewsTime(a.published) ?? 0));
+          const latest = arr[0];
+          const ms = parseNewsTime(latest?.published);
+          const recent = ms != null ? (now - ms) / 60000 <= NEWS_WINDOW_MIN : false;
+          newsMap.set(t, {
+            latestISO: ms != null ? new Date(ms).toISOString() : null,
+            latestUrl: latest?.url ?? null,
+            recent,
+            latestHeadline: latest?.headline ?? null,
+            latestTag: latest?.tag ?? null,
+          });
+        }
       }
     } catch {}
 
@@ -167,7 +186,13 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           if (row.gap_pct == null && safeNum(ai.gap_pct) != null) row.gap_pct = safeNum(ai.gap_pct);
           if (row.rvol == null && safeNum(ai.rvol) != null) row.rvol = safeNum(ai.rvol);
         }
-        row.catalyst = newsMap.get(row.ticker) || { recent: false, latestISO: null, latestUrl: null };
+        row.catalyst = newsMap.get(row.ticker) || {
+          recent: false,
+          latestISO: null,
+          latestUrl: null,
+          latestHeadline: null,
+          latestTag: null,
+        };
 
         const { score, action } = computeScoreAndDecision(row);
         row.actionScore = score;
@@ -225,7 +250,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
     }
   }, [visible, onTopTickersChange]);
 
-  const totalVol = useMemo(() => visible.reduce((a, r) => a + (r.volume ?? 0), 0), [visible]);
   const avgGap = useMemo(() => {
     const xs = visible.map((r) => r.gap_pct ?? r.change_pct).filter((x) => x != null) as number[];
     return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
@@ -236,7 +260,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       <div className="flex items-center gap-3 mb-4">
         <div className="text-sm opacity-80">Last Update {friendlyTime(data.generatedAt)} • Auto: 60s</div>
         <div className="ml-auto text-sm opacity-80">
-          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Page {page} of {totalPages} • Showing {visible.length ? `${start + 1}–${end}` : "0"} of {filteredAll.length}
+          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Page {page} of {Math.max(1, Math.ceil(filteredAll.length / PAGE_SIZE))} • Showing {visible.length ? `${start + 1}–${end}` : "0"} of {filteredAll.length}
         </div>
       </div>
 
@@ -252,14 +276,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           <input type="checkbox" checked={onlyStrong} onChange={(e) => setOnlyStrong(e.target.checked)} />
           AI / Momentum filter
         </label>
-
-        <div className="ml-auto flex items-center gap-2">
-          <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40">«</button>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Prev</button>
-          <span className="text-sm opacity-80">Page {page} / {totalPages}</span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Next</button>
-          <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40">»</button>
-        </div>
       </div>
 
       {/* Table */}
@@ -278,11 +294,12 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           <tbody className="text-white/90">
             {visible.map((r) => {
               const strength = clamp((r.actionScore ?? 0) / 100, 0, 1);
-              const alpha = 0.10 + strength * 0.38; // stronger
+              const alpha = 0.10 + strength * 0.38;
               const bg = `linear-gradient(90deg, rgba(16,185,129,${alpha}) 0%, rgba(0,0,0,0) 62%)`;
               const leftAccent = strength > 0.25 ? `inset 3px 0 0 0 rgba(16,185,129, ${0.25 + strength * 0.4})` : "none";
-              const hasNews = !!r.catalyst?.recent && !!r.catalyst?.latestISO;
+              const hasNews = !!r.catalyst?.latestISO;
               const link = r.catalyst?.latestUrl || undefined;
+              const tag = r.catalyst?.latestTag || (hasNews ? "NEWS" : "");
 
               return (
                 <tr
@@ -308,13 +325,13 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
                           target="_blank"
                           rel="noopener noreferrer"
                           className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs underline"
-                          title="Open full story"
+                          title={r.catalyst?.latestHeadline ?? "Open article"}
                         >
-                          NEWS • {timeOnly(r.catalyst?.latestISO)}
+                          {tag} • {timeOnly(r.catalyst?.latestISO)}
                         </a>
                       ) : (
                         <span className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs">
-                          NEWS • {timeOnly(r.catalyst?.latestISO)}
+                          {tag} • {timeOnly(r.catalyst?.latestISO)}
                         </span>
                       )
                     ) : "—"}
@@ -329,20 +346,11 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           </tbody>
         </table>
       </div>
-
-      {/* Bottom pager */}
-      <div className="mt-4 flex items-center justify-end gap-2">
-        <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40">«</button>
-        <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Prev</button>
-        <span className="text-sm opacity-80">Page {page} / {totalPages}</span>
-        <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 rounded border border-white/15 disabled:opacity-40">Next</button>
-        <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 rounded border border-white/15 disabled:opacity-40">»</button>
-      </div>
     </section>
   );
 }
 
-/** ───── Scoring + Decision (news-aware) ───── */
+/** ───── Scoring + Decision ───── */
 function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" | "WATCH" | "SKIP" } {
   const ai = clamp((r.ai_score ?? 0), 0, 1);
   const rvRaw = r.rvol ?? 1;
@@ -356,27 +364,27 @@ function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" 
 
   const f = r.float_m ?? null;
   if (f != null) {
-    if (f <= 20) score += 3;
+    if (f <= FLOAT_TARGET_M) score += FLOAT_BONUS;
     else {
-      const capped = Math.min(f, 200);
-      const frac = (capped - 20) / (200 - 20);
-      score -= 12 * clamp(frac, 0, 1);
+      const capped = Math.min(f, FLOAT_PENALTY_CAP_M);
+      const frac = (capped - FLOAT_TARGET_M) / (FLOAT_PENALTY_CAP_M - FLOAT_TARGET_M);
+      score -= FLOAT_PENALTY_MAX * clamp(frac, 0, 1);
     }
   }
-  if (r.catalyst?.recent) score += 8;
+  if (r.catalyst?.latestISO) score += NEWS_BONUS;
   if (chgVal < 0) score -= 5;
   const rsi = r.rsi14m ?? null;
   if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 5;
 
   score = clamp(score, 0, 100);
 
-  const hasNews = !!r.catalyst?.recent;
+  const hasNews = !!r.catalyst?.latestISO;
   let action: "TRADE" | "WATCH" | "SKIP";
   if (
-    (hasNews && rvRaw >= 5 && gapVal >= 5 && chgVal >= 5) ||
-    (!hasNews && rvRaw >= 7 && gapVal >= 8 && chgVal >= 6)
+    (hasNews && rvRaw >= RVOL_TRADE && gapVal >= GAP_MIN_TRADE && chgVal >= CHANGE_MIN_TRADE) ||
+    (!hasNews && rvRaw >= RVOL_TRADE_FALLBACK && gapVal >= GAP_MIN_TRADE_FALLBACK && chgVal >= CHANGE_MIN_TRADE_FALLBACK)
   ) action = "TRADE";
-  else if (rvRaw >= 2.5 && gapVal >= 2 && chgVal >= 0) action = "WATCH";
+  else if (rvRaw >= RVOL_WATCH && gapVal >= GAP_MIN_WATCH && chgVal >= CHANGE_MIN_WATCH) action = "WATCH";
   else action = "SKIP";
 
   return { score, action };
