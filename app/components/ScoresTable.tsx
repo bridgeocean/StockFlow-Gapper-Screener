@@ -44,15 +44,7 @@ type ScoreRow = {
 };
 
 type ScoresPayload = { generatedAt: string | null; scores: ScoreRow[] };
-
-type NewsItem = {
-  ticker: string;
-  headline: string;
-  summary?: string;
-  source?: string;
-  url?: string;
-  published?: string; // ISO or HH:mm:ss
-};
+type NewsItem = { ticker: string; headline: string; url?: string; published?: string; summary?: string; source?: string };
 type NewsPayload = { generatedAt?: string | null; items: NewsItem[] };
 
 /** Helpers */
@@ -119,7 +111,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
     let aiGenerated: string | null = null;
     const newsMap = new Map<string, { latestISO: string | null; latestUrl: string | null; recent: boolean }>();
 
-    // 1) Finviz
+    // 1) Finviz or your server feed
     try {
       const res = await fetch("/api/stocks", { cache: "no-store" });
       if (res.ok) {
@@ -128,7 +120,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 2) AI scores
+    // 2) AI scores (live)
     try {
       const res = await fetch("/api/scores", { cache: "no-store" });
       if (res.ok) {
@@ -141,7 +133,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 3) News (now from /api/news)
+    // 3) News (live)
     try {
       const res = await fetch("/api/news", { cache: "no-store" });
       if (res.ok) {
@@ -175,9 +167,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           if (row.gap_pct == null && safeNum(ai.gap_pct) != null) row.gap_pct = safeNum(ai.gap_pct);
           if (row.rvol == null && safeNum(ai.rvol) != null) row.rvol = safeNum(ai.rvol);
         }
-
-        const catalyst = newsMap.get(row.ticker) || { recent: false, latestISO: null, latestUrl: null };
-        row.catalyst = catalyst;
+        row.catalyst = newsMap.get(row.ticker) || { recent: false, latestISO: null, latestUrl: null };
 
         const { score, action } = computeScoreAndDecision(row);
         row.actionScore = score;
@@ -288,13 +278,18 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           <tbody>
             {visible.map((r) => {
               const strength = clamp((r.actionScore ?? 0) / 100, 0, 1);
-              const alpha = 0.06 + strength * 0.24;
-              const bg = `linear-gradient(90deg, rgba(74,222,128,${alpha}) 0%, rgba(0,0,0,0) 55%)`;
+              const alpha = 0.10 + strength * 0.38; // stronger, more visible
+              const bg = `linear-gradient(90deg, rgba(16,185,129,${alpha}) 0%, rgba(0,0,0,0) 62%)`;
+              const leftAccent = strength > 0.25 ? `inset 3px 0 0 0 rgba(16,185,129, ${0.25 + strength * 0.4})` : "none";
               const hasNews = !!r.catalyst?.recent && !!r.catalyst?.latestISO;
               const link = r.catalyst?.latestUrl || undefined;
 
               return (
-                <tr key={r.ticker} className="border-t border-white/10" style={{ background: bg }}>
+                <tr
+                  key={r.ticker}
+                  className="border-t border-white/10"
+                  style={{ background: bg, boxShadow: leftAccent as any }}
+                >
                   <Td>{r.ticker}</Td>
                   <TdR>{fmtNum(r.price)}</TdR>
                   <TdR>{fmtPct(r.gap_pct)}</TdR>
@@ -308,8 +303,13 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
                   <TdR>
                     {hasNews ? (
                       link ? (
-                        <a href={link} target="_blank" rel="noopener noreferrer"
-                           className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs underline">
+                        <a
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs underline"
+                          title="Open full story"
+                        >
                           NEWS • {timeOnly(r.catalyst?.latestISO)}
                         </a>
                       ) : (
