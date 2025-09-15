@@ -1,25 +1,17 @@
 name: Push AI Scores
-
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 13-20 * * 1-5"   # every 5 min during 13:00–20:59 UTC, Mon–Fri
-
-permissions:
-  contents: write   # needed to push back to the repo
-
+    - cron: "*/5 13-20 * * 1-5"   # optional: every 5 min 13:00–20:59 UTC, Mon–Fri
+env:
+  APP_URL: "https://YOUR-APP.vercel.app"   # <- replace with your deployed URL
 jobs:
   push:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # ⬇️ Replace this step with your real model pipeline that creates today_scores.json
-      - name: Build scores JSON (demo)
+      - name: Build scores JSON (demo — replace with your model output)
         run: |
-          mkdir -p public
-          cat > public/today_scores.json <<'JSON'
+          cat > scores.json <<'JSON'
           {
             "generatedAt": null,
             "scores": [
@@ -28,14 +20,9 @@ jobs:
           }
           JSON
 
-      - name: Commit and push if changed
+      - name: POST scores to API (uses repo secret)
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/today_scores.json
-          if git diff --quiet --cached; then
-            echo "No changes to commit."
-          else
-            git commit -m "chore: update today_scores.json"
-            git push
-          fi
+          curl -sS -X POST "$APP_URL/api/scores" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${{ secrets.SCORES_API_KEY }}" \
+            --data @scores.json
