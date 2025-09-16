@@ -1,7 +1,14 @@
 {
-  "generatedAt": "2025-09-16T13:20:02Z",
+  "generatedAt": "2025-09-16T13:46:04Z",
   "count": 9,
   "scores": [
+    {
+      "ticker": "TUYA",
+      "price": 2.62,
+      "score": 1.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
     {
       "ticker": "VTEX",
       "price": 4.14,
@@ -20,13 +27,6 @@
       "ticker": "ALIT",
       "price": 3.59,
       "score": 0.8887,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "TUYA",
-      "price": 2.62,
-      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
