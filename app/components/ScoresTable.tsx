@@ -41,9 +41,9 @@ type ScoreRow = {
   catalyst?: {
     recent: boolean;
     latestISO?: string | null;
-    latestUrl?: string | null;
+    latestUrl?: string | null;        // original article (may be non-finviz)
     latestHeadline?: string | null;
-    latestTag?: string | null;
+    latestTag?: string | null;        // FDA / OFFERING / M&A / ...
   };
   actionScore?: number;
   action?: "TRADE" | "WATCH" | "SKIP";
@@ -69,6 +69,7 @@ function parseNewsTime(raw?: string): number | null {
     return Number.isFinite(ms) ? ms : null;
   } catch { return null; }
 }
+const finvizNewsUrl = (ticker: string) => `https://finviz.com/quote.ashx?t=${encodeURIComponent(ticker)}#news`;
 
 function mapFinvizStocksToScores(rows: any[]): ScoresPayload {
   const scores: ScoreRow[] = rows.map((s) => {
@@ -151,7 +152,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       if (res.ok) {
         const j = (await res.json()) as NewsPayload;
         const now = Date.now();
-        // pick the most recent item per ticker
         const byT: Record<string, NewsItem[]> = {};
         (j?.items || []).forEach((n) => {
           const t = String(n.ticker || "").toUpperCase();
@@ -298,8 +298,8 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
               const bg = `linear-gradient(90deg, rgba(16,185,129,${alpha}) 0%, rgba(0,0,0,0) 62%)`;
               const leftAccent = strength > 0.25 ? `inset 3px 0 0 0 rgba(16,185,129, ${0.25 + strength * 0.4})` : "none";
               const hasNews = !!r.catalyst?.latestISO;
-              const link = r.catalyst?.latestUrl || undefined;
               const tag = r.catalyst?.latestTag || (hasNews ? "NEWS" : "");
+              const finvizLink = finvizNewsUrl(r.ticker);
 
               return (
                 <tr
@@ -319,21 +319,15 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
                   <TdR><Badge decision={r.action} /></TdR>
                   <TdR>
                     {hasNews ? (
-                      link ? (
-                        <a
-                          href={link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs underline"
-                          title={r.catalyst?.latestHeadline ?? "Open article"}
-                        >
-                          {tag} • {timeOnly(r.catalyst?.latestISO)}
-                        </a>
-                      ) : (
-                        <span className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs">
-                          {tag} • {timeOnly(r.catalyst?.latestISO)}
-                        </span>
-                      )
+                      <a
+                        href={finvizLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300 text-xs underline"
+                        title={r.catalyst?.latestHeadline ?? "Open on Finviz"}
+                      >
+                        {tag} • {timeOnly(r.catalyst?.latestISO)}
+                      </a>
                     ) : "—"}
                   </TdR>
                   <TdR>{formatInt(r.volume)}</TdR>
