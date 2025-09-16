@@ -2,19 +2,19 @@ name: Push Finviz News
 on:
   workflow_dispatch:
   schedule:
-    # Every 5 minutes during RTH in UTC (13–20 Mon–Fri). Adjust as you like.
-    - cron: "*/5 13-20 * * 1-5"
+    # Every 5 min from 09:00–20:59 UTC (covers US premarket + RTH)
+    - cron: "*/5 9-20 * * 1-5"
 
 jobs:
   push:
     runs-on: ubuntu-latest
     env:
-      APP_URL: ${{ vars.APP_URL }}   # set this in GitHub: Settings → Secrets and variables → Actions → Variables
+      APP_URL: ${{ vars.APP_URL }}   # OR hard-code: "https://YOUR-APP.vercel.app"
     steps:
       - name: Check APP_URL
         run: |
           if [ -z "${APP_URL}" ]; then
-            echo "::error ::APP_URL repository variable is not set. Go to Settings → Secrets and variables → Actions → Variables and add APP_URL=https://<your-vercel-url>"
+            echo "::error ::APP_URL repository variable is not set. Go to Settings → Secrets and variables → Actions → Variables and set APP_URL=https://<your-vercel-url>"
             exit 1
           fi
           echo "Using APP_URL=${APP_URL}"
@@ -29,8 +29,6 @@ jobs:
             echo "::error ::curl failed calling ${APP_URL}/api/stocks"
             exit 1
           }
-          head -c 400 stocks.json || true
-          echo
           if ! jq -e . stocks.json > /dev/null 2>&1; then
             echo "::error ::/api/stocks did not return valid JSON. First bytes:"
             head -c 400 stocks.json
@@ -38,7 +36,6 @@ jobs:
           fi
 
       - name: Extract first 20 tickers (symbol/ticker fallback)
-        id: tick
         run: |
           TICKERS=$(jq -r '
             (.data // .stocks // .items // [])
@@ -53,8 +50,8 @@ jobs:
             echo "::warning ::No tickers found in /api/stocks. Falling back to demo list."
             TICKERS="BLNE,CCCC,CHEK,BRY"
           fi
-          echo "TICKERS=$TICKERS"
           echo "TICKERS=$TICKERS" >> $GITHUB_ENV
+          echo "Using tickers: $TICKERS"
 
       - name: POST /api/news/update (Finviz)
         run: |
