@@ -3,46 +3,58 @@ name: Auto update Market News
 on:
   workflow_dispatch:
   schedule:
-    # Runs every 5 minutes during premarket + RTH in UTC.
-    # Adjust the hours for your preference.
+    # Every 5 minutes, Mon–Fri, 12:00–21:55 UTC (premarket + RTH). Adjust if you like.
     - cron: "*/5 12-21 * * 1-5"
 
 jobs:
   update:
     runs-on: ubuntu-latest
     env:
-      APP_URL: ${{ vars.APP_URL }}                # e.g. https://your-app.vercel.app
-      SCORES_API_KEY: ${{ secrets.SCORES_API_KEY }} # optional; sent if your API checks it
+      APP_URL: ${{ vars.APP_URL }}                  # e.g. https://your-app.vercel.app
+      SCORES_API_KEY: ${{ secrets.SCORES_API_KEY }} # optional if your API checks a key
     steps:
-      - name: Check APP_URL is set
+      - name: Verify APP_URL is set
+        shell: bash
         run: |
           if [ -z "$APP_URL" ]; then
             echo "APP_URL repository variable is not set."
             echo "Set it at: Settings → Secrets and variables → Actions → Variables"
             exit 1
           fi
-          echo "APP_URL=$APP_URL"
+          echo "Using APP_URL=$APP_URL"
 
-      - name: Get first-page tickers from the app
+      - name: Get first-page tickers from /api/stocks
+        shell: bash
         run: |
+          set -e
           curl -sS "$APP_URL/api/stocks" > stocks.json
-          # robust: accept .symbol or .ticker
+          # Accept .symbol or .ticker; take first 10; join with commas
           TICKERS=$(jq -r '.data[] | (.symbol // .ticker) | select(.!=null)' stocks.json | head -n 10 | paste -sd, -)
           if [ -z "$TICKERS" ]; then
-            echo "No tickers found on /api/stocks"; cat stocks.json; exit 1
+            echo "No tickers found on /api/stocks"
+            cat stocks.json
+            exit 1
           fi
-          echo "TICKERS=$TICKERS" >> $GITHUB_ENV
           echo "Tickers: $TICKERS"
+          echo "TICKERS=$TICKERS" >> "$GITHUB_ENV"
 
-      - name: Push Finviz headlines for current page
+      - name: Push Finviz headlines for current page to /api/news/update
+        shell: bash
         run: |
-          BODY=$(jq -n --arg t "$TICKERS" '{tickers: ($t|split(",")), maxPerTicker: 5}')
+          set -e
+          # Build JSON safely without YAML interpolation issues
+          QUOTED=$(printf '%s' "$TICKERS" | sed 's/,/","/g; s/^/"/; s/$/"/')
+          JSON=$(printf '{"tickers":[%s],"maxPerTicker":5}\n' "$QUOTED")
+
           curl -sS -X POST "$APP_URL/api/news/update" \
             -H "content-type: application/json" \
             -H "x-api-key: ${SCORES_API_KEY}" \
-            --data "$BODY" \
-            -o news.json -w "\nHTTP %{http_code}\n"
-          cat news.json
+            --data "$JSON" \
+            -o news.json -w '\nHTTP %{http_code}\n'
 
-      - name: Done
-        run: echo "News cache refreshed for: $TICKERS"
+          echo "Posted:"
+          cat news.json || true
+
+      - name: Finished
+        shell: bash
+        run: echo "News cache refreshed for tickers: $TICKERS"
