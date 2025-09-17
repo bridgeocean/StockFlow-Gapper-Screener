@@ -7,7 +7,7 @@ type NewsItem = {
   headline: string;
   url?: string;
   source?: string;
-  published?: string; // ISO or HH:mm:ss
+  published?: string;
   tag?: string;
 };
 
@@ -22,11 +22,7 @@ function parseTime(raw?: string): number | null {
   } catch { return null; }
 }
 const finvizTickerUrl = (t: string) => `https://finviz.com/quote.ashx?t=${encodeURIComponent(t)}#news`;
-
-function hhmm(ms?: number | null): string {
-  if (!ms) return "—";
-  try { return new Date(ms).toLocaleTimeString([], { hour12: false }); } catch { return "—"; }
-}
+const hhmm = (ms?: number | null) => (!ms ? "—" : new Date(ms).toLocaleTimeString([], { hour12: false }));
 
 export default function NewsPanel({ tickers = [] }: { tickers?: string[] }) {
   const [payload, setPayload] = useState<NewsPayload>({ items: [] });
@@ -57,7 +53,6 @@ export default function NewsPanel({ tickers = [] }: { tickers?: string[] }) {
       ticker: (n.ticker || "").toUpperCase(),
       _ms: parseTime(n.published),
     }));
-    // Only show news matching the current page tickers
     if (set.size > 0) items = items.filter((n) => set.has(n.ticker));
     items.sort((a, b) => (b._ms ?? 0) - (a._ms ?? 0));
     return items.slice(0, 50);
