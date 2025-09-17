@@ -50,43 +50,39 @@ export default function NewsPanel({ tickers = [] }: { tickers?: string[] }) {
     return () => clearInterval(id);
   }, []);
 
-  // 1) Filter to visible tickers
-  const set = new Set(tickers.map((t) => t.toUpperCase()));
-  let items = (payload.items || []).map((n) => ({
-    ...n,
-    ticker: (n.ticker || "").toUpperCase(),
-    _ms: parseTime(n.published),
-  }));
-  const filtered = set.size ? items.filter((n) => set.has(n.ticker)) : items;
-
-  // 2) If empty, fall back to latest overall (so panel is never blank)
-  const useFallback = filtered.length === 0 && items.length > 0;
-  const list = (useFallback ? items : filtered)
-    .sort((a, b) => (b._ms ?? 0) - (a._ms ?? 0))
-    .slice(0, 50);
+  const filtered = useMemo(() => {
+    const set = new Set(tickers.map((t) => t.toUpperCase()));
+    let items = (payload.items || []).map((n) => ({
+      ...n,
+      ticker: (n.ticker || "").toUpperCase(),
+      _ms: parseTime(n.published),
+    }));
+    // Only show news matching the current page tickers
+    if (set.size > 0) items = items.filter((n) => set.has(n.ticker));
+    items.sort((a, b) => (b._ms ?? 0) - (a._ms ?? 0));
+    return items.slice(0, 50);
+  }, [payload.items, tickers]);
 
   return (
     <aside className="rounded-2xl bg-white/5 border border-white/10 p-4 text-white">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold">
-          Market News {useFallback ? <span className="text-xs opacity-70">(all tickers)</span> : null}
-        </h3>
+        <h3 className="text-lg font-semibold">Market News</h3>
         <div className="text-xs opacity-70">
           {payload.generatedAt ? new Date(payload.generatedAt).toLocaleTimeString([], { hour12: false }) : "—"}
         </div>
       </div>
 
-      {loading && list.length === 0 ? (
+      {loading && filtered.length === 0 ? (
         <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="animate-pulse rounded-lg bg-white/10 h-14" />
         ))}</div>
-      ) : list.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-white/10 bg-black/20 p-4 text-sm opacity-80">
-          No news available.
+          No matching news for the current tickers.
         </div>
       ) : (
         <ul className="space-y-3">
-          {list.map((n, idx) => {
+          {filtered.map((n, idx) => {
             const finviz = finvizTickerUrl(n.ticker);
             const full = n.url && /^https?:\/\//i.test(n.url) ? n.url : finviz;
             return (
@@ -102,7 +98,7 @@ export default function NewsPanel({ tickers = [] }: { tickers?: string[] }) {
                   )}
                 </div>
 
-                {/* Title → Finviz (always reliable) */}
+                {/* Title → Finviz (reliable) */}
                 <div className="font-medium leading-snug mb-1">
                   <a href={finviz} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-90">
                     {n.headline}
