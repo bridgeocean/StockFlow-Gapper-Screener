@@ -1,82 +1,77 @@
-// app/api/scores/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import type { Redis } from "ioredis";
+import { NextResponse } from "next/server";
+import Redis from "ioredis";
 
-export const runtime = "nodejs"; // ensure Node runtime on Vercel
+const REDIS_URL = process.env.REDIS_URL!;
+const SCORES_API_KEY = process.env.SCORES_API_KEY || "";
+const redis = new Redis(REDIS_URL);
 
-// ---------- CONFIG ----------
-const SCORES_KEY = "today_scores";
-const WRITE_API_KEY = process.env.SCORES_API_KEY || "";
-const API_KEY_HEADER = "x-api-key";
-// ----------------------------
+type Score = {
+  ticker: string;
+  score: number;     // 0..1 float
+  gap_pct?: number | null;
+  rvol?: number | null;
+  rsi14m?: number | null;
+  price?: number | null;
+  volume?: number | null;
+};
+type Payload = { generatedAt: string | null; scores: Score[] };
 
-// Reuse a single Redis client across invocations
-declare global {
-  // eslint-disable-next-line no-var
-  var __redisClient: Redis | undefined;
+function fnum(x: any): number | null {
+  if (x === null || x === undefined || x === "") return null;
+  const s = String(x).trim().replace(/%$/, "");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 
-async function getRedis(): Promise<Redis> {
-  if (global.__redisClient) return global.__redisClient;
-
-  const url = process.env.REDIS_URL;
-  if (!url) throw new Error("REDIS_URL env var is missing");
-
-  const { default: IORedis } = await import("ioredis");
-  const client = new IORedis(url, {
-    maxRetriesPerRequest: 2,
-    enableAutoPipelining: true,
-    tls: url.startsWith("rediss://") ? {} : undefined
-  });
-
-  client.on("error", (e) => console.error("[redis] error:", e?.message));
-  global.__redisClient = client;
-  return client;
-}
-
-const ok = (d: any, s = 200) => NextResponse.json(d, { status: s });
-const bad = (m: string, s = 400) => NextResponse.json({ error: m }, { status: s });
-const isPayload = (x: any) => x && typeof x === "object" && Array.isArray(x.scores);
-
-// GET: read current scores
 export async function GET() {
   try {
-    const redis = await getRedis();
-    const raw = await redis.get(SCORES_KEY);
-    if (raw) {
-      try { return ok(JSON.parse(raw), 200); }
-      catch { return ok({ generatedAt: null, scores: [] }, 200); }
-    }
-    // fallback to static file so UI never breaks if empty
-    try {
-      const fs = await import("node:fs/promises");
-      const path = process.cwd() + "/public/today_scores.json";
-      const txt = await fs.readFile(path, "utf8");
-      return ok(JSON.parse(txt), 200);
-    } catch {
-      return ok({ generatedAt: null, scores: [] }, 200);
-    }
-  } catch (err: any) {
-    return bad(err?.message || "GET failed", 500);
+    const raw = await redis.get("scores:payload");
+    const payload: Payload = raw
+      ? JSON.parse(raw)
+      : { generatedAt: null, scores: [] };
+    return NextResponse.json(payload, { status: 200 });
+  } catch (e: any) {
+    return NextResponse.json(
+      { generatedAt: null, scores: [], error: e?.message || "scores error" },
+      { status: 200 }
+    );
   }
 }
 
-// POST: write new scores (requires API key)
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    if (!WRITE_API_KEY) return bad("SCORES_API_KEY not set on server", 500);
-    if ((req.headers.get(API_KEY_HEADER) || "") !== WRITE_API_KEY) return bad("Unauthorized", 401);
+    // Optional API key gate
+    if (SCORES_API_KEY) {
+      const k = (req.headers.get("x-api-key") || "").trim();
+      if (k !== SCORES_API_KEY) {
+        return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+      }
+    }
 
     const body = await req.json();
-    if (!isPayload(body)) return bad("Invalid payload: missing .scores[]", 400);
+    const when = (body?.generatedAt && String(body.generatedAt)) || new Date().toISOString();
 
-    const payload = { generatedAt: body.generatedAt || new Date().toISOString(), scores: body.scores };
+    const items: Score[] = Array.isArray(body?.scores) ? body.scores.map((r: any) => {
+      const t = String(r?.ticker || "").toUpperCase().trim();
+      return {
+        ticker: t,
+        score: Math.max(0, Math.min(1, Number(r?.score) || 0)),   // keep float
+        gap_pct: fnum(r?.gap_pct),
+        rvol: fnum(r?.rvol),
+        rsi14m: fnum(r?.rsi14m),
+        price: fnum(r?.price),
+        volume: fnum(r?.volume),
+      };
+    }).filter((r: Score) => !!r.ticker) : [];
 
-    const redis = await getRedis();
-    await redis.set(SCORES_KEY, JSON.stringify(payload));
+    const payload: Payload = { generatedAt: when, scores: items };
 
-    return ok({ ok: true, stored: { count: payload.scores.length, generatedAt: payload.generatedAt } }, 200);
-  } catch (err: any) {
-    return bad(err?.message || "POST failed", 500);
+    // Store exactly as received (no rounding)
+    await redis.set("scores:payload", JSON.stringify(payload), "EX", 60 * 60 * 6);
+    await redis.set("scores:updatedAt", when);
+
+    return NextResponse.json({ ok: true, count: items.length, generatedAt: when }, { status: 200 });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || "bad json" }, { status: 400 });
   }
 }
