@@ -3,18 +3,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import PerPageSelect from "./PerPageSelect";
 
-/** ───────────────────────── Tunables ───────────────────────── */
-const WEIGHTS = { rvol: 0.65, ai: 0.20, gap: 0.10, change: 0.05 };
+/** ───────────────────────── Tunables (lenient) ─────────────────────────
+ *  More permissive thresholds + a reasonable rVol fallback when rVol is missing.
+ *  This helps names like ATCH (large gap/%change) get TRADE classification.
+ */
+const WEIGHTS = { rvol: 0.55, ai: 0.20, gap: 0.18, change: 0.07 };
 
-const RVOL_TRADE = 5.0;
-const RVOL_TRADE_FALLBACK = 7.0;
-const GAP_MIN_TRADE = 5;
-const GAP_MIN_TRADE_FALLBACK = 8;
-const CHANGE_MIN_TRADE = 5;
-const CHANGE_MIN_TRADE_FALLBACK = 6;
+const RVOL_TRADE = 3.0;                 // with recent news
+const RVOL_TRADE_FALLBACK = 4.5;        // no news
 
-const RVOL_WATCH = 2.5;
-const GAP_MIN_WATCH = 2;
+const GAP_MIN_TRADE = 4;                // with news
+const GAP_MIN_TRADE_FALLBACK = 6;       // no news
+
+const CHANGE_MIN_TRADE = 3;             // with news
+const CHANGE_MIN_TRADE_FALLBACK = 5;    // no news
+
+const RVOL_WATCH = 1.8;
+const GAP_MIN_WATCH = 1.5;
 const CHANGE_MIN_WATCH = 0;
 
 const FLOAT_TARGET_M = 20;
@@ -110,15 +115,13 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   const [gapMin, setGapMin] = useState(5);
   const [onlyStrong, setOnlyStrong] = useState(false);
 
-  // NEW: page size with localStorage persistence
+  // page size (10/25/50), persisted
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 10;
     const saved = Number(localStorage.getItem("sf_page_size") || "10");
     return [10, 25, 50].includes(saved) ? saved : 10;
   });
-  useEffect(() => {
-    try { localStorage.setItem("sf_page_size", String(pageSize)); } catch {}
-  }, [pageSize]);
+  useEffect(() => { try { localStorage.setItem("sf_page_size", String(pageSize)); } catch {} }, [pageSize]);
 
   const [page, setPage] = useState(1);
 
@@ -134,7 +137,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       latestTag: string | null;
     }>();
 
-    // 1) Stocks list
+    // 1) Stocks
     try {
       const res = await fetch("/api/stocks", { cache: "no-store" });
       if (res.ok) {
@@ -197,11 +200,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           if (row.rvol == null && safeNum(ai.rvol) != null) row.rvol = safeNum(ai.rvol);
         }
         row.catalyst = newsMap.get(row.ticker) || {
-          recent: false,
-          latestISO: null,
-          latestUrl: null,
-          latestHeadline: null,
-          latestTag: null,
+          recent: false, latestISO: null, latestUrl: null, latestHeadline: null, latestTag: null,
         };
 
         const { score, action } = computeScoreAndDecision(row);
@@ -232,9 +231,10 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       .filter((r) => {
         if (!onlyStrong) return true;
         const ai = r.ai_score ?? 0;
-        const rv = r.rvol ?? 0;
+        // be lenient here too
+        const rv = (r.rvol ?? 0);
         const as = r.actionScore ?? 0;
-        return rv >= RVOL_WATCH || ai >= 0.6 || as >= 70;
+        return rv >= 2 || ai >= 0.55 || as >= 60;
       })
       .sort((a, b) =>
         (b.actionScore ?? 0) - (a.actionScore ?? 0) ||
@@ -243,6 +243,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
   // Pagination (no data cut-off)
+  const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(filteredAll.length / pageSize));
   useEffect(() => { setPage((p) => Math.min(Math.max(1, p), totalPages)); }, [totalPages]);
   useEffect(() => { setPage(1); }, [priceMin, priceMax, gapMin, onlyStrong, pageSize]);
@@ -251,14 +252,14 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   const end = Math.min(filteredAll.length, start + pageSize);
   const visible = filteredAll.slice(start, end);
 
-  // tell NewsPanel which 10/25/50 are on screen
+  // tell NewsPanel which tickers are visible
   const tickRef = useRef<string>("");
   useEffect(() => {
-    const topTickers = visible.map((r) => r.ticker);
-    const key = topTickers.join(",");
+    const top = visible.map((r) => r.ticker);
+    const key = top.join(",");
     if (key !== tickRef.current) {
       tickRef.current = key;
-      onTopTickersChange?.(topTickers);
+      onTopTickersChange?.(top);
     }
   }, [visible, onTopTickersChange]);
 
@@ -290,7 +291,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
         </label>
 
         <div className="ml-auto" />
-        {/* NEW: per-page selector */}
         <PerPageSelect value={pageSize} onChange={setPageSize} />
       </div>
 
@@ -384,13 +384,18 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   );
 }
 
-/** ───── Scoring + Decision ───── */
+/** ───── Scoring + Decision (lenient + rVol fallback) ───── */
 function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" | "WATCH" | "SKIP" } {
   const ai = clamp((r.ai_score ?? 0), 0, 1);
-  const rvRaw = r.rvol ?? 1;
-  const rv = clamp((rvRaw - 1) / 2, 0, 1);
+
   const gapVal = Math.abs(r.gap_pct ?? r.change_pct ?? 0);
   const chgVal = r.change_pct ?? 0;
+
+  // rVol fallback heuristic:
+  // if rVol is missing, infer a reasonable value from the gap size
+  const rvRaw = r.rvol ?? (gapVal >= 40 ? 4.5 : gapVal >= 20 ? 3.0 : 1.0);
+
+  const rv = clamp((rvRaw - 1) / 2, 0, 1);
   const gap = clamp(gapVal / 20, 0, 1);
   const chg = clamp(Math.max(0, chgVal) / 10, 0, 1);
 
@@ -405,14 +410,14 @@ function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" 
       score -= FLOAT_PENALTY_MAX * clamp(frac, 0, 1);
     }
   }
-  if (r.catalyst?.latestISO) score += NEWS_BONUS;
-  if (chgVal < 0) score -= 5;
+  const hasNews = !!r.catalyst?.latestISO;
+  if (hasNews) score += NEWS_BONUS;
+  if (chgVal < 0) score -= 4;
   const rsi = r.rsi14m ?? null;
-  if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 5;
+  if (rsi != null && (rsi >= 85 || rsi <= 15)) score -= 4;
 
   score = clamp(score, 0, 100);
 
-  const hasNews = !!r.catalyst?.latestISO;
   let action: "TRADE" | "WATCH" | "SKIP";
   if (
     (hasNews && rvRaw >= RVOL_TRADE && gapVal >= GAP_MIN_TRADE && chgVal >= CHANGE_MIN_TRADE) ||
