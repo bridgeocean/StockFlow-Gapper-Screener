@@ -1,0 +1,48 @@
+name: Auto update Market News
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs every 5 minutes during premarket + RTH in UTC.
+    # Adjust the hours for your preference.
+    - cron: "*/5 12-21 * * 1-5"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ vars.APP_URL }}                # e.g. https://your-app.vercel.app
+      SCORES_API_KEY: ${{ secrets.SCORES_API_KEY }} # optional; sent if your API checks it
+    steps:
+      - name: Check APP_URL is set
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "APP_URL repository variable is not set."
+            echo "Set it at: Settings → Secrets and variables → Actions → Variables"
+            exit 1
+          fi
+          echo "APP_URL=$APP_URL"
+
+      - name: Get first-page tickers from the app
+        run: |
+          curl -sS "$APP_URL/api/stocks" > stocks.json
+          # robust: accept .symbol or .ticker
+          TICKERS=$(jq -r '.data[] | (.symbol // .ticker) | select(.!=null)' stocks.json | head -n 10 | paste -sd, -)
+          if [ -z "$TICKERS" ]; then
+            echo "No tickers found on /api/stocks"; cat stocks.json; exit 1
+          fi
+          echo "TICKERS=$TICKERS" >> $GITHUB_ENV
+          echo "Tickers: $TICKERS"
+
+      - name: Push Finviz headlines for current page
+        run: |
+          BODY=$(jq -n --arg t "$TICKERS" '{tickers: ($t|split(",")), maxPerTicker: 5}')
+          curl -sS -X POST "$APP_URL/api/news/update" \
+            -H "content-type: application/json" \
+            -H "x-api-key: ${SCORES_API_KEY}" \
+            --data "$BODY" \
+            -o news.json -w "\nHTTP %{http_code}\n"
+          cat news.json
+
+      - name: Done
+        run: echo "News cache refreshed for: $TICKERS"
