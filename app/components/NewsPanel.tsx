@@ -28,10 +28,13 @@ export default function NewsPanel({ tickers = [] }: { tickers?: string[] }) {
   const [payload, setPayload] = useState<NewsPayload>({ items: [] });
   const [loading, setLoading] = useState(false);
 
+  const tickKey = useMemo(() => tickers.map((t) => t.toUpperCase()).join(","), [tickers]);
+
   async function fetchNews() {
     try {
       setLoading(true);
-      const res = await fetch("/api/news", { cache: "no-store" });
+      const qs = tickKey ? `?tickers=${encodeURIComponent(tickKey)}` : "";
+      const res = await fetch(`/api/news${qs}`, { cache: "no-store" });
       if (!res.ok) throw new Error("news fetch failed");
       const j = (await res.json()) as NewsPayload;
       setPayload({ generatedAt: j.generatedAt ?? null, items: Array.isArray(j.items) ? j.items : [] });
@@ -40,11 +43,11 @@ export default function NewsPanel({ tickers = [] }: { tickers?: string[] }) {
     } finally { setLoading(false); }
   }
 
+  useEffect(() => { fetchNews(); }, [tickKey]);
   useEffect(() => {
-    fetchNews();
     const id = setInterval(fetchNews, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [tickKey]);
 
   const filtered = useMemo(() => {
     const set = new Set(tickers.map((t) => t.toUpperCase()));
@@ -93,7 +96,6 @@ export default function NewsPanel({ tickers = [] }: { tickers?: string[] }) {
                   )}
                 </div>
 
-                {/* Title → Finviz (reliable) */}
                 <div className="font-medium leading-snug mb-1">
                   <a href={finviz} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-90">
                     {n.headline}
