@@ -1,3 +1,4 @@
+// app/layout.tsx
 import "./globals.css";
 import type { ReactNode } from "react";
 import SiteHeader from "./components/SiteHeader";
