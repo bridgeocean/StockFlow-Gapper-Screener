@@ -3,10 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import PerPageSelect from "./PerPageSelect";
 
-/** ───────────────────────── Tunables (lenient) ─────────────────────────
- *  More permissive thresholds + a reasonable rVol fallback when rVol is missing.
- *  This helps names like ATCH (large gap/%change) get TRADE classification.
- */
+/** ───────────────────────── Tunables (lenient) ───────────────────────── */
 const WEIGHTS = { rvol: 0.55, ai: 0.20, gap: 0.18, change: 0.07 };
 
 const RVOL_TRADE = 3.0;                 // with recent news
@@ -123,6 +120,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   });
   useEffect(() => { try { localStorage.setItem("sf_page_size", String(pageSize)); } catch {} }, [pageSize]);
 
+  // single page state (FIX: only declared once)
   const [page, setPage] = useState(1);
 
   async function loadOnce() {
@@ -231,7 +229,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       .filter((r) => {
         if (!onlyStrong) return true;
         const ai = r.ai_score ?? 0;
-        // be lenient here too
         const rv = (r.rvol ?? 0);
         const as = r.actionScore ?? 0;
         return rv >= 2 || ai >= 0.55 || as >= 60;
@@ -243,7 +240,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
   // Pagination (no data cut-off)
-  const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(filteredAll.length / pageSize));
   useEffect(() => { setPage((p) => Math.min(Math.max(1, p), totalPages)); }, [totalPages]);
   useEffect(() => { setPage(1); }, [priceMin, priceMax, gapMin, onlyStrong, pageSize]);
@@ -391,8 +387,7 @@ function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" 
   const gapVal = Math.abs(r.gap_pct ?? r.change_pct ?? 0);
   const chgVal = r.change_pct ?? 0;
 
-  // rVol fallback heuristic:
-  // if rVol is missing, infer a reasonable value from the gap size
+  // rVol fallback heuristic when missing:
   const rvRaw = r.rvol ?? (gapVal >= 40 ? 4.5 : gapVal >= 20 ? 3.0 : 1.0);
 
   const rv = clamp((rvRaw - 1) / 2, 0, 1);
@@ -429,7 +424,7 @@ function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" 
   return { score, action };
 }
 
-/** UI helpers */
+/** UI utils */
 function fmtNum(v?: number | null, d = 2) { if (v == null) return "—"; return Number(v).toFixed(d); }
 function fmtPct(v?: number | null) { if (v == null) return "—"; return Number(v).toFixed(1) + "%"; }
 function formatInt(v?: number | null) {
@@ -440,9 +435,10 @@ function formatInt(v?: number | null) {
 }
 function friendlyTime(iso: string | null) { if (!iso) return "—"; try { const d = new Date(iso); return d.toLocaleTimeString([], { hour12: false }); } catch { return "—"; } }
 function timeOnly(iso?: string | null) { if (!iso) return "—"; try { const d = new Date(iso); return d.toLocaleTimeString([], { hour12: false }); } catch { return "—"; } }
-function Th({ children, className = "" }: any) { return <th className={`px-3 py-2 font-medium ${className}`}>{children}</th>; }
-function Td({ children, className = "" }: any) { return <td className={`px-3 py-2 ${className}`}>{children}</td>; }
-function TdR({ children, className = "" }: any) { return <td className={`px-3 py-2 text-right ${className}`}>{children}</td>; }
+
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) { return <th className={`px-3 py-2 font-medium ${className}`}>{children}</th>; }
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) { return <td className={`px-3 py-2 ${className}`}>{children}</td>; }
+function TdR({ children, className = "" }: { children: React.ReactNode; className?: string }) { return <td className={`px-3 py-2 text-right ${className}`}>{children}</td>; }
 function Badge({ decision }: { decision?: "TRADE" | "WATCH" | "SKIP" }) {
   let tx = "SKIP"; let cls = "text-white/80 bg-white/10 border-white/10";
   if (decision === "TRADE") { tx = "TRADE"; cls = "text-black bg-green-500 border-green-500"; }
