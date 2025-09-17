@@ -27,18 +27,15 @@ export async function GET(req: Request) {
     );
 
     const raw = (await redis.get("news:payload")) || "";
-    let payload: Payload =
-      raw ? JSON.parse(raw) : { generatedAt: null, items: [] };
+    const payload: Payload = raw
+      ? JSON.parse(raw)
+      : { generatedAt: null, items: [] };
 
-    let items = payload.items || [];
-    if (filterSet.size) {
-      items = items.filter((n) => filterSet.has((n.ticker || "").toUpperCase()));
-    }
+    const items = filterSet.size
+      ? payload.items.filter((n) => filterSet.has((n.ticker || "").toUpperCase()))
+      : payload.items;
 
-    return NextResponse.json({
-      generatedAt: payload.generatedAt,
-      items,
-    });
+    return NextResponse.json({ generatedAt: payload.generatedAt, items });
   } catch (e: any) {
     return NextResponse.json(
       { generatedAt: null, items: [], error: e?.message || "news error" },
