@@ -1,35 +1,26 @@
 name: Push AI Scores (local joblib)
+
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 9-20 * * 1-5"  # every 5 minutes during US premarket + RTH (UTC)
+    - cron: "*/5 9-20 * * 1-5"  # every 5m during premarket+RTH (UTC)
 
 jobs:
   push:
     runs-on: ubuntu-latest
     env:
-      APP_URL: ${{ vars.APP_URL }}  # e.g. https://your-app.vercel.app
+      APP_URL: ${{ vars.APP_URL }}              # e.g. https://your-app.vercel.app
+      SCORES_API_KEY: ${{ secrets.SCORES_API_KEY }}
     steps:
-      - name: Check APP_URL
-        run: |
-          if [ -z "${APP_URL}" ]; then
-            echo "::error ::APP_URL repo variable not set. Go to Settings → Secrets and variables → Actions → Variables and add APP_URL=https://<your-vercel-url>";
-            exit 1;
-          fi
-          echo "Using APP_URL=${APP_URL}"
+      - uses: actions/checkout@v4
 
-      - name: Check out repo
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          # Adjust versions if your model needs a specific sklearn/xgboost/lightgbm
           pip install numpy pandas joblib scikit-learn requests
 
       - name: Fetch /api/stocks
@@ -39,122 +30,116 @@ jobs:
           echo
 
       - name: Build scores with local model & POST
-        env:
-          SCORES_API_KEY: ${{ secrets.SCORES_API_KEY }}
         run: |
           python - <<'PY'
-          import os, json, time, math
-          import numpy as np
-          import pandas as pd
-          import joblib
-          import requests
+          import os, json, math, time
+          import numpy as np, pandas as pd, joblib, requests
 
           APP_URL = os.environ["APP_URL"].rstrip("/")
-          KEY = os.environ["SCORES_API_KEY"]
+          KEY = os.environ.get("SCORES_API_KEY","")
 
-          # --- locate model file in repo root ---
-          # try both names just in case
-          MODEL_CANDIDATES = ["printedai_score.joblib", "ai_score.joblib", "model.joblib"]
-          model_path = None
-          for p in MODEL_CANDIDATES:
-            if os.path.exists(p):
-              model_path = p
-              break
+          # Load model
+          MODEL_CANDIDATES = ["printedai_score.joblib","ai_score.joblib","model.joblib"]
+          model_path = next((p for p in MODEL_CANDIDATES if os.path.exists(p)), None)
           if not model_path:
-            raise FileNotFoundError(f"No joblib model found; tried: {MODEL_CANDIDATES}")
-
-          print(f"Loading model: {model_path}")
+            raise FileNotFoundError(f"No joblib model found; tried {MODEL_CANDIDATES}")
+          print("Model:", model_path)
           model = joblib.load(model_path)
 
-          # --- load stocks list pulled in previous step ---
-          with open("stocks.json","r") as f:
-            raw = json.load(f)
-          rows = raw.get("data") or raw.get("items") or raw.get("stocks") or []
-
-          def to_float(x):
-            if x is None: return None
+          # Load stocks
+          rows = json.load(open("stocks.json")).get("data", [])
+          def fnum(x):
             try:
               s = str(x).strip()
               if s.endswith("%"): s = s[:-1]
               return float(s)
-            except:
-              return None
+            except: return None
 
-          # Build a simple feature set the same way the dashboard expects
-          # If your trained model expects different columns, adjust FEATURE_COLS below to match.
           recs = []
           for r in rows:
             t = str(r.get("symbol") or r.get("ticker") or "").upper()
-            if not t: 
-              continue
-            gap = to_float(r.get("gap") or r.get("gap_pct") or r.get("gapPct"))
-            chg = to_float(r.get("change") or r.get("change_pct") or r.get("changePercent"))
-            if gap is None and chg is not None:
-              gap = chg  # proxy if finviz only gives change%
+            if not t: continue
+            gap = fnum(r.get("gap") or r.get("gap_pct") or r.get("gapPct") or r.get("change") or r.get("change_pct"))
+            chg = fnum(r.get("change") or r.get("change_pct"))
+            rvol = fnum(r.get("relativeVolume") or r.get("relVolume") or r.get("rvol"))
+            # rVol fallback for big gaps
+            if (rvol is None) or (rvol is not None and rvol <= 0):
+              if gap is not None and gap >= 40: rvol = 4.5
+              elif gap is not None and gap >= 20: rvol = 3.0
+            float_m = fnum(r.get("floatM") or r.get("float_m")) \
+                      or ((fnum(r.get("float_shares")) or 0)/1e6 if r.get("float_shares") is not None else None)
             recs.append({
               "ticker": t,
               "gap_pct": gap,
-              "rvol": to_float(r.get("relativeVolume") or r.get("relVolume") or r.get("rvol")),
-              "float_m": to_float(r.get("floatM") or r.get("float_m")) 
-                         or (to_float(r.get("float_shares"))/1e6 if r.get("float_shares") is not None else None),
-              "price": to_float(r.get("price")),
-              "rsi14m": to_float(r.get("rsi14m") or r.get("rsi")),
-              "volume": to_float(r.get("volume")),
+              "rvol": rvol,
+              "float_m": float_m,
+              "price": fnum(r.get("price")),
+              "rsi14m": fnum(r.get("rsi14m") or r.get("rsi")),
+              "volume": fnum(r.get("volume")),
+              "change_pct": chg,
             })
 
           df = pd.DataFrame.from_records(recs)
+          if df.empty:
+            print("No rows from /api/stocks")
+            raise SystemExit(0)
 
-          # Choose the feature columns your model expects.
-          # If your model used a different schema, edit this list to match the training.
           FEATURE_COLS = ["gap_pct","rvol","float_m","price","rsi14m"]
           for c in FEATURE_COLS:
             if c not in df.columns: df[c] = np.nan
-
           X = df[FEATURE_COLS].astype(float).fillna(0.0)
 
-          # Inference that works across sklearn models (classifier or regressor)
-          def as_prob(pred):
-            # clamp to [0,1]
-            try:
-              return max(0.0, min(1.0, float(pred)))
-            except:
-              return 0.0
+          # Heuristic score to blend when model is degenerate
+          def clamp(v, lo=0.0, hi=1.0): return max(lo, min(hi, float(v)))
+          h_rv = clamp(((df["rvol"].fillna(1.0) - 1.0)/4.0))
+          h_gap = clamp((df["gap_pct"].abs().fillna(0.0)/20.0))
+          h_chg = clamp((df["change_pct"].fillna(0.0).clip(lower=0)/10.0))
+          h_float = np.where((df["float_m"].fillna(999) <= 20), 0.05, 0.0)  # small float bonus
+          heuristic = clamp(0.55*h_rv + 0.30*h_gap + 0.15*h_chg + h_float)
+
+          # Model inference
+          def to01(arr):
+            arr = np.asarray(arr, dtype=float).ravel()
+            mn, mx = float(np.min(arr)), float(np.max(arr))
+            if not np.isfinite(mn) or not np.isfinite(mx): return np.zeros_like(arr)
+            if math.isclose(mx, mn): return np.full_like(arr, 0.5)  # neutral if constant
+            return (arr - mn) / (mx - mn)
 
           if hasattr(model, "predict_proba"):
-            probs = model.predict_proba(X)
-            if probs.ndim == 2 and probs.shape[1] >= 2:
-              scores = probs[:, 1]
+            proba = model.predict_proba(X)
+            if proba.ndim == 2 and proba.shape[1] >= 2:
+              model_score = proba[:,1]
             else:
-              scores = probs.ravel()
+              model_score = proba.ravel()
+            model_score = np.clip(model_score, 0, 1)
           else:
-            raw_pred = model.predict(X)
-            # min-max to [0,1] as a fallback if regressor
-            mn, mx = float(np.min(raw_pred)), float(np.max(raw_pred))
-            if math.isclose(mx, mn):
-              scores = np.zeros_like(raw_pred, dtype=float)
-            else:
-              scores = (raw_pred - mn) / (mx - mn)
+            pred = model.predict(X)
+            model_score = to01(pred)  # avoid all-zeros if constant
 
-          scores = np.array([as_prob(s) for s in scores])
-
-          out = []
-          for i, t in enumerate(df["ticker"].tolist()):
-            out.append({
-              "ticker": t,
-              "score": float(scores[i]),
-              "gap_pct": to_float(df.at[i,"gap_pct"]),
-              "rvol": to_float(df.at[i,"rvol"]),
-              "rsi14m": to_float(df.at[i,"rsi14m"]),
-              "price": to_float(df.at[i,"price"]),
-              "volume": to_float(df.at[i,"volume"]),
-            })
+          # Blend: if model looks degenerate (low variance or 1 row), lean on heuristic
+          if len(model_score) < 5 or np.std(model_score) < 1e-6:
+            final = heuristic
+          else:
+            final = 0.7*model_score + 0.3*heuristic
+          final = np.clip(final, 0, 1)
 
           payload = {
             "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "scores": out
+            "scores": [
+              {
+                "ticker": df.at[i,"ticker"],
+                "score": float(final[i]),
+                "gap_pct": float(df.at[i,"gap_pct"]) if pd.notnull(df.at[i,"gap_pct"]) else None,
+                "rvol": float(df.at[i,"rvol"]) if pd.notnull(df.at[i,"rvol"]) else None,
+                "rsi14m": float(df.at[i,"rsi14m"]) if pd.notnull(df.at[i,"rsi14m"]) else None,
+                "price": float(df.at[i,"price"]) if pd.notnull(df.at[i,"price"]) else None,
+                "volume": float(df.at[i,"volume"]) if pd.notnull(df.at[i,"volume"]) else None,
+              }
+              for i in range(len(df))
+            ],
           }
 
-          print("Posting", len(out), "scores to /api/scores")
+          print("Posting", len(payload["scores"]), "scores")
           r = requests.post(
             f"{APP_URL}/api/scores",
             headers={"content-type": "application/json", "x-api-key": KEY},
