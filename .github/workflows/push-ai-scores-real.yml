@@ -1,0 +1,99 @@
+name: Push AI Scores (real model)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 9-20 * * 1-5"   # every 5m during US premarket + RTH (UTC)
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ vars.APP_URL }}        # https://your-app.vercel.app
+      MODEL_URL: ${{ vars.MODEL_URL }}    # https://your-model-endpoint/scores
+    steps:
+      - name: Check env
+        run: |
+          if [ -z "${APP_URL}" ]; then
+            echo "::error ::APP_URL repo variable not set"; exit 1; fi
+          if [ -z "${MODEL_URL}" ]; then
+            echo "::warning ::MODEL_URL not set — Action will send zero scores"; fi
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+
+      - name: Install requests
+        run: python -m pip install --upgrade requests
+
+      - name: Build & push scores
+        env:
+          SCORES_API_KEY: ${{ secrets.SCORES_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os, json, time, requests
+
+          APP_URL = os.environ["APP_URL"].rstrip("/")
+          MODEL_URL = os.environ.get("MODEL_URL")
+          API_KEY = os.environ["SCORES_API_KEY"]
+
+          def get_stocks():
+            r = requests.get(f"{APP_URL}/api/stocks", timeout=30)
+            r.raise_for_status()
+            j = r.json()
+            rows = j.get("data") or j.get("items") or j.get("stocks") or []
+            return rows
+
+          def call_model(rows):
+            if not MODEL_URL:
+              # No model endpoint provided: return zeros (keeps pipeline alive)
+              return [{"ticker": str(r.get("symbol") or r.get("ticker") or "").upper(), "score": 0.0} for r in rows]
+            # Send rows to your model. Adjust payload/headers as your model expects.
+            payload = {"rows": rows}
+            m = requests.post(MODEL_URL, json=payload, timeout=60)
+            m.raise_for_status()
+            out = m.json()
+            return out.get("scores") or []
+
+          def merge_payload(rows, scores):
+            s_map = { (s.get("ticker") or "").upper(): float(s.get("score") or 0.0) for s in scores }
+            out = []
+            for r in rows:
+              t = str(r.get("symbol") or r.get("ticker") or "").upper()
+              if not t:
+                continue
+              # extract some features so the dashboard can display them
+              def num(x):
+                try: return float(x)
+                except: return None
+              def pct(x):
+                # strip trailing % if present
+                if x is None: return None
+                try:
+                  s = str(x).strip()
+                  if s.endswith("%"): s=s[:-1]
+                  return float(s)
+                except: return None
+
+              out.append({
+                "ticker": t,
+                "score": s_map.get(t, 0.0),
+                "gap_pct": pct(r.get("gap") or r.get("gap_pct") or r.get("gapPct")),
+                "rvol": num(r.get("relativeVolume") or r.get("relVolume") or r.get("rvol")),
+                "rsi14m": num(r.get("rsi14m") or r.get("rsi")),
+                "price": num(r.get("price")),
+                "volume": num(r.get("volume")),
+              })
+            return {
+              "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+              "scores": out
+            }
+
+          rows = get_stocks()
+          scores = call_model(rows)
+          payload = merge_payload(rows, scores)
+
+          # post to your app
+          h = {"content-type": "application/json", "x-api-key": os.environ["SCORES_API_KEY"]}
+          r = requests.post(f"{APP_URL}/api/scores", headers=h, data=json.dumps(payload), timeout=30)
+          r.raise_for_status()
+          print("Posted scores:", len(payload["scores"]))
+          PY
