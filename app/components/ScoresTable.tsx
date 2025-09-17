@@ -112,7 +112,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   const [gapMin, setGapMin] = useState(5);
   const [onlyStrong, setOnlyStrong] = useState(false);
 
-  // page size (10/25/50), persisted
   const [pageSize, setPageSize] = useState<number>(() => {
     if (typeof window === "undefined") return 10;
     const saved = Number(localStorage.getItem("sf_page_size") || "10");
@@ -120,7 +119,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   });
   useEffect(() => { try { localStorage.setItem("sf_page_size", String(pageSize)); } catch {} }, [pageSize]);
 
-  // single page state (FIX: only declared once)
   const [page, setPage] = useState(1);
 
   async function loadOnce() {
@@ -239,7 +237,6 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       );
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
-  // Pagination (no data cut-off)
   const totalPages = Math.max(1, Math.ceil(filteredAll.length / pageSize));
   useEffect(() => { setPage((p) => Math.min(Math.max(1, p), totalPages)); }, [totalPages]);
   useEffect(() => { setPage(1); }, [priceMin, priceMax, gapMin, onlyStrong, pageSize]);
@@ -380,15 +377,23 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   );
 }
 
-/** ───── Scoring + Decision (lenient + rVol fallback) ───── */
+/** ───── Scoring + Decision (lenient + **fixed rVol fallback**) ───── */
 function computeScoreAndDecision(r: ScoreRow): { score: number; action: "TRADE" | "WATCH" | "SKIP" } {
   const ai = clamp((r.ai_score ?? 0), 0, 1);
 
   const gapVal = Math.abs(r.gap_pct ?? r.change_pct ?? 0);
   const chgVal = r.change_pct ?? 0;
 
-  // rVol fallback heuristic when missing:
-  const rvRaw = r.rvol ?? (gapVal >= 40 ? 4.5 : gapVal >= 20 ? 3.0 : 1.0);
+  // 🔧 IMPORTANT FIX: treat rvol ≤ 0 as missing → use fallback from gap
+  const providedRvol = r.rvol ?? null;
+  const rvRaw =
+    providedRvol != null && providedRvol > 0
+      ? providedRvol
+      : gapVal >= 40
+      ? 4.5
+      : gapVal >= 20
+      ? 3.0
+      : 1.0;
 
   const rv = clamp((rvRaw - 1) / 2, 0, 1);
   const gap = clamp(gapVal / 20, 0, 1);
