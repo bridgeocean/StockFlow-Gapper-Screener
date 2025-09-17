@@ -2,26 +2,78 @@ name: Push AI Scores
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 13-20 * * 1-5"
-env:
-  APP_URL: "https://v0-finviz-gapper.vercel.app"   # <-- replace with your URL
+    # Every 5 min from 09:00–20:59 UTC (covers US premarket + RTH)
+    - cron: "*/5 9-20 * * 1-5"
+
 jobs:
   push:
     runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ vars.APP_URL }}   # set this repo variable: https://<your-vercel-url>
     steps:
-      - name: Build scores JSON (demo)
+      - name: Check APP_URL
         run: |
-          cat > scores.json <<'JSON'
-          {
-            "generatedAt": null,
-            "scores": [
-              { "ticker": "BLNE", "score": 0.82, "gap_pct": 32.0, "rvol": 5.6, "rsi14m": 61, "price": 3.30, "volume": 1500000 }
-            ]
-          }
-          JSON
-      - name: POST scores
+          if [ -z "${APP_URL}" ]; then
+            echo "::error ::APP_URL repository variable is not set. Go to Settings → Secrets and variables → Actions → Variables and set APP_URL=https://<your-vercel-url>"
+            exit 1
+          fi
+          echo "Using APP_URL=${APP_URL}"
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Fetch /api/stocks
         run: |
-          curl -sS -X POST "$APP_URL/api/scores" \
+          set -e
+          curl -fsS "${APP_URL}/api/stocks" -H "accept: application/json" -o stocks.json
+          if ! jq -e . stocks.json > /dev/null 2>&1; then
+            echo "::error ::/api/stocks did not return valid JSON."
+            head -c 400 stocks.json || true
+            exit 1
+          fi
+
+      - name: Build AI scores JSON (heuristic if your model isn't pushing yet)
+        run: |
+          jq '{
+            generatedAt: (now | todateiso8601),
+            scores: (
+              (.data // .stocks // .items // [])
+              | map({
+                  ticker: ( .symbol // .ticker // .Symbol // .Ticker | tostring | ascii_upcase ),
+                  gap_pct: ( ( .gap // .gap_pct // .gapPct // .changePercent // .change_pct // .change ) | tostring | sub("%$";"") | tonumber? ),
+                  change_pct: ( ( .changePercent // .change_pct // .change ) | tostring | sub("%$";"") | tonumber? ),
+                  rvol: ( .relativeVolume // .relVolume // .rvol | tonumber? ),
+                  rsi14m: ( .rsi14m // .rsi | tonumber? ),
+                  price: ( .price | tonumber? ),
+                  volume: ( .volume | tonumber? ),
+                  float_m: ( .floatM // .float_m // (.float_shares / 1000000) | tonumber? )
+                })
+              | map(select(.ticker != null))
+              | map( .gap_pct = (if (.gap_pct == null and .change_pct!=null) then .change_pct else .gap_pct end) )
+              | map(
+                  .score =
+                    (
+                      # rVol term (dominant), normalized from ~1–3+ into 0–1
+                      ( ((.rvol // 1) - 1) / 2 | if . < 0 then 0 elif . > 1 then 1 else . end ) * 0.65
+                      +
+                      # gap term
+                      ( ((.gap_pct // 0) / 20 | if . < 0 then 0 elif . > 1 then 1 else . end) * 0.20 )
+                      +
+                      # positive change term
+                      ( (((.change_pct // 0) | if . < 0 then 0 else . end) / 10 | if . > 1 then 1 else . end) * 0.15 )
+                    )
+                )
+              | map( .score = (if .score<0 then 0 elif .score>1 then 1 else .score end) )
+              | map({ticker, score, gap_pct, rvol, rsi14m, price, volume, float_m})
+            )
+          }' stocks.json > scores.json
+          echo "scores.json built:"
+          head -c 400 scores.json || true
+          echo
+
+      - name: POST /api/scores
+        run: |
+          curl -fsS -X POST "${APP_URL}/api/scores" \
             -H "content-type: application/json" \
             -H "x-api-key: ${{ secrets.SCORES_API_KEY }}" \
             --data @scores.json
