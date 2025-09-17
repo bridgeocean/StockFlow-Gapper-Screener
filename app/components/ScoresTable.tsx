@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import PerPageSelect from "./PerPageSelect";
 
 /** ───────────────────────── Tunables ───────────────────────── */
 const WEIGHTS = { rvol: 0.65, ai: 0.20, gap: 0.10, change: 0.05 };
@@ -24,8 +25,6 @@ const FLOAT_PENALTY_CAP_M = 200;
 const NEWS_WINDOW_MIN = 60;
 const NEWS_BONUS = 8;
 
-const PAGE_SIZE = 10;
-
 /** Types */
 type ScoreRow = {
   ticker: string;
@@ -41,9 +40,9 @@ type ScoreRow = {
   catalyst?: {
     recent: boolean;
     latestISO?: string | null;
-    latestUrl?: string | null;        // original article (may be non-finviz)
+    latestUrl?: string | null;
     latestHeadline?: string | null;
-    latestTag?: string | null;        // FDA / OFFERING / M&A / ...
+    latestTag?: string | null;
   };
   actionScore?: number;
   action?: "TRADE" | "WATCH" | "SKIP";
@@ -110,6 +109,17 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
   const [priceMax, setPriceMax] = useState(5);
   const [gapMin, setGapMin] = useState(5);
   const [onlyStrong, setOnlyStrong] = useState(false);
+
+  // NEW: page size with localStorage persistence
+  const [pageSize, setPageSize] = useState<number>(() => {
+    if (typeof window === "undefined") return 10;
+    const saved = Number(localStorage.getItem("sf_page_size") || "10");
+    return [10, 25, 50].includes(saved) ? saved : 10;
+  });
+  useEffect(() => {
+    try { localStorage.setItem("sf_page_size", String(pageSize)); } catch {}
+  }, [pageSize]);
+
   const [page, setPage] = useState(1);
 
   async function loadOnce() {
@@ -146,7 +156,7 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       }
     } catch {}
 
-    // 3) News (Finviz cache)
+    // 3) News cache
     try {
       const res = await fetch("/api/news", { cache: "no-store" });
       if (res.ok) {
@@ -232,14 +242,16 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
       );
   }, [data.scores, priceMin, priceMax, gapMin, onlyStrong]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAll.length / PAGE_SIZE));
+  // Pagination (no data cut-off)
+  const totalPages = Math.max(1, Math.ceil(filteredAll.length / pageSize));
   useEffect(() => { setPage((p) => Math.min(Math.max(1, p), totalPages)); }, [totalPages]);
-  useEffect(() => { setPage(1); }, [priceMin, priceMax, gapMin, onlyStrong]);
+  useEffect(() => { setPage(1); }, [priceMin, priceMax, gapMin, onlyStrong, pageSize]);
 
-  const start = (page - 1) * PAGE_SIZE;
-  const end = Math.min(filteredAll.length, start + PAGE_SIZE);
+  const start = (page - 1) * pageSize;
+  const end = Math.min(filteredAll.length, start + pageSize);
   const visible = filteredAll.slice(start, end);
 
+  // tell NewsPanel which 10/25/50 are on screen
   const tickRef = useRef<string>("");
   useEffect(() => {
     const topTickers = visible.map((r) => r.ticker);
@@ -257,10 +269,10 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
 
   return (
     <section className="rounded-2xl bg-white/5 border border-white/10 p-4">
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="text-sm opacity-80">Last Update {friendlyTime(data.generatedAt)} • Auto: 60s</div>
         <div className="ml-auto text-sm opacity-80">
-          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Page {page} of {Math.max(1, Math.ceil(filteredAll.length / PAGE_SIZE))} • Showing {visible.length ? `${start + 1}–${end}` : "0"} of {filteredAll.length}
+          Avg Gap: {avgGap ? avgGap.toFixed(1) + "%" : "—"} • Results: {filteredAll.length}
         </div>
       </div>
 
@@ -276,6 +288,10 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
           <input type="checkbox" checked={onlyStrong} onChange={(e) => setOnlyStrong(e.target.checked)} />
           AI / Momentum filter
         </label>
+
+        <div className="ml-auto" />
+        {/* NEW: per-page selector */}
+        <PerPageSelect value={pageSize} onChange={setPageSize} />
       </div>
 
       {/* Table */}
@@ -339,6 +355,30 @@ export default function ScoresTable({ onTopTickersChange }: { onTopTickersChange
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pager */}
+      <div className="mt-3 flex items-center justify-between text-sm">
+        <div className="opacity-80">
+          Showing {visible.length ? `${start + 1}–${end}` : "0"} of {filteredAll.length}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="px-3 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 disabled:opacity-40"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+          >
+            Prev
+          </button>
+          <span>Page {page} / {Math.max(1, Math.ceil(filteredAll.length / pageSize))}</span>
+          <button
+            className="px-3 py-1.5 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 disabled:opacity-40"
+            onClick={() => setPage((p) => Math.min(Math.ceil(filteredAll.length / pageSize), p + 1))}
+            disabled={page >= Math.ceil(filteredAll.length / pageSize)}
+          >
+            Next
+          </button>
+        </div>
       </div>
     </section>
   );
