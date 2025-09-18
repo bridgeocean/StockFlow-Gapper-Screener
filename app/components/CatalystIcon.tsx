@@ -3,21 +3,18 @@
 import React from "react";
 
 /**
- * Compact catalyst icons used in the table and news panel.
- * Tag codes you’ll see:
- *  FDA  = FDA / clinical
- *  ERN  = Earnings / guidance
- *  OFF  = Offering / priced
- *  MA   = M&A / buyout
- *  PRT  = Partnership / collaboration
- *  ANL  = Analyst / PT / rating
- *  CNT  = Contract / award / PO
- *  LEG  = Legal / SEC / lawsuit
+ * Compact catalyst icons.
+ * Codes:
+ *  FDA = FDA / Clinical
+ *  ERN = Earnings / Guidance
+ *  OFF = Offering / Priced
+ *  MA  = M&A / Buyout
+ *  PRT = Partnership / Collaboration
+ *  ANL = Analyst / PT / Rating
+ *  CNT = Contract / Award / PO
+ *  LEG = Legal / SEC / Lawsuit
  */
-const MAP: Record<
-  string,
-  { icon: string; label: string; className?: string }
-> = {
+const MAP: Record<string, { icon: string; label: string }> = {
   FDA: { icon: "💊", label: "FDA / Clinical" },
   ERN: { icon: "📈", label: "Earnings / Guidance" },
   OFF: { icon: "💸", label: "Offering / Priced" },
@@ -30,14 +27,10 @@ const MAP: Record<
 
 export default function CatalystIcon({ tag }: { tag?: string }) {
   if (!tag) return null;
-  const t = tag.toUpperCase();
-  const info = MAP[t] ?? { icon: "📰", label: tag };
+  const key = tag.toUpperCase();
+  const info = MAP[key] ?? { icon: "📰", label: tag };
   return (
-    <span
-      title={info.label}
-      aria-label={info.label}
-      className={`align-middle text-base leading-none ${info.className ?? ""}`}
-    >
+    <span title={info.label} aria-label={info.label} className="align-middle text-base leading-none">
       {info.icon}
     </span>
   );
