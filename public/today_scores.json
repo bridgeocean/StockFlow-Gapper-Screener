@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-22T13:21:00Z",
+  "generatedAt": "2025-09-22T13:47:01Z",
   "count": 9,
   "scores": [
     {
@@ -17,16 +17,23 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 4.53,
-      "score": 0.8454,
+      "ticker": "NOK",
+      "price": 4.74,
+      "score": 0.8411,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "NOK",
-      "price": 4.74,
-      "score": 0.8411,
+      "ticker": "TUYA",
+      "price": 2.6,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 4.53,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -48,13 +55,6 @@
       "ticker": "WIT",
       "price": 2.74,
       "score": 0.0012,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "TUYA",
-      "price": 2.6,
-      "score": 0.0006,
       "news_hits": 0,
       "source": "ml+polygon"
     },
