@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-23T13:20:03Z",
+  "generatedAt": "2025-09-23T13:47:03Z",
   "count": 9,
   "scores": [
     {
@@ -17,16 +17,16 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "NOK",
-      "price": 4.82,
-      "score": 0.566,
+      "ticker": "VTEX",
+      "price": 4.6,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 4.6,
-      "score": 0.0643,
+      "ticker": "NOK",
+      "price": 4.82,
+      "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
     },
