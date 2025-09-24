@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-24T12:59:01Z",
+  "generatedAt": "2025-09-24T13:20:06Z",
   "count": 9,
   "scores": [
     {
@@ -31,6 +31,13 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "TUYA",
+      "price": 2.49,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "ALIT",
       "price": 3.17,
       "score": 0.566,
@@ -48,13 +55,6 @@
       "ticker": "DSWL",
       "price": 3.96,
       "score": 0.0114,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "TUYA",
-      "price": 2.49,
-      "score": 0.0069,
       "news_hits": 0,
       "source": "ml+polygon"
     },
