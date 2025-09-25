@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-09-25T13:47:09Z",
+  "generatedAt": "2025-09-25T15:35:02Z",
   "count": 9,
   "scores": [
     {
@@ -24,6 +24,13 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "VTEX",
+      "price": 4.49,
+      "score": 0.9607,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "MNDO",
       "price": 1.2,
       "score": 0.6068,
@@ -33,13 +40,6 @@
     {
       "ticker": "TUYA",
       "price": 2.59,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 4.49,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
