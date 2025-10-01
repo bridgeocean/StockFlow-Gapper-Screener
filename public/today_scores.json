@@ -1,69 +1,69 @@
 {
-  "generatedAt": "2025-09-30T15:33:02Z",
+  "generatedAt": "2025-10-01T13:01:11Z",
   "count": 9,
   "scores": [
     {
       "ticker": "ALIT",
-      "price": 3.35,
-      "score": 0.9984,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "XRX",
-      "price": 3.75,
-      "score": 0.9963,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.69,
-      "score": 0.995,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "NOK",
-      "price": 4.73,
-      "score": 0.958,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "TUYA",
-      "price": 2.48,
+      "price": 3.28,
       "score": 0.58,
       "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 4.38,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
+      "source": "finviz-fallback"
     },
     {
       "ticker": "DSWL",
-      "price": 4.05,
-      "score": 0.566,
+      "price": 3.85,
+      "score": 0.58,
       "news_hits": 0,
-      "source": "ml+polygon"
+      "source": "finviz-fallback"
     },
     {
       "ticker": "MNDO",
-      "price": 1.12,
-      "score": 0.5517,
+      "price": 1.13,
+      "score": 0.58,
       "news_hits": 0,
-      "source": "ml+polygon"
+      "source": "finviz-fallback"
+    },
+    {
+      "ticker": "NOK",
+      "price": 4.8,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "finviz-fallback"
     },
     {
       "ticker": "TAIT",
-      "price": 2.55,
-      "score": 0.0831,
+      "price": 2.43,
+      "score": 0.58,
       "news_hits": 0,
-      "source": "ml+polygon"
+      "source": "finviz-fallback"
+    },
+    {
+      "ticker": "TUYA",
+      "price": 2.5,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "finviz-fallback"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 4.39,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "finviz-fallback"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.65,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "finviz-fallback"
+    },
+    {
+      "ticker": "XRX",
+      "price": 3.74,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "finviz-fallback"
     }
   ]
 }
