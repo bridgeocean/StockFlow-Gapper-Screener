@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-10-06T13:00:05Z",
+  "generatedAt": "2025-10-06T13:21:07Z",
   "count": 9,
   "scores": [
     {
@@ -12,7 +12,7 @@
     {
       "ticker": "TUYA",
       "price": 2.59,
-      "score": 0.9474,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
