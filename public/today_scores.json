@@ -1,25 +1,11 @@
 {
-  "generatedAt": "2025-10-09T13:49:04Z",
+  "generatedAt": "2025-10-09T15:47:08Z",
   "count": 8,
   "scores": [
-    {
-      "ticker": "WIT",
-      "price": 2.68,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
     {
       "ticker": "ALIT",
       "price": 3.22,
       "score": 0.9984,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 4.61,
-      "score": 0.9909,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -41,6 +27,20 @@
       "ticker": "DSWL",
       "price": 3.92,
       "score": 0.8819,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 4.61,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.68,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
