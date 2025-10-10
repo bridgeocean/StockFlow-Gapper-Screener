@@ -1,18 +1,11 @@
 {
-  "generatedAt": "2025-10-10T13:45:09Z",
+  "generatedAt": "2025-10-10T15:33:11Z",
   "count": 8,
   "scores": [
     {
       "ticker": "TAIT",
       "price": 2.6,
       "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.75,
-      "score": 0.9985,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -40,6 +33,13 @@
     {
       "ticker": "VTEX",
       "price": 4.6,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.75,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
