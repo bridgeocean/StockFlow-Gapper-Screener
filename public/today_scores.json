@@ -1,59 +1,59 @@
 {
-  "generatedAt": "2025-10-16T15:36:01Z",
+  "generatedAt": "2025-10-17T13:00:13Z",
   "count": 8,
   "scores": [
     {
-      "ticker": "DSWL",
-      "price": 3.59,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "MNDO",
-      "price": 1.15,
-      "score": 1.0,
+      "ticker": "XRX",
+      "price": 3.09,
+      "score": 0.9998,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "TUYA",
-      "price": 2.42,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "XRX",
-      "price": 3.34,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.73,
-      "score": 0.9995,
+      "price": 2.31,
+      "score": 0.9971,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "ALIT",
-      "price": 3.03,
-      "score": 0.9191,
+      "price": 2.96,
+      "score": 0.9227,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "DSWL",
+      "price": 3.5,
+      "score": 0.8965,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "VTEX",
-      "price": 4.44,
+      "price": 4.21,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
+      "ticker": "MNDO",
+      "price": 1.09,
+      "score": 0.566,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "TAIT",
-      "price": 2.53,
+      "price": 2.6,
+      "score": 0.566,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.62,
       "score": 0.0,
       "news_hits": 0,
       "source": "ml+polygon"
