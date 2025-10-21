@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-10-21T13:03:05Z",
+  "generatedAt": "2025-10-21T13:26:04Z",
   "count": 8,
   "scores": [
     {
@@ -17,16 +17,16 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 4.42,
-      "score": 0.9997,
+      "ticker": "ALIT",
+      "price": 3.02,
+      "score": 0.9991,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "ALIT",
-      "price": 3.02,
-      "score": 0.9991,
+      "ticker": "VTEX",
+      "price": 4.42,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
