@@ -1,656 +1,838 @@
 {
-  "generatedAt": "2025-10-28T13:01:00.382369Z",
+  "generatedAt": "2025-10-29T13:03:25.716134Z",
   "count": 180,
   "items": [
     {
-      "ticker": "U.S. LABOR MARKET HAS REMAINED IN EXPANSION MODE THIS MONTH: ADP",
-      "headline": "U.S. labor market has remained in expansion mode this month: ADP",
-      "source": "MarketWatch",
-      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=7ac16ae0-d412-4a32-b567-40d0af02a997&mod=mw_rss_bulletins",
+      "ticker": "BIG TECH FACES TOUGH QUESTIONS OVER THE A.I. SPENDING SPREE",
+      "headline": "Big Tech Faces Tough Questions Over the A.I. Spending Spree",
+      "source": "The New York Times",
+      "link": "https://www.nytimes.com/2025/10/29/business/dealbook/tech-ai-spending-spree.html",
       "datetime": null
     },
     {
-      "ticker": "\u2018AMERICA FIRST\u2019 ENERGY POLICY SPARKS A TEXAS OIL REVIVAL",
-      "headline": "\u2018America first\u2019 energy policy sparks a Texas oil revival",
+      "ticker": "ANDREW CUOMO SURGES AS MAMDANI\u2019S LEAD SHRINKS TO 10 POINTS: 'CANDIDACY IS COLLAPSING'",
+      "headline": "Andrew Cuomo surges as Mamdani\u2019s lead shrinks to 10 points: 'Candidacy is collapsing'",
       "source": "Fox Business",
-      "link": "https://www.foxbusiness.com/video/6384187710112",
+      "link": "https://www.foxbusiness.com/video/6384240478112",
       "datetime": null
     },
     {
-      "ticker": "GOVERNMENT SHUTDOWN SLAMS US ECONOMY: BANK OF AMERICA CEO WARNS IT WILL SLOW GROWTH",
-      "headline": "Government shutdown slams US economy: Bank of America CEO warns it will slow growth",
+      "ticker": "OPENAI IS 'YEARS AHEAD' OF BIG TECH NAMES, SAYS ANALYST",
+      "headline": "OpenAI is 'years ahead' of big tech names, says analyst",
       "source": "Fox Business",
-      "link": "https://www.foxbusiness.com/video/6384188001112",
+      "link": "https://www.foxbusiness.com/video/6384198672112",
       "datetime": null
     },
     {
-      "ticker": "STOCK FUTURES TICK HIGHER AFTER ROUND OF STRONG EARNINGS",
-      "headline": "Stock futures tick higher after round of strong earnings",
-      "source": "CNBC",
-      "link": "https://www.cnbc.com/2025/10/27/stock-market-today-live-updates.html",
-      "datetime": null
-    },
-    {
-      "ticker": "AS ARGENTINA SURGES BACK, PESO SHOWS LIMIT TO MILEI EUPHORIA",
-      "headline": "As Argentina Surges Back, Peso Shows Limit to Milei Euphoria",
+      "ticker": "PORTUGUESE POLICE TARGET KPMG, NOVO BANCO IN CORRUPTION PROBE",
+      "headline": "Portuguese Police Target KPMG, Novo Banco in Corruption Probe",
       "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/as-argentina-surges-back-peso-shows-limit-to-milei-euphoria",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/portuguese-police-target-kpmg-novo-banco-in-corruption-probe",
       "datetime": null
     },
     {
-      "ticker": "US FUTURES RISE AHEAD OF BIG-TECH EARNINGS, FED: MARKETS WRAP",
-      "headline": "US Futures Rise Ahead of Big-Tech Earnings, Fed: Markets Wrap",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-27/stock-market-today-dow-s-p-live-updates",
-      "datetime": null
-    },
-    {
-      "ticker": "UPS SHARES ARE SURGING IN PREMARKET TRADES FOLLOWING EARNINGS REPORT",
-      "headline": "UPS shares are surging in premarket trades following earnings report",
-      "source": "MarketWatch",
-      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=17f3a4da-edab-43fe-970f-4b2306509407&mod=mw_rss_bulletins",
-      "datetime": null
-    },
-    {
-      "ticker": "WILL BILL GATES\u2019S \u2018STRATEGIC PIVOT\u2019 SHAKE UP CLIMATE POLICY?",
-      "headline": "Will Bill Gates\u2019s \u2018Strategic Pivot\u2019 Shake Up Climate Policy?",
-      "source": "The New York Times",
-      "link": "https://www.nytimes.com/2025/10/28/business/dealbook/bill-gates-climate-pivot.html",
-      "datetime": null
-    },
-    {
-      "ticker": "WORKERS USING AI TO SCAM THEIR EMPLOYERS WITH PHONY EXPENSE RECEIPTS: REPORT",
-      "headline": "Workers using AI to scam their employers with phony expense receipts: report",
-      "source": "Fox Business",
-      "link": "https://foxbusiness.com/lifestyle/workers-using-ai-scam-employers-phony-expense-receipts-report",
-      "datetime": null
-    },
-    {
-      "ticker": "BRIAN MOYNIHAN: MIDDLE-CLASS STILL GROWING, BUT WEALTH GAP SHOWS THE PINCH",
-      "headline": "Brian Moynihan: Middle-class still growing, but wealth gap shows the pinch",
-      "source": "Fox Business",
-      "link": "https://www.foxbusiness.com/video/6384185227112",
-      "datetime": null
-    },
-    {
-      "ticker": "WHATNOT RAISES $225 MILLION AS INVESTORS BET ON LIVESTREAM SHOPPING",
-      "headline": "Whatnot Raises $225 Million as Investors Bet on Livestream Shopping",
-      "source": "The New York Times",
-      "link": "https://www.nytimes.com/2025/10/28/business/dealbook/whatnot-livestream-shopping-fundraise.html",
-      "datetime": null
-    },
-    {
-      "ticker": "TEXAS SUES TYLENOL MAKERS, CLAIMING THEY HID AUTISM RISKS",
-      "headline": "Texas Sues Tylenol Makers, Claiming They Hid Autism Risks",
-      "source": "The New York Times",
-      "link": "https://www.nytimes.com/2025/10/28/health/tylenol-autism-texas-lawsuit.html",
-      "datetime": null
-    },
-    {
-      "ticker": "BIG TECH SUPERPOWER IS NOW THE MARKET'S ACHILLES' HEEL",
-      "headline": "Big Tech superpower is now the market's Achilles' heel",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/big-tech-has-become-the-markets-superpower--and-its-achilles-heel-100039467.html",
-      "datetime": null
-    },
-    {
-      "ticker": "AMAZON TO CUT ABOUT 14,000 JOBS AS AI SPENDING BALLOONS",
-      "headline": "Amazon to cut about 14,000 jobs as AI spending balloons",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/amazon-lay-off-14-000-093006981.html",
-      "datetime": null
-    },
-    {
-      "ticker": "DEMOCRATS ARE TRYING TO TURN THE GOVERNMENT SHUTDOWN INTO A POLICY BATTLE, CONGRESSMAN SAYS",
-      "headline": "Democrats are trying to turn the government shutdown into a policy battle, congressman says",
-      "source": "Fox Business",
-      "link": "https://www.foxbusiness.com/video/6384184294112",
-      "datetime": null
-    },
-    {
-      "ticker": "ECONOMIC CALENDAR: FED WEEK CONTINUES WITH HOUSING AND CONSUMER-CONFIDENCE DATA",
-      "headline": "Economic calendar: Fed week continues with housing and consumer-confidence data",
-      "source": "MarketWatch",
-      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=4ec3fc0c-194c-4102-8086-3704ab82a39a&mod=mw_rss_bulletins",
-      "datetime": null
-    },
-    {
-      "ticker": "STOCK MARKET TODAY: DOW FUTURES GAIN AFTER UNITEDHEALTH EARNINGS",
-      "headline": "Stock Market Today: Dow Futures Gain After UnitedHealth Earnings",
+      "ticker": "STOCK MARKET TODAY: DOW FUTURES RISE AHEAD OF FED RATE DECISION",
+      "headline": "Stock Market Today: Dow Futures Rise Ahead of Fed Rate Decision",
       "source": "WSJ",
-      "link": "https://www.wsj.com/livecoverage/stock-market-today-dow-sp-500-nasdaq-10-28-2025",
+      "link": "https://www.wsj.com/livecoverage/fed-interest-rate-decision-live-10-29-2025",
       "datetime": null
     },
     {
-      "ticker": "MORNING BID: GOLD SOLD, STOCKS STALL",
-      "headline": "Morning Bid: Gold sold, stocks stall",
-      "source": "Reuters",
-      "link": "https://www.reuters.com/business/finance/global-markets-view-usa-2025-10-28/",
+      "ticker": "COMPENSATION SCHEME OPENS FOR POST OFFICE CAPTURE IT SYSTEM",
+      "headline": "Compensation scheme opens for Post Office Capture IT system",
+      "source": "BBC",
+      "link": "https://www.bbc.com/news/articles/cj3zlgxvzdjo?at_medium=RSS&at_campaign=rss",
       "datetime": null
     },
     {
-      "ticker": "AI IS GOBBLING UP POWER AND MONEY \u2014 AND SIDELINING THIS BIG ISSUE, SAY BLACKSTONE\u2019S AND BLACKROCK\u2019S CEOS",
-      "headline": "AI is gobbling up power and money \u2014 and sidelining this big issue, say Blackstone\u2019s and BlackRock\u2019s CEOs",
+      "ticker": "WHAT ARE THE BIGGEST BUDGET DEFICITS IN US HISTORY?",
+      "headline": "What are the biggest budget deficits in US history?",
+      "source": "Fox Business",
+      "link": "https://foxbusiness.com/politics/what-were-biggest-budget-deficits-us-history",
+      "datetime": null
+    },
+    {
+      "ticker": "NVIDIA JUMPS AS TRUMP FUELS HOPES FOR CHINA BLACKWELL SALES",
+      "headline": "Nvidia jumps as Trump fuels hopes for China Blackwell sales",
+      "source": "Yahoo Finance",
+      "link": "https://finance.yahoo.com/news/nvidia-shares-soar-trump-fuels-092736201.html",
+      "datetime": null
+    },
+    {
+      "ticker": "US STOCK FUTURES RISE, BUOYED BY NVIDIA AHEAD OF FED",
+      "headline": "US stock futures rise, buoyed by Nvidia ahead of Fed",
+      "source": "Yahoo Finance",
+      "link": "https://finance.yahoo.com/news/live/stock-market-today-dow-sp-500-nasdaq-futures-rise-as-nvidia-hopes-run-high-with-fed-decision-on-deck-225431542.html",
+      "datetime": null
+    },
+    {
+      "ticker": "WHY COMPANIES LIKE AMAZON AND UPS ARE GROWING BOLD ABOUT LAYOFFS",
+      "headline": "Why companies like Amazon and UPS are growing bold about layoffs",
       "source": "MarketWatch",
-      "link": "https://www.marketwatch.com/story/ai-is-gobbling-up-power-and-money-and-sidelining-this-big-issue-blackstone-and-blackrock-ceo-say-c493f9da",
+      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=71f2b1cc-ac0b-4e08-91cd-000a62dcbd70&mod=mw_rss_bulletins",
       "datetime": null
     },
     {
-      "ticker": "BLACKROCK-LINKED TOKENIZATION FIRM SECURITIZE TO GO PUBLIC VIA SPAC DEAL",
-      "headline": "BlackRock-linked tokenization firm Securitize to go public via SPAC deal",
+      "ticker": "NVIDIA POWERS STOCK GAINS AHEAD OF FED RATE CALL: MARKETS WRAP",
+      "headline": "Nvidia Powers Stock Gains Ahead of Fed Rate Call: Markets Wrap",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-28/stock-market-today-dow-s-p-live-updates",
+      "datetime": null
+    },
+    {
+      "ticker": "WHY OPENAI IS NOW CLOSER TO BECOMING 'MAGNIFICENT'",
+      "headline": "Why OpenAI is now closer to becoming 'Magnificent'",
+      "source": "Yahoo Finance",
+      "link": "https://finance.yahoo.com/news/the-next-chapter-in-openais-dealmaking-frees-it-to-make-even-more-100039904.html",
+      "datetime": null
+    },
+    {
+      "ticker": "THE FED'S DECISION IS ON DECK. HERE'S WHAT TO EXPECT.",
+      "headline": "The Fed's decision is on deck. Here's what to expect.",
+      "source": "Yahoo Finance",
+      "link": "https://finance.yahoo.com/news/fed-expected-to-cut-rates-again-even-as-officials-fly-blind-without-data-130059938.html",
+      "datetime": null
+    },
+    {
+      "ticker": "FED INTEREST-RATE CUT ON TABLE AMID HISTORIC GOVERNMENT SHUTDOWN \u2014 LIVE UPDATES",
+      "headline": "Fed interest-rate cut on table amid historic government shutdown \u2014 live updates",
+      "source": "MarketWatch",
+      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=4031a6d0-2f4a-4d52-9cf6-8e0bdf422bbe&mod=mw_rss_bulletins",
+      "datetime": null
+    },
+    {
+      "ticker": "MORNING BID: 48 HOURS TO TEST THE EXUBERANCE",
+      "headline": "Morning Bid: 48 hours to test the exuberance",
+      "source": "Reuters",
+      "link": "https://www.reuters.com/business/finance/global-markets-view-usa-2025-10-29/",
+      "datetime": null
+    },
+    {
+      "ticker": "GOVERNMENT SET TO MISS 1.5M TARGET, HOUSEBUILDERS WARN",
+      "headline": "Government set to miss 1.5m target, housebuilders warn",
+      "source": "BBC",
+      "link": "https://www.bbc.com/news/articles/cr5er1dpmn8o?at_medium=RSS&at_campaign=rss",
+      "datetime": null
+    },
+    {
+      "ticker": "HOW AFFLUENT INVESTORS ARE USING OPTIONS MATH TO BORROW ON THE CHEAP",
+      "headline": "How Affluent Investors Are Using Options Math to Borrow on the Cheap",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/wall-street-options-trick-becomes-new-fintech-lending-hack",
+      "datetime": null
+    },
+    {
+      "ticker": "US PRODUCES MORE OIL THAN SAUDI ARABIA AND RUSSIA COMBINED: CHEVRON CEO",
+      "headline": "US produces more oil than Saudi Arabia and Russia combined: Chevron CEO",
+      "source": "Fox Business",
+      "link": "https://www.foxbusiness.com/video/6384239323112",
+      "datetime": null
+    },
+    {
+      "ticker": "HEDGE FUNDS EXCLUDED FROM SELECTA\u2019S DEBT DEAL FILE LAWSUIT IN US",
+      "headline": "Hedge Funds Excluded From Selecta\u2019s Debt Deal File Lawsuit in US",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/excluded-hedge-funds-file-lawsuit-against-selecta-s-debt-deal",
+      "datetime": null
+    },
+    {
+      "ticker": "CANADA PENSION TO BOOST INDIA INVESTMENTS AFTER PORTFOLIO SURGES TO $22 BILLION",
+      "headline": "Canada Pension to Boost India Investments After Portfolio Surges to $22 Billion",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/canada-pension-to-boost-india-investments-after-portfolio-surges-to-22-billion",
+      "datetime": null
+    },
+    {
+      "ticker": "PARAMOUNT TO LAY OFF 2,000 EMPLOYEES",
+      "headline": "Paramount to Lay Off 2,000 Employees",
+      "source": "The New York Times",
+      "link": "https://www.nytimes.com/2025/10/29/business/media/paramount-layoffs-skydance.html",
+      "datetime": null
+    },
+    {
+      "ticker": "DISTRESSED FUND SEIZES CONTROL OF ONE OF AMERICA\u2019S LARGEST MALLS",
+      "headline": "Distressed Fund Seizes Control of One of America\u2019s Largest Malls",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/distressed-fund-seizes-control-of-one-of-america-s-largest-malls-after-bond-bust",
+      "datetime": null
+    },
+    {
+      "ticker": "FORMER FTX US HEAD PLANS TO BRING KEY CRYPTO FEATURE TO STOCKS, CURRENCIES",
+      "headline": "Former FTX US Head Plans to Bring Key Crypto Feature to Stocks, Currencies",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/former-ftx-us-head-plans-perps-trading-hub-for-stocks-currencies",
+      "datetime": null
+    },
+    {
+      "ticker": "MUSEUM WORKERS FEEL HAPPIER, BUT BURNOUT AND LOW PAY STILL LOOM",
+      "headline": "Museum Workers Feel Happier, but Burnout and Low Pay Still Loom",
+      "source": "The New York Times",
+      "link": "https://www.nytimes.com/2025/10/29/arts/design/museum-jobs-pay-burnout-politics.html",
+      "datetime": null
+    },
+    {
+      "ticker": "BUOYED BY TRUMP, ARGENTINA TAKES AIM AT $16 BILLION US JUDGMENT",
+      "headline": "Buoyed by Trump, Argentina Takes Aim at $16 Billion US Judgment",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/buoyed-by-trump-argentina-takes-aim-at-16-billion-us-judgment",
+      "datetime": null
+    },
+    {
+      "ticker": "US MORTGAGE RATES FALL TO 6.3%, BOOSTING BUYING AND REFINANCING",
+      "headline": "US Mortgage Rates Fall to 6.3%, Boosting Buying and Refinancing",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/us-mortgage-rates-fall-to-6-3-boosting-buying-and-refinancing",
+      "datetime": null
+    },
+    {
+      "ticker": "S&P 500 FUTURES RISE AS INVESTORS AWAIT FED RATE DECISION; NVIDIA CLIMBS",
+      "headline": "S&P 500 futures rise as investors await Fed rate decision; Nvidia climbs",
       "source": "CNBC",
-      "link": "https://www.cnbc.com/2025/10/28/-blackrock-linked-tokenization-firm-securitize-to-go-public-via-spac-deal.html",
+      "link": "https://www.cnbc.com/2025/10/28/stock-market-today-live-updates-.html",
       "datetime": null
     },
     {
-      "ticker": "\u2018SHOWING UP MATTERS\u2019: WALL STREET GIANTS BULK UP IN SAUDI ARABIA",
-      "headline": "\u2018Showing Up Matters\u2019: Wall Street Giants Bulk Up in Saudi Arabia",
+      "ticker": "POUND FALLS AS INVESTORS PREPARE FOR ECONOMIC BLOW FROM BUDGET",
+      "headline": "Pound Falls as Investors Prepare for Economic Blow From Budget",
       "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/goldman-gs-leads-wall-street-s-saudi-push-ceo-says-showing-up-matters",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/pound-falls-as-investors-prepare-for-economic-blow-from-budget",
       "datetime": null
     },
     {
-      "ticker": "TRUMP OFFERS JAPAN 'ANYTHING YOU WANT' AFTER RARE EARTHS DEAL",
-      "headline": "Trump offers Japan 'anything you want' after rare earths deal",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/live/trump-tariffs-live-updates-trump-praises-japan-offers-takaichi-anything-you-want-as-they-sign-deals-on-trade-and-rare-earths-162418649.html",
+      "ticker": "ALL FIVE OF HIS HEDGE FUNDS HAVE DOUBLED THIS YEAR. WHAT THIS MANAGER IS SAYING NOW ABOUT GOLD AND TECH.",
+      "headline": "All five of his hedge funds have doubled this year. What this manager is saying now about gold and tech.",
+      "source": "MarketWatch",
+      "link": "https://www.marketwatch.com/story/all-five-of-his-hedge-funds-have-doubled-this-year-what-this-manager-is-saying-now-about-gold-and-tech-acac9b29",
       "datetime": null
     },
     {
-      "ticker": "PAYPAL SIGNS DEAL WITH OPENAI TO BECOME THE FIRST PAYMENTS WALLET IN CHATGPT",
-      "headline": "PayPal signs deal with OpenAI to become the first payments wallet in ChatGPT",
-      "source": "CNBC",
-      "link": "https://www.cnbc.com/2025/10/28/paypal-openai-chatgpt-payments-deal.html",
-      "datetime": null
-    },
-    {
-      "ticker": "WHY SOARING COFFEE PRICES HAVE TRUMP'S ATTENTION",
-      "headline": "Why soaring coffee prices have Trump's attention",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/we-want-to-get-coffee-down-a-little-bit-soaring-caffeine-prices-have-trumps-attention-090042329.html",
-      "datetime": null
-    },
-    {
-      "ticker": "STOCKS PAUSE AS MARKETS BRACE FOR TECH EARNINGS, RATE VERDICTS",
-      "headline": "Stocks pause as markets brace for tech earnings, rate verdicts",
-      "source": "Reuters",
-      "link": "https://www.reuters.com/world/china/global-markets-wrapup-1-2025-10-28/",
-      "datetime": null
-    },
-    {
-      "ticker": "AMAZON PLANS TO CUT AS MANY AS 30,000 CORPORATE JOBS",
-      "headline": "Amazon plans to cut as many as 30,000 corporate jobs",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/exclusive-amazon-targets-many-30-184252368.html",
-      "datetime": null
-    },
-    {
-      "ticker": "STOCK BULLS SEE S&P 500 RISING ABOVE 7,000 AS MOMENTUM BUILDS",
-      "headline": "Stock Bulls See S&P 500 Rising Above 7,000 as Momentum Builds",
+      "ticker": "S&P 500\u2019S $17T RALLY SPARKS DEBATE OVER CASHING IN OR GOING LONG",
+      "headline": "S&P 500\u2019s $17T Rally Sparks Debate Over Cashing In or Going Long",
       "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/stock-bulls-see-s-p-500-rising-above-7-000-as-momentum-builds",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/s-p-500-s-17t-rally-sparks-debate-over-cashing-in-or-going-long",
       "datetime": null
     },
     {
-      "ticker": "PRIVATE LENDERS AREN\u2019T OUT OF THE DOGHOUSE YET",
-      "headline": "Private Lenders Aren\u2019t Out of the Doghouse Yet",
+      "ticker": "TOYOTA SAYS $10 BILLION U.S. INVESTMENT TOUTED BY TRUMP ISN\u2019T NEW",
+      "headline": "Toyota Says $10 Billion U.S. Investment Touted by Trump Isn\u2019t New",
+      "source": "The New York Times",
+      "link": "https://www.nytimes.com/2025/10/29/business/trump-toyota-10-billion.html",
+      "datetime": null
+    },
+    {
+      "ticker": "CATERPILLAR BEATS ESTIMATES ON HIGHER SALES FROM ENERGY SEGMENT",
+      "headline": "Caterpillar Beats Estimates on Higher Sales from Energy Segment",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/caterpillar-beats-estimates-on-higher-sales-from-energy-segment",
+      "datetime": null
+    },
+    {
+      "ticker": "SIR DAVID ATTENBOROUGH BACKS BID TO BUY ESTATE",
+      "headline": "Sir David Attenborough backs bid to buy estate",
+      "source": "BBC",
+      "link": "https://www.bbc.com/news/articles/c1d0x39x270o?at_medium=RSS&at_campaign=rss",
+      "datetime": null
+    },
+    {
+      "ticker": "S&P 500 EYES FRESH RECORD WITH FED, BIG TECH EARNINGS AHEAD",
+      "headline": "S&P 500 eyes fresh record with Fed, Big Tech earnings ahead",
+      "source": "Yahoo Finance",
+      "link": "https://finance.yahoo.com/news/live/stock-market-today-sp-500-nasdaq-futures-rise-as-dow-stalls-with-fed-decision-big-tech-earnings-on-deck-225431576.html",
+      "datetime": null
+    },
+    {
+      "ticker": "ONE BIG QUESTION HANGS OVER TRUMP'S VAUNTED CHINA DEAL",
+      "headline": "One big question hangs over Trump's vaunted China deal",
+      "source": "Yahoo Finance",
+      "link": "https://finance.yahoo.com/news/trumps-team-touts-deal-framework-with-china-its-unclear-what-china-will-demand-in-return-090012132.html",
+      "datetime": null
+    },
+    {
+      "ticker": "UK BOEING SUPPLIER DONCASTERS PREPARES IPO IN NEW YORK",
+      "headline": "UK Boeing Supplier Doncasters Prepares IPO in New York",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/uk-boeing-supplier-doncasters-said-to-prepare-ipo-in-new-york",
+      "datetime": null
+    },
+    {
+      "ticker": "AI SPENDING IS WHAT MATTERS MOST IN ALPHABET, MICROSOFT EARNINGS",
+      "headline": "AI Spending Is What Matters Most in Alphabet, Microsoft Earnings",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/ai-spending-is-what-matters-most-in-alphabet-microsoft-earnings",
+      "datetime": null
+    },
+    {
+      "ticker": "RUSSIANS ARE HOARDING GOLD EQUAL TO SPAIN RESERVES, STUDY SHOWS",
+      "headline": "Russians Are Hoarding Gold Equal to Spain Reserves, Study Shows",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/russians-are-hoarding-gold-equal-to-spain-reserves-study-shows",
+      "datetime": null
+    },
+    {
+      "ticker": "BIG BANKS ARE FIGHTING A NEW $10 MILLION FDIC CAP",
+      "headline": "Big Banks Are Fighting a New $10 Million FDIC Cap",
       "source": "WSJ",
-      "link": "https://www.wsj.com/finance/investing/private-lenders-arent-out-of-the-doghouse-yet-19d47250?mod=rss_markets_main",
+      "link": "https://www.wsj.com/finance/banking/fdic-cap-raise-bank-reactions-2162dd98?mod=rss_markets_main",
       "datetime": null
     },
     {
-      "ticker": "FED\u2019S POLICY PATH LOOKS MORE TREACHEROUS AS SHUTDOWN DELAYS CRITICAL DATA",
-      "headline": "Fed\u2019s Policy Path Looks More Treacherous as Shutdown Delays Critical Data",
-      "source": "The New York Times",
-      "link": "https://www.nytimes.com/2025/10/28/business/fed-interest-rates-shutdown-data.html",
-      "datetime": null
-    },
-    {
-      "ticker": "BANK OF CHINA DELIVERS 5% GAIN IN PROFIT AS MARGIN STABILIZES",
-      "headline": "Bank of China Delivers 5% Gain in Profit as Margin Stabilizes",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/bank-of-china-delivers-5-gain-in-profit-as-margin-stabilizes",
-      "datetime": null
-    },
-    {
-      "ticker": "BEYOND DUBAI\u2019S GLITTER, THE UAE COAST OFFERS A GLIMPSE OF LIFE BEFORE OIL",
-      "headline": "Beyond Dubai\u2019s Glitter, the UAE Coast Offers a Glimpse of Life Before Oil",
-      "source": "The New York Times",
-      "link": "https://www.nytimes.com/2025/10/28/travel/dubai-uae-oil-wealth.html",
-      "datetime": null
-    },
-    {
-      "ticker": "PING AN PROFIT RISES AS STOCK RALLY LIFTS INVESTMENT RETURNS",
-      "headline": "Ping An Profit Rises as Stock Rally Lifts Investment Returns",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/ping-an-profit-rises-as-market-rebound-lifts-investment-returns",
-      "datetime": null
-    },
-    {
-      "ticker": "WHY GERMANY\u2019S MERZ IS CALLING FOR A JOINT EUROPEAN STOCK EXCHANGE",
-      "headline": "Why Germany\u2019s Merz Is Calling for a Joint European Stock Exchange",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/can-a-merz-backed-pan-european-stock-exchange-help-eu-rival-the-us-and-china",
-      "datetime": null
-    },
-    {
-      "ticker": "US FUTURES INCH DOWN IN WAIT FOR TECH EARNINGS, FED",
-      "headline": "US futures inch down in wait for tech earnings, Fed",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/live/stock-market-today-dow-sp-500-nasdaq-futures-inch-down-with-key-earnings-fed-meeting-on-deck-224625414.html",
-      "datetime": null
-    },
-    {
-      "ticker": "SPAIN'S BLUE-CHIP IBEX FINALLY TOPS 2007 RECORD HIGH",
-      "headline": "Spain's blue-chip IBEX finally tops 2007 record high",
-      "source": "Reuters",
-      "link": "https://www.reuters.com/business/finance/spains-blue-chip-ibex-finally-tops-2007-record-high-2025-10-28/",
-      "datetime": null
-    },
-    {
-      "ticker": "UK\u2019S SHAWBROOK SET TO PRICE \u00a3348 MILLION IPO IN MIDDLE OF RANGE",
-      "headline": "UK\u2019s Shawbrook Set to Price \u00a3348 Million IPO in Middle of Range",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/uk-s-shawbrook-set-to-price-348-million-ipo-in-middle-of-range",
-      "datetime": null
-    },
-    {
-      "ticker": "HDFC BANK PUTS BANKERS ON LEAVE AMID CREDIT SUISSE BOND PROBE",
-      "headline": "HDFC Bank Puts Bankers on Leave Amid Credit Suisse Bond Probe",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/hdfc-bank-puts-bankers-on-leave-amid-credit-suisse-bond-probe",
-      "datetime": null
-    },
-    {
-      "ticker": "ANGLO WARNS 2026 COPPER OUTPUT LIKELY TO BE LOWER THAN EXPECTED",
-      "headline": "Anglo Warns 2026 Copper Output Likely to Be Lower Than Expected",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/anglo-warns-2026-copper-output-likely-to-be-lower-than-expected",
-      "datetime": null
-    },
-    {
-      "ticker": "SAUDI WEALTH FUND\u2019S BOSS TOUTS VISION 2030 PROGRESS AMID STRAINS",
-      "headline": "Saudi Wealth Fund\u2019s Boss Touts Vision 2030 Progress Amid Strains",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/saudi-wealth-fund-s-boss-touts-vision-2030-progress-amid-strains",
-      "datetime": null
-    },
-    {
-      "ticker": "TOP INDIAN COMMODITY BOURSE HALTS TRADING AFTER TECHNICAL GLITCH",
-      "headline": "Top Indian Commodity Bourse Halts Trading After Technical Glitch",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/top-indian-commodity-bourse-halts-trading-after-technical-glitch",
-      "datetime": null
-    },
-    {
-      "ticker": "SWISS FRANC DRAWS RECORD BEARISH BETS FROM JAPAN MARGIN TRADERS",
-      "headline": "Swiss Franc Draws Record Bearish Bets From Japan Margin Traders",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/swiss-franc-draws-record-bearish-bets-from-japan-margin-traders",
-      "datetime": null
-    },
-    {
-      "ticker": "NOMURA PROFIT BEATS ESTIMATES ON STOCK TRADING, M&A ADVISORY",
-      "headline": "Nomura Profit Beats Estimates on Stock Trading, M&A Advisory",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/nomura-profit-beats-estimates-on-stock-trading-m-a-advisory",
-      "datetime": null
-    },
-    {
-      "ticker": "GOLDMAN SEES YEN AT 100 OVER NEXT DECADE AS POLICY NORMALIZES",
-      "headline": "Goldman Sees Yen at 100 Over Next Decade as Policy Normalizes",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/goldman-sees-yen-at-100-over-next-decade-as-policy-normalizes",
-      "datetime": null
-    },
-    {
-      "ticker": "HSBC WARNS OF PRESSURE IN HONG KONG\u00a0OFFICE PROPERTY AMID DEFAULTS",
-      "headline": "HSBC Warns of Pressure in Hong Kong\u00a0Office Property Amid Defaults",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/hsbc-warns-of-pressure-in-hk-office-property-amid-defaults",
-      "datetime": null
-    },
-    {
-      "ticker": "BUMPER IPO GAINS SHRINK IN INDIA\u2019S RECORD-SETTING PRIMARY MARKET",
-      "headline": "Bumper IPO Gains Shrink in India\u2019s Record-Setting Primary Market",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/bumper-ipo-gains-shrink-in-india-s-record-setting-primary-market",
-      "datetime": null
-    },
-    {
-      "ticker": "BNP PARIBAS\u2019 RISING LOAN PROVISIONS ADD TO HEADWINDS FOR BONNAFE",
-      "headline": "BNP Paribas\u2019 Rising Loan Provisions Add to Headwinds for Bonnafe",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/bnp-paribas-rising-loan-provisions-add-to-headwinds-for-bonnafe",
-      "datetime": null
-    },
-    {
-      "ticker": "GOLDMAN CEO SOLOMON SEES NO \u2018SYSTEMIC CRISIS\u2019 IN CREDIT MARKETS",
-      "headline": "Goldman CEO Solomon Sees No \u2018Systemic Crisis\u2019 in Credit Markets",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/goldman-ceo-solomon-sees-no-systemic-crisis-in-credit-markets",
-      "datetime": null
-    },
-    {
-      "ticker": "TRUMP MEETS WITH JAPAN\u2019S FIRST FEMALE LEADER, SIGNS RARE EARTH, CRITICAL MINERALS SUPPLY",
-      "headline": "Trump meets with Japan\u2019s first female leader, signs rare earth, critical minerals supply",
-      "source": "Fox Business",
-      "link": "https://foxbusiness.com/politics/trump-meets-japans-first-female-leader-signs-rare-earth-critical-minerals-supply",
-      "datetime": null
-    },
-    {
-      "ticker": "AMAZON PREPARES FOR MAJOR LAYOFFS AMONG OFFICE WORKERS, MEDIA REPORTS SAY",
-      "headline": "Amazon prepares for major layoffs among office workers, media reports say",
-      "source": "BBC",
-      "link": "https://www.bbc.com/news/articles/c1m3zm9jnl1o?at_medium=RSS&at_campaign=rss",
-      "datetime": null
-    },
-    {
-      "ticker": "BANK OF KOREA MAY BUY GOLD IN MEDIUM-TERM AFTER LONG HIATUS",
-      "headline": "Bank of Korea May Buy Gold in Medium-Term After Long Hiatus",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/bank-of-korea-may-buy-gold-in-medium-term-after-long-hiatus",
-      "datetime": null
-    },
-    {
-      "ticker": "BROOKFIELD SAYS PRIVATE CREDIT NOT CROWDING OUT PRIVATE EQUITY",
-      "headline": "Brookfield Says Private Credit Not Crowding Out Private Equity",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/brookfield-says-private-credit-not-crowding-out-private-equity",
-      "datetime": null
-    },
-    {
-      "ticker": "PRIZED EUROPEAN ASSETS UP FOR GRABS AS INDIA INC. LOOKS ABROAD",
-      "headline": "Prized European Assets Up for Grabs as India Inc. Looks Abroad",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/prized-european-assets-up-for-grabs-as-india-inc-looks-abroad",
-      "datetime": null
-    },
-    {
-      "ticker": "MORNING BID: OF BASEBALL, GOLF AND NOBEL PRIZES",
-      "headline": "Morning Bid: Of baseball, golf and Nobel prizes",
-      "source": "Reuters",
-      "link": "https://www.reuters.com/world/china/global-markets-view-europe-2025-10-28/",
-      "datetime": null
-    },
-    {
-      "ticker": "PHILIPPINE CENTRAL BANK ALLOWING MARKET FORCES TO DETERMINE FX",
-      "headline": "Philippine Central Bank Allowing Market Forces to Determine FX",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/philippine-central-bank-allowing-market-forces-to-determine-fx",
-      "datetime": null
-    },
-    {
-      "ticker": "SOYBEANS EXTEND GAINS AHEAD OF TRADE TALKS BETWEEN TRUMP-XI",
-      "headline": "Soybeans Extend Gains Ahead of Trade Talks Between Trump-Xi",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/soybeans-edge-higher-ahead-of-key-us-china-trade-summit",
-      "datetime": null
-    },
-    {
-      "ticker": "CHANDRA ASRI IN TALKS WITH LENDERS TO FUND $1 BILLION ESSO DEAL",
-      "headline": "Chandra Asri in Talks with Lenders to Fund $1 Billion Esso Deal",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/chandra-asri-in-talks-with-lenders-to-fund-1-billion-esso-deal",
-      "datetime": null
-    },
-    {
-      "ticker": "BILL GATES SAYS CLIMATE CHANGE \u2018WILL NOT LEAD TO HUMANITY\u2019S DEMISE\u2019",
-      "headline": "Bill Gates Says Climate Change \u2018Will Not Lead to Humanity\u2019s Demise\u2019",
-      "source": "The New York Times",
-      "link": "https://www.nytimes.com/2025/10/28/climate/bill-gates-climate-change-humanity.html",
-      "datetime": null
-    },
-    {
-      "ticker": "INDIA STATE REFINERS WEIGH UP RUSSIA OIL OPTIONS AFTER SANCTIONS",
-      "headline": "India State Refiners Weigh Up Russia Oil Options After Sanctions",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/india-state-refiners-weigh-up-russia-oil-options-after-sanctions",
-      "datetime": null
-    },
-    {
-      "ticker": "KEY RUSSIAN OIL GRADE SLUMPS AS US SANCTIONS HAMPER CHINA BUYING",
-      "headline": "Key Russian Oil Grade Slumps as US Sanctions Hamper China Buying",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/key-russian-oil-grade-slumps-as-us-sanctions-hamper-china-buying",
-      "datetime": null
-    },
-    {
-      "ticker": "YEN OUTPERFORMS G-10 PEERS AFTER JAPAN\u2019S VERBAL INTERVENTION",
-      "headline": "Yen Outperforms G-10 Peers After Japan\u2019s Verbal Intervention",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/yen-outperforms-g-10-peers-after-japan-s-verbal-intervention",
-      "datetime": null
-    },
-    {
-      "ticker": "INDONESIAN BONDS ARE TOP PICK FOR SCHRODERS ON PURBAYA, BI BETS",
-      "headline": "Indonesian Bonds Are Top Pick for Schroders on Purbaya, BI Bets",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/indonesian-bonds-are-top-pick-for-schroders-on-purbaya-bi-bets",
-      "datetime": null
-    },
-    {
-      "ticker": "MSCI\u2019S EYE ON LOW-FREE-FLOAT INDONESIAN STOCKS MAY SPUR OUTFLOWS",
-      "headline": "MSCI\u2019s Eye on Low-Free-Float Indonesian Stocks May Spur Outflows",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/msci-s-eye-on-low-free-float-indonesian-stocks-may-spur-outflows",
-      "datetime": null
-    },
-    {
-      "ticker": "PBOC SEEN RESUMING BOND PURCHASES AS IT STEPS BACK INTO MARKET",
-      "headline": "PBOC Seen Resuming Bond Purchases as It Steps Back Into Market",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/pboc-seen-resuming-bond-purchases-as-it-steps-back-into-market",
-      "datetime": null
-    },
-    {
-      "ticker": "PBOC GOVERNOR WARNS ON STABLECOIN RISKS AS GLOBAL ANXIETY BUILDS",
-      "headline": "PBOC Governor Warns on Stablecoin Risks as Global Anxiety Builds",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/pboc-governor-warns-on-stablecoin-risks-as-global-anxiety-builds",
-      "datetime": null
-    },
-    {
-      "ticker": "INDIAN BANKING STOCKS GAIN MOMENTUM WITH RISING OPEN INTEREST, APPEALING VALUATIONS",
-      "headline": "Indian Banking Stocks Gain Momentum With Rising Open Interest, Appealing Valuations",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/india-market-buzz-telecom-banks-have-fresh-policy-tailwinds",
-      "datetime": null
-    },
-    {
-      "ticker": "SHANGHAI INDEX BREAKS 10-YEAR RANGE AS TRADE TENSIONS EASE",
-      "headline": "Shanghai Index Breaks 10-Year Range as Trade Tensions Ease",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/shanghai-index-breaks-10-year-range-as-trade-tensions-ease",
-      "datetime": null
-    },
-    {
-      "ticker": "CHINA\u2019S TOP POWER LOBBY SAYS IT\u2019S READY FOR WINTER DEMAND SURGE",
-      "headline": "China\u2019s Top Power Lobby Says It\u2019s Ready for Winter Demand Surge",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/china-s-top-power-lobby-says-it-s-ready-for-winter-demand-surge",
-      "datetime": null
-    },
-    {
-      "ticker": "AMAZON TO CUT NEARLY 30K CORPORATE JOBS IN LARGEST LAYOFF IN COMPANY HISTORY: REPORT",
-      "headline": "Amazon to cut nearly 30K corporate jobs in largest layoff in company history: report",
-      "source": "Fox Business",
-      "link": "https://foxbusiness.com/economy/amazon-cut-nearly-30k-corporate-jobs-largest-layoff-company-history-report",
-      "datetime": null
-    },
-    {
-      "ticker": "HUNGER AND COLD LOOM AS SHUTDOWN IMPERILS FUNDING FOR ANTIPOVERTY PROGRAMS",
-      "headline": "Hunger and Cold Loom as Shutdown Imperils Funding for Antipoverty Programs",
-      "source": "The New York Times",
-      "link": "https://www.nytimes.com/2025/10/27/us/politics/trump-shutdown-snap-food-stamps-aid.html",
-      "datetime": null
-    },
-    {
-      "ticker": "WHY THE ODDS OF GAS PRICES FALLING BELOW $2 ANYTIME SOON ARE ONE IN A MILLION",
-      "headline": "Why the odds of gas prices falling below $2 anytime soon are one in a million",
-      "source": "MarketWatch",
-      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=2c79ee7f-8cc5-472d-b367-d0eaa1890e71&mod=mw_rss_bulletins",
-      "datetime": null
-    },
-    {
-      "ticker": "PHILIPPINE PESO\u00a0FALLS TO NEW RECORD LOW ON RATE VIEW, OUTFLOW",
-      "headline": "Philippine Peso\u00a0Falls to New Record Low on Rate View, Outflow",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/php-usd-philippine-peso-flirts-with-record-low-on-rate-cut-view-stock-outflow",
-      "datetime": null
-    },
-    {
-      "ticker": "DOMINO\u2019S PIZZA ENTERPRISES SOARS ON REPORT BAIN EYEING TAKEOVER",
-      "headline": "Domino\u2019s Pizza Enterprises Soars on Report Bain Eyeing Takeover",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-28/domino-s-pizza-enterprises-soars-on-report-bain-eyeing-takeover",
-      "datetime": null
-    },
-    {
-      "ticker": "THE SOUTH AFRICAN START-UP BRINGING TECH TO TOWNSHIPS",
-      "headline": "The South African start-up bringing tech to townships",
-      "source": "BBC",
-      "link": "https://www.bbc.com/news/videos/c2310jkr9y9o?at_medium=RSS&at_campaign=rss",
-      "datetime": null
-    },
-    {
-      "ticker": "TURING AI INSTITUTE BOSS DENIES ACCUSATIONS OF 'TOXIC INTERNAL CULTURE'",
-      "headline": "Turing AI Institute boss denies accusations of 'toxic internal culture'",
-      "source": "BBC",
-      "link": "https://www.bbc.com/news/articles/c9q1xdnydwjo?at_medium=RSS&at_campaign=rss",
-      "datetime": null
-    },
-    {
-      "ticker": "HEADLIGHTS TO BE REVIEWED AFTER DRIVERS COMPLAIN OF BEING 'BLINDED' AT NIGHT",
-      "headline": "Headlights to be reviewed after drivers complain of being 'blinded' at night",
-      "source": "BBC",
-      "link": "https://www.bbc.com/news/articles/cn971jlpvvro?at_medium=RSS&at_campaign=rss",
-      "datetime": null
-    },
-    {
-      "ticker": "PRODUCTIVITY DOWNGRADE MAY ADD \u00a320BN TO BUDGET HOLE",
-      "headline": "Productivity downgrade may add \u00a320bn to Budget hole",
-      "source": "BBC",
-      "link": "https://www.bbc.com/news/articles/c0rpve82jxvo?at_medium=RSS&at_campaign=rss",
-      "datetime": null
-    },
-    {
-      "ticker": "MAKE THESE 4 MOVES BY YEAR'S END TO TAKE ADVANTAGE OF TRUMP\u2019S NEW TAX CUTS",
-      "headline": "Make these 4 moves by year's end to take advantage of Trump\u2019s new tax cuts",
-      "source": "MarketWatch",
-      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=2160daff-b896-4460-9509-61feb77c742c&mod=mw_rss_bulletins",
-      "datetime": null
-    },
-    {
-      "ticker": "OIL STEADY AS TRADERS FOCUS ON GLUT AND RUSSIAN CRUDE SANCTIONS",
-      "headline": "Oil Steady as Traders Focus on Glut and Russian Crude Sanctions",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-27/latest-oil-market-news-and-analysis-for-oct-28",
-      "datetime": null
-    },
-    {
-      "ticker": "CHINA\u2019S PROFIT REBOUND MEANS LITTLE FOR BULLS FIXATED ON TRADE",
-      "headline": "China\u2019s Profit Rebound Means Little for Bulls Fixated on Trade",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-27/china-s-profit-rebound-means-little-for-bulls-fixated-on-trade",
-      "datetime": null
-    },
-    {
-      "ticker": "DEMOCRATS HAVE 'DISGRACEFUL MOMENT' IN GOVERNMENT SHUTDOWN AS SMALL BUSINESSES SUFFER, SBA ADMINISTRATOR SAYS",
-      "headline": "Democrats have 'disgraceful moment' in government shutdown as small businesses suffer, SBA administrator says",
-      "source": "Fox Business",
-      "link": "https://foxbusiness.com/media/democrats-have-disgraceful-moment-government-shutdown-small-businesses-suffer-sba-administrator",
-      "datetime": null
-    },
-    {
-      "ticker": "GOLD HOLDS BELOW $4,000 AS US-CHINA PROGRESS DAMPS HAVEN DEMAND",
-      "headline": "Gold Holds Below $4,000 as US-China Progress Damps Haven Demand",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-27/gold-holds-below-4-000-as-us-china-progress-damps-haven-demand",
-      "datetime": null
-    },
-    {
-      "ticker": "SANY HEAVY SET FOR HK TRADING DEBUT AFTER $1.6 BILLION LISTING",
-      "headline": "Sany Heavy Set for HK Trading Debut After $1.6 Billion Listing",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-27/sany-heavy-set-for-hk-trading-debut-after-1-6-billion-listing",
-      "datetime": null
-    },
-    {
-      "ticker": "THE GOOD VIBES ARE BACK ON WALL STREET",
-      "headline": "The Good Vibes Are Back on Wall Street",
+      "ticker": "GLOBAL MARKETS MIXED AHEAD OF U.S. INTEREST-RATE DECISION",
+      "headline": "Global Markets Mixed Ahead of U.S. Interest-Rate Decision",
       "source": "WSJ",
-      "link": "https://www.wsj.com/finance/stocks/global-stocks-markets-dow-news-10-27-2025-492733ee?mod=rss_markets_main",
+      "link": "https://www.wsj.com/finance/global-markets-mixed-ahead-of-u-s-interest-rate-decision-6edaa3b7?mod=rss_markets_main",
       "datetime": null
     },
     {
-      "ticker": "JAPAN\u2019S STOCK INVESTORS TO KEEP EYE ON TAKAICHI-TRUMP MEETING",
-      "headline": "Japan\u2019s Stock Investors to Keep Eye on Takaichi-Trump Meeting",
-      "source": "Bloomberg",
-      "link": "https://www.bloomberg.com/news/articles/2025-10-27/japan-s-stock-investors-to-keep-eye-on-takaichi-trump-meeting",
+      "ticker": "CRACKDOWN SEES INCREASE IN ARRESTS FOR ILLEGAL WORKING",
+      "headline": "Crackdown sees increase in arrests for illegal working",
+      "source": "BBC",
+      "link": "https://www.bbc.com/news/articles/cp3d7ljx71do?at_medium=RSS&at_campaign=rss",
       "datetime": null
     },
     {
-      "ticker": "CARMAX IS LEAVING THE S&P 500 FOR THIS FAMOUS INDUSTRIAL COMPANY\u2019S SPINOFF",
-      "headline": "CarMax is leaving the S&P 500 for this famous industrial company\u2019s spinoff",
+      "ticker": "NVIDIA IN PREMARKET TRADE SURPASSES $5 TRILLION VALUATION",
+      "headline": "Nvidia in premarket trade surpasses $5 trillion valuation",
       "source": "MarketWatch",
-      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=9d0d0c6d-2bd3-4263-8d55-ebc2bee24d58&mod=mw_rss_bulletins",
+      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=b5901c85-017b-40a3-8f15-41e282b30f58&mod=mw_rss_bulletins",
       "datetime": null
     },
     {
-      "ticker": "TESLA CHAIR PLEADS WITH INVESTORS: BACK MUSK'S $1T PAY PLAN",
-      "headline": "Tesla chair pleads with investors: Back Musk's $1T pay plan",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/tesla-may-lose-elon-musk-if-shareholders-dont-approve-1-trillion-pay-package-chairperson-warns-143908548.html",
+      "ticker": "WHAT TO WATCH AT THE FEDERAL RESERVE\u2019S OCTOBER MEETING",
+      "headline": "What to Watch at the Federal Reserve\u2019s October Meeting",
+      "source": "The New York Times",
+      "link": "https://www.nytimes.com/2025/10/29/business/fed-interest-rates-decision.html",
       "datetime": null
     },
     {
-      "ticker": "FLIGHT DELAYS PILE UP AS SHUTDOWN EYES LONGEST IN HISTORY",
-      "headline": "Flight delays pile up as shutdown eyes longest in history",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/live/government-shutdown-live-airport-delays-pile-up-as-lawmakers-return-to-dc-with-stoppage-nearing-a-full-month-100414997.html",
+      "ticker": "WHEN THIS REPORTER COMES CALLING, THE WHITE HOUSE INSULTS GO FLYING",
+      "headline": "When This Reporter Comes Calling, the White House Insults Go Flying",
+      "source": "The New York Times",
+      "link": "https://www.nytimes.com/2025/10/29/business/media/when-this-reporter-comes-calling-the-white-house-insults-go-flying.html",
       "datetime": null
     },
     {
-      "ticker": "US STOCK FUTURES INCH UP WITH KEY EARNINGS, FED MEETING ON DECK",
-      "headline": "US stock futures inch up with key earnings, Fed meeting on deck",
-      "source": "Yahoo Finance",
-      "link": "https://finance.yahoo.com/news/live/stock-market-today-dow-sp-500-nasdaq-futures-inch-up-after-records-with-key-earnings-fed-meeting-on-deck-224625094.html",
+      "ticker": "\u2018ANTI-TOURISM\u2019 TOURS SHOW VISITORS A DIFFERENT SIDE OF VACATION HOT SPOTS",
+      "headline": "\u2018Anti-Tourism\u2019 Tours Show Visitors a Different Side of Vacation Hot Spots",
+      "source": "The New York Times",
+      "link": "https://www.nytimes.com/2025/10/29/travel/athens-mexico-tourism.html",
       "datetime": null
     },
     {
-      "ticker": "BRIAN KELLY'S LSU FIRING: WHERE WILL HIS $54M BUYOUT RANK AMONG COLLEGE FOOTBALL'S BIGGEST?",
-      "headline": "Brian Kelly's LSU firing: Where will his $54M buyout rank among college football's biggest?",
+      "ticker": "U.S. MANUFACTURING\u2019S MIXED PICTURE IN 4 CHARTS",
+      "headline": "U.S. Manufacturing\u2019s Mixed Picture in 4 Charts",
+      "source": "The New York Times",
+      "link": "https://www.nytimes.com/2025/10/29/business/mixed-picture-united-states-manufacturing-in-four-charts.html",
+      "datetime": null
+    },
+    {
+      "ticker": "RIO TINTO CEO TROTT STEPS UP PUSH TO STREAMLINE SPRAWLING MINER",
+      "headline": "Rio Tinto CEO Trott Steps Up Push to Streamline Sprawling Miner",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/rio-tinto-ceo-trott-steps-up-push-to-streamline-sprawling-miner",
+      "datetime": null
+    },
+    {
+      "ticker": "NEXT CONTINUES TO PROFIT AFTER M&S CYBER-ATTACK",
+      "headline": "Next continues to profit after M&S cyber-attack",
+      "source": "BBC",
+      "link": "https://www.bbc.com/news/articles/cn0g28wgjzlo?at_medium=RSS&at_campaign=rss",
+      "datetime": null
+    },
+    {
+      "ticker": "AUSTRALIAN TREASURER SOUNDS INVESTOR ALERT AS GLOBAL RISKS MOUNT",
+      "headline": "Australian Treasurer Sounds Investor Alert as Global Risks Mount",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/australian-treasurer-sounds-investor-alert-as-global-risks-mount",
+      "datetime": null
+    },
+    {
+      "ticker": "INDIA COAL GIANT\u2019S PROFIT DROPS AMID WEAKER ELECTRICITY DEMAND",
+      "headline": "India Coal Giant\u2019s Profit Drops Amid Weaker Electricity Demand",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/india-coal-giant-s-profit-drops-amid-weaker-electricity-demand",
+      "datetime": null
+    },
+    {
+      "ticker": "SANTANDER UK SKIPS RESULTS ON UNCERTAINTY OVER CAR LOAN REDRESS",
+      "headline": "Santander UK Skips Results on Uncertainty Over Car Loan Redress",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/santander-uk-skips-results-on-uncertainty-over-car-loan-redress",
+      "datetime": null
+    },
+    {
+      "ticker": "FED 'IN A FOG' AS IT HEADS TOWARD ANOTHER RATE CUT",
+      "headline": "Fed 'in a fog' as it heads toward another rate cut",
+      "source": "Reuters",
+      "link": "https://www.reuters.com/business/fed-in-fog-it-heads-toward-another-rate-cut-2025-10-29/",
+      "datetime": null
+    },
+    {
+      "ticker": "OIL GIANTS JOIN OPEC IN BOOSTING PRODUCTION AS CRUDE TUMBLES",
+      "headline": "Oil Giants Join OPEC in Boosting Production as Crude Tumbles",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/oil-giants-join-opec-in-boosting-production-as-crude-tumbles",
+      "datetime": null
+    },
+    {
+      "ticker": "EUROPEAN GAS EDGES HIGHER AS TRADERS EYE FRAGILE SUPPLY BALANCE",
+      "headline": "European Gas Edges Higher as Traders Eye Fragile Supply Balance",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/european-gas-edges-higher-as-traders-eye-fragile-supply-balance",
+      "datetime": null
+    },
+    {
+      "ticker": "ROMANIA SAYS US TOLD ALLIES IT WILL REDUCE TROOPS IN EAST EUROPE",
+      "headline": "Romania Says US Told Allies It Will Reduce Troops in East Europe",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/romania-says-us-told-allies-it-will-reduce-troops-in-east-europe",
+      "datetime": null
+    },
+    {
+      "ticker": "GLENCORE SAYS ON TRACK TO HIT ITS 2025 PRODUCTION GOALS",
+      "headline": "Glencore Says On Track To Hit Its 2025 Production Goals",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/glencore-says-on-track-to-hit-its-2025-production-goals",
+      "datetime": null
+    },
+    {
+      "ticker": "NEXT LIFTS GUIDANCE AGAIN AS SHOPPERS DEFY UK ECONOMIC WOES",
+      "headline": "Next Lifts Guidance Again as Shoppers Defy UK Economic Woes",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/next-lifts-guidance-again-as-shoppers-defy-uk-economic-woes",
+      "datetime": null
+    },
+    {
+      "ticker": "KOMATSU FALLS AS OPERATING PROFIT SLIPS TO THREE-YEAR LOW",
+      "headline": "Komatsu Falls as Operating Profit Slips to Three-Year Low",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/komatsu-falls-as-operating-profit-slips-to-three-year-low",
+      "datetime": null
+    },
+    {
+      "ticker": "INDIAN OIL AND VITOL TO LAUNCH TRADING JOINT VENTURE IN 2026",
+      "headline": "Indian Oil and Vitol to Launch Trading Joint Venture in 2026",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/indian-oil-and-vitol-to-launch-trading-joint-venture-in-2026",
+      "datetime": null
+    },
+    {
+      "ticker": "YEN OPTIONS VOLUME HIT MONTH-LOW AS INVESTORS AWAIT BOJ SIGNALS",
+      "headline": "Yen Options Volume Hit Month-Low as Investors Await BOJ Signals",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/yen-options-volume-hit-month-low-as-investors-await-boj-signals",
+      "datetime": null
+    },
+    {
+      "ticker": "NIKKEI\u2019S RALLY SEEN VULNERABLE WITH FEW STOCKS DRIVING GAINS",
+      "headline": "Nikkei\u2019s Rally Seen Vulnerable With Few Stocks Driving Gains",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/nikkei-s-rally-seen-vulnerable-with-few-stocks-driving-gains",
+      "datetime": null
+    },
+    {
+      "ticker": "NEC TO BUY US TELECOM SERVICES PROVIDER CSG FOR $2.9 BILLION",
+      "headline": "NEC to Buy US Telecom Services Provider CSG for $2.9 Billion",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/nec-to-buy-us-telecom-services-provider-csg-for-2-9-billion",
+      "datetime": null
+    },
+    {
+      "ticker": "PHILIPPINE PESO REBOUNDS AS CENTRAL BANK DENIES WATCHING LEVELS",
+      "headline": "Philippine Peso Rebounds as Central Bank Denies Watching Levels",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/php-usd-philippine-peso-rebounds-as-central-bank-denies-watching-levels",
+      "datetime": null
+    },
+    {
+      "ticker": "COPPER HITS RECORD HIGH AS MINE DISRUPTIONS ADD TO SUPPLY RISKS",
+      "headline": "Copper Hits Record High as Mine Disruptions Add to Supply Risks",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/copper-hits-record-high-as-mine-disruptions-add-to-supply-risks",
+      "datetime": null
+    },
+    {
+      "ticker": "AI EARNINGS STRENGTH WIDENS TO MORE STOCKS TO ALLAY BUBBLE FEARS",
+      "headline": "AI Earnings Strength Widens to More Stocks to Allay Bubble Fears",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/ai-earnings-strength-widens-to-more-stocks-to-allay-bubble-fears",
+      "datetime": null
+    },
+    {
+      "ticker": "INDIA CENTRAL BANK ACCELERATES REPATRIATION OF GOLD HELD ABROAD",
+      "headline": "India Central Bank Accelerates Repatriation of Gold Held Abroad",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/india-central-bank-accelerates-repatriation-of-gold-held-abroad",
+      "datetime": null
+    },
+    {
+      "ticker": "INDIA-BOUND TANKER CARRYING RUSSIAN CRUDE U-TURNS IN BALTIC SEA",
+      "headline": "India-Bound Tanker Carrying Russian Crude U-Turns in Baltic Sea",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/india-bound-tanker-carrying-russian-crude-u-turns-in-baltic-sea",
+      "datetime": null
+    },
+    {
+      "ticker": "BEN & JERRY\u2019S CO-FOUNDER SAYS UNILEVER 'STOPPED' ICE CREAM COMPANY FROM CREATING A 'FLAVOR FOR PALESTINE'",
+      "headline": "Ben & Jerry\u2019s co-founder says Unilever 'stopped' ice cream company from creating a 'flavor for Palestine'",
       "source": "Fox Business",
-      "link": "https://foxbusiness.com/sports/brian-kellys-lsu-firing-where-his-54m-buyout-rank-among-college-footballs-biggest",
+      "link": "https://foxbusiness.com/economy/ben-jerrys-co-founder-says-unilever-stopped-ice-cream-company-from-creating-flavor-palestine",
       "datetime": null
     },
     {
-      "ticker": "CEO EXPLAINS MULTIMILLION-DOLLAR INVESTMENT IN US RARE EARTH PROCESSING PLANT, MAKES BOLD 2028 PREDICTION",
-      "headline": "CEO explains multimillion-dollar investment in US rare earth processing plant, makes bold 2028 prediction",
-      "source": "Fox Business",
-      "link": "https://foxbusiness.com/media/ceo-explains-multi-million-investment-us-rare-earth-processing-plant-makes-bold-2028-prediction",
+      "ticker": "NVIDIA SHARES SOAR AS TRUMP FUELS HOPES OF CHINA BLACKWELL SALES",
+      "headline": "Nvidia Shares Soar as Trump Fuels Hopes of China Blackwell Sales",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/nvidia-shares-soar-as-trump-fuels-hopes-of-china-blackwell-sales",
       "datetime": null
     },
     {
-      "ticker": "MUSK'S ANTI-WOKE GROKIPEDIA HAS LANDED - HOSTS 900,000 ARTICLES ON DAY 1",
-      "headline": "Musk's Anti-Woke Grokipedia Has Landed - Hosts 900,000 Articles On Day 1",
+      "ticker": "MORNING BID: FED, BIG TECH AND TRUMP PAGEANTRY RULE THE DAY",
+      "headline": "Morning Bid: Fed, Big Tech and Trump pageantry rule the day",
+      "source": "Reuters",
+      "link": "https://www.reuters.com/world/china/global-markets-view-europe-2025-10-29/",
+      "datetime": null
+    },
+    {
+      "ticker": "INDIA ASSET MANAGERS\u2019 SHARES SLUMP AS REGULATOR SEEKS LOWER FEES",
+      "headline": "India Asset Managers\u2019 Shares Slump as Regulator Seeks Lower Fees",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/india-asset-managers-shares-slump-as-regulator-seeks-lower-fees",
+      "datetime": null
+    },
+    {
+      "ticker": "JAPANESE INSURERS TRIM FOREIGN DEBT AS DOMESTIC YIELDS SOAR",
+      "headline": "Japanese Insurers Trim Foreign Debt as Domestic Yields Soar",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/japanese-insurers-trim-foreign-debt-as-domestic-yields-soar",
+      "datetime": null
+    },
+    {
+      "ticker": "CHINA PURCHASES FIRST CARGOES OF US SOYBEANS THIS SEASON",
+      "headline": "China Purchases First Cargoes of US Soybeans This Season",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/china-purchases-first-cargoes-of-us-soybeans-this-season",
+      "datetime": null
+    },
+    {
+      "ticker": "TRUMP SAYS 'PRETTY CLEAR I'M NOT ALLOWED TO RUN' FOR THIRD TERM",
+      "headline": "Trump says 'Pretty clear I'm not allowed to run' for third term",
+      "source": "Yahoo Finance",
+      "link": "https://finance.yahoo.com/news/trump-says-pretty-clear-m-022057794.html",
+      "datetime": null
+    },
+    {
+      "ticker": "BANK JAGO\u2019S PROFIT SOARS, FUELED BY INTEREST INCOME, USER GROWTH",
+      "headline": "Bank Jago\u2019s Profit Soars, Fueled by Interest Income, User Growth",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/bank-jago-s-profit-soars-fueled-by-interest-income-user-growth",
+      "datetime": null
+    },
+    {
+      "ticker": "DEATH OF TREASURIES VOLATILITY SETS STAGE FOR POWELL TO SURPRISE",
+      "headline": "Death of Treasuries Volatility Sets Stage for Powell to Surprise",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/death-of-treasuries-volatility-sets-stage-for-powell-to-surprise",
+      "datetime": null
+    },
+    {
+      "ticker": "BEN & JERRY'S CO-FOUNDER SAYS UNILEVER BLOCKED PALESTINE-THEMED ICE CREAM",
+      "headline": "Ben & Jerry's co-founder says Unilever blocked Palestine-themed ice cream",
+      "source": "BBC",
+      "link": "https://www.bbc.com/news/articles/c1lqeqv9j9no?at_medium=RSS&at_campaign=rss",
+      "datetime": null
+    },
+    {
+      "ticker": "RECORD VIETNAM RAINS KILL NINE, FORCING THOUSANDS TO EVACUATE",
+      "headline": "Record Vietnam Rains Kill Nine, Forcing Thousands to Evacuate",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/record-vietnam-rains-kill-nine-forcing-thousands-to-evacuate",
+      "datetime": null
+    },
+    {
+      "ticker": "LITHIUM PRICES BOOSTED BY CHINA\u2019S POLICY DRIVE ON ENERGY STORAGE",
+      "headline": "Lithium Prices Boosted by China\u2019s Policy Drive on Energy Storage",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/lithium-prices-boosted-by-china-s-policy-drive-on-energy-storage",
+      "datetime": null
+    },
+    {
+      "ticker": "PHILIPPINE PESO POISED FOR REBOUND AS\u00a0HOLIDAY REMITTANCES SET TO ARRIVE",
+      "headline": "Philippine Peso Poised for Rebound as\u00a0Holiday Remittances Set to Arrive",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/php-usd-philippine-peso-set-for-year-end-rebound-on-holiday-remittances-boost",
+      "datetime": null
+    },
+    {
+      "ticker": "INDIA\u2019S RBI SET TO RESUME BOND BUYS TO BOOST CASH, ANALYSTS SAY",
+      "headline": "India\u2019s RBI Set to Resume Bond Buys to Boost Cash, Analysts Say",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/india-s-rbi-set-to-resume-bond-buys-to-boost-cash-analysts-say",
+      "datetime": null
+    },
+    {
+      "ticker": "PUBLICIS TO BUY SINGAPORE MEME CREATOR IN SOCIAL MEDIA PUSH",
+      "headline": "Publicis to Buy Singapore Meme Creator in Social Media Push",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/publicis-to-buy-singapore-meme-creator-in-social-media-push",
+      "datetime": null
+    },
+    {
+      "ticker": "INDIAN INVESTORS TURN CAUTIOUS AS BIG POST-LISTING GAINS BECOME RARE",
+      "headline": "Indian Investors Turn Cautious as Big Post-Listing Gains Become Rare",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/india-market-buzz-foreigners-cut-bearish-bets-ipo-gains-fade",
+      "datetime": null
+    },
+    {
+      "ticker": "BASE METALS EDGE BACK FROM THREE-YEAR HIGH BEFORE FED DECISION",
+      "headline": "Base Metals Edge Back From Three-Year High Before Fed Decision",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/base-metals-edge-back-from-three-year-high-before-fed-decision",
+      "datetime": null
+    },
+    {
+      "ticker": "GOLDMAN LIFTS IRON ORE FORECAST FOR NEXT YEAR, BUT STAYS BEARISH",
+      "headline": "Goldman Lifts Iron Ore Forecast for Next Year, But Stays Bearish",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/goldman-lifts-iron-ore-forecast-for-next-year-but-stays-bearish",
+      "datetime": null
+    },
+    {
+      "ticker": "ASIA STOCKS RISE ON AI OPTIMISM, INVESTORS GIRD FOR FED, TECH EARNINGS",
+      "headline": "Asia stocks rise on AI optimism, investors gird for Fed, tech earnings",
+      "source": "Reuters",
+      "link": "https://www.reuters.com/world/china/global-markets-wrapup-1-2025-10-29/",
+      "datetime": null
+    },
+    {
+      "ticker": "SOFTBANK, PANASONIC SHARES CLIMB AFTER NEW US INVESTMENT PLANS",
+      "headline": "SoftBank, Panasonic Shares Climb After New US Investment Plans",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/softbank-panasonic-shares-climb-after-new-us-investment-plans",
+      "datetime": null
+    },
+    {
+      "ticker": "MY EMPLOYER ENACTED A TOUGH NEW RETURN-TO-OFFICE POLICY. SHOULD WE FIGHT BACK?",
+      "headline": "My employer enacted a tough new return-to-office policy. Should we fight back?",
+      "source": "MarketWatch",
+      "link": "https://www.marketwatch.com/bulletins/redirect/go?g=ebdeca16-ef63-4223-9662-cd814c35077b&mod=mw_rss_bulletins",
+      "datetime": null
+    },
+    {
+      "ticker": "KEY-MAN RISK ON WISETECH FOUNDER WHITE ESTIMATED AT $6 BILLION",
+      "headline": "Key-Man Risk on WiseTech Founder White Estimated at $6 Billion",
+      "source": "Bloomberg",
+      "link": "https://www.bloomberg.com/news/articles/2025-10-29/key-man-risk-on-wisetech-founder-white-estimated-at-6-billion",
+      "datetime": null
+    },
+    {
+      "ticker": "REEVES VOWS TO 'DEFY' GLOOMY ECONOMIC FORECASTS",
+      "headline": "Reeves vows to 'defy' gloomy economic forecasts",
+      "source": "BBC",
+      "link": "https://www.bbc.com/news/articles/cql9ez5grpqo?at_medium=RSS&at_campaign=rss",
+      "datetime": null
+    },
+    {
+      "ticker": "GAZA CEASEFIRE HAS RESUMED AFTER ISRAELI SOLDIER & OVER 100 PALESTINIANS WERE KILLED TUESDAY",
+      "headline": "Gaza Ceasefire Has Resumed After Israeli Soldier & Over 100 Palestinians Were Killed Tuesday",
       "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/political/musks-anti-woke-grokipedia-has-landed-hosts-900000-articles-day-1",
+      "link": "https://www.zerohedge.com/geopolitical/gaza-ceasefire-has-resumed-after-israeli-soldier-over-100-palestinians-were-killed",
       "datetime": null
     },
     {
-      "ticker": "FUTURES FLAT AHEAD OF TWO HUGE DAYS AS GOLD SLIDES",
-      "headline": "Futures Flat Ahead Of Two Huge Days As Gold Slides",
+      "ticker": "FUTURES PUSH TO NEW RECORD, NVIDIA ABOVE $5 TRILLION AHEAD OF FED RATE CUT AND MAG 7 EARNINGS",
+      "headline": "Futures Push To New Record, Nvidia Above $5 Trillion Ahead Of Fed Rate Cut And Mag 7 Earnings",
       "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/markets/futures-flat-ahead-two-huge-days-gold-slides",
+      "link": "https://www.zerohedge.com/markets/futures-push-new-record-nvidia-above-5-trillion-ahead-fed-rate-cut-and-mag-7-earnings",
       "datetime": null
     },
     {
-      "ticker": "NEW ADP EMPLOYMENT REPORT SIGNALS REBOUND IN LABOR MARKET",
-      "headline": "New ADP Employment Report Signals Rebound In Labor Market",
+      "ticker": "CHINA BUYS AMERICAN SOYBEANS BEFORE TRUMP-XI MEETING",
+      "headline": "China Buys American Soybeans Before Trump-Xi Meeting",
       "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/personal-finance/new-adp-employment-report-signals-rebound-labor-market",
+      "link": "https://www.zerohedge.com/commodities/china-buys-american-soybeans-trump-xi-meeting",
+      "datetime": null
+    },
+    {
+      "ticker": "FOOD STAMPS TO BE PAUSED FOR 42 MILLION AMERICANS: WHAT TO KNOW...",
+      "headline": "Food Stamps To Be Paused For 42 Million Americans: What To Know...",
+      "source": "Zero Hedge",
+      "link": "https://www.zerohedge.com/political/food-stamps-be-paused-42-million-americans-what-know",
+      "datetime": null
+    },
+    {
+      "ticker": "TRUMP SAYS NVIDIA'S BLACKWELL AI CHIPS WILL BE ON\u00a0AGENDA IN TALKS WITH CHINA'S XI",
+      "headline": "Trump Says Nvidia's Blackwell AI Chips Will Be On\u00a0Agenda In Talks With China's Xi",
+      "source": "Zero Hedge",
+      "link": "https://www.zerohedge.com/ai/trump-says-nvidias-blackwell-ai-chips-will-be-agenda-talks-chinas-xi",
+      "datetime": null
+    },
+    {
+      "ticker": "THE FED'S PIVOT: THE RETURN OF EASY MONEY & THE INFLATION STORM AHEAD",
+      "headline": "The Fed's Pivot: The Return Of Easy Money & The Inflation Storm Ahead",
+      "source": "Zero Hedge",
+      "link": "https://www.zerohedge.com/markets/feds-pivot-return-easy-money-inflation-storm-ahead",
+      "datetime": null
+    },
+    {
+      "ticker": "FOREIGN STOCKS STILL ON TRACK TO OUTPERFORM US IN 2025",
+      "headline": "Foreign Stocks Still On Track To Outperform US In 2025",
+      "source": "The Capital Spectator",
+      "link": "https://www.capitalspectator.com/foreign-stocks-still-on-track-to-outperform-us-in-2025/",
+      "datetime": null
+    },
+    {
+      "ticker": "MBA:MORTGAGE APPLICATIONS INCREASE IN LATEST WEEKLY SURVEY",
+      "headline": "MBA:Mortgage Applications Increase in Latest Weekly Survey",
+      "source": "Calculated Risk",
+      "link": "http://www.calculatedriskblog.com/2025/10/mbamortgage-applications-increase-in.html",
+      "datetime": null
+    },
+    {
+      "ticker": "TRUMP SECURES TRADE DEAL WITH SOUTH KOREA AS CHINA SIGNALS WILLINGNESS TO \"COOPERATE\" AHEAD OF BILATERAL TALKS",
+      "headline": "Trump Secures Trade Deal With South Korea As China Signals Willingness To \"Cooperate\" Ahead Of Bilateral Talks",
+      "source": "Zero Hedge",
+      "link": "https://www.zerohedge.com/markets/trump-secures-trade-deal-south-korea-china-signals-willingness-cooperate-ahead-bilateral",
+      "datetime": null
+    },
+    {
+      "ticker": "RUSSIAN OIL GIANT LUKOIL SELLING INTERNATIONAL ASSETS AFTER TRUMP SANCTIONS",
+      "headline": "Russian Oil Giant Lukoil Selling International Assets After Trump Sanctions",
+      "source": "Zero Hedge",
+      "link": "https://www.zerohedge.com/geopolitical/russian-oil-giant-lukoil-selling-international-assets-after-trump-sanctions",
+      "datetime": null
+    },
+    {
+      "ticker": "MACRO BRIEFING: 29 OCTOBER 2025",
+      "headline": "Macro Briefing: 29 October 2025",
+      "source": "The Capital Spectator",
+      "link": "https://www.capitalspectator.com/macro-briefing-29-october-2025/",
+      "datetime": null
+    },
+    {
+      "ticker": "REBASING THE DOLLAR: ANOTHER LOOK AT THE DEBASING NARRATIVE",
+      "headline": "Rebasing The Dollar: Another Look At The Debasing Narrative",
+      "source": "Real Investment Advice",
+      "link": "https://realinvestmentadvice.com/resources/blog/rebasing-the-dollar-another-look-at-the-debasing-narrative/",
+      "datetime": null
+    },
+    {
+      "ticker": "JAMAICA DEVASTATED BY MENACING HURRICANE MELISSA: WIDESPREAD POWER OUTAGES, INTERNET BLACKOUT, & SEVERE INFRASTRUCTURE DAMAGE",
+      "headline": "Jamaica Devastated By Menacing Hurricane Melissa: Widespread Power Outages, Internet Blackout, & Severe Infrastructure Damage",
+      "source": "Zero Hedge",
+      "link": "https://www.zerohedge.com/weather/jamaica-devastated-menacing-hurricane-melissa-widespread-power-outages-internet-blackout",
+      "datetime": null
+    },
+    {
+      "ticker": "RIO DE JANEIRO'S OUTSKIRTS ERUPT INTO CHAOS: MAJOR NARCOTERRORISM CRACKDOWN TURNS AREA INTO WARZONE",
+      "headline": "Rio De Janeiro's Outskirts Erupt Into Chaos: Major Narcoterrorism Crackdown Turns Area Into Warzone",
+      "source": "Zero Hedge",
+      "link": "https://www.zerohedge.com/geopolitical/rio-de-janeiros-outskirts-erupt-chaos-major-narcoterrorism-crackdown-turns-area",
+      "datetime": null
+    },
+    {
+      "ticker": "ASTERA LABS: WHY ESUN COULD SHAKE ITS GROWTH",
+      "headline": "Astera Labs: Why ESUN Could Shake Its Growth",
+      "source": "Seeking Alpha",
+      "link": "https://seekingalpha.com/article/4834470-astera-labs-why-esun-could-shake-its-growth?source=feed_tag_editors_picks",
+      "datetime": null
+    },
+    {
+      "ticker": "CAPE VALUATIONS: DOES NVIDIA OVERSTATE ITS OMINOUS WARNING?",
+      "headline": "CAPE Valuations: Does Nvidia Overstate Its Ominous Warning?",
+      "source": "Real Investment Advice",
+      "link": "https://realinvestmentadvice.com/resources/blog/cape-valuation-does-nvidia-overstate-its-ominous-warning/",
+      "datetime": null
+    },
+    {
+      "ticker": "WEDNESDAY: FOMC STATEMENT, PENDING HOME SALES",
+      "headline": "Wednesday: FOMC Statement, Pending Home Sales",
+      "source": "Calculated Risk",
+      "link": "http://www.calculatedriskblog.com/2025/10/wednesday-fomc-statement-pending-home.html",
+      "datetime": null
+    },
+    {
+      "ticker": "ART OF THE (NEW) DEAL",
+      "headline": "Art of the (New) Deal",
+      "source": "Daily Reckoning",
+      "link": "https://dailyreckoning.com/art-of-the-new-deal/",
+      "datetime": null
+    },
+    {
+      "ticker": "TUESDAY LINKS: HOLDING THE SYSTEM TOGETHER",
+      "headline": "Tuesday links: holding the system together",
+      "source": "Abnormal Returns",
+      "link": "https://abnormalreturns.com/2025/10/28/tuesday-links-holding-the-system-together/",
+      "datetime": null
+    },
+    {
+      "ticker": "CHINA MAKES BIG LEAP FORWARD AT US DOLLAR AND SANCTION AVOIDANCE",
+      "headline": "China Makes Big Leap Forward at US Dollar and Sanction Avoidance",
+      "source": "Mish's Global Economic Trend Analysis",
+      "link": "https://mishtalk.com/economics/china-makes-big-leap-forward-at-us-dollar-and-sanction-avoidance/",
+      "datetime": null
+    },
+    {
+      "ticker": "A FEW COMMENTS ON THE SEASONAL PATTERN FOR HOUSE PRICES",
+      "headline": "A few Comments on the Seasonal Pattern for House Prices",
+      "source": "Calculated Risk",
+      "link": "http://www.calculatedriskblog.com/2025/10/a-few-comments-on-seasonal-pattern-for.html",
+      "datetime": null
+    },
+    {
+      "ticker": "RWM COMING TO DC!",
+      "headline": "RWM Coming to DC!",
+      "source": "The Big Picture",
+      "link": "https://ritholtz.com/2025/10/rwm-coming-to-dc/",
+      "datetime": null
+    },
+    {
+      "ticker": "ULTY: DON'T FALL FOR THIS 100%+ DIVIDEND YIELD TRAP",
+      "headline": "ULTY: Don't Fall For This 100%+ Dividend Yield Trap",
+      "source": "Seeking Alpha",
+      "link": "https://seekingalpha.com/article/4834089-ulty-dont-fall-for-100-percent-plus-dividend-yield-trap?source=feed_tag_editors_picks",
+      "datetime": null
+    },
+    {
+      "ticker": "MEMOS FROM HOWARD MARKS: A LOOK UNDER THE HOOD",
+      "headline": "Memos From Howard Marks: A Look Under The Hood",
+      "source": "Seeking Alpha",
+      "link": "https://seekingalpha.com/article/4834122-memos-howard-marks-look-under-hood?source=feed_tag_editors_picks",
+      "datetime": null
+    },
+    {
+      "ticker": "MY DINNER WITH DON JR.",
+      "headline": "My Dinner with Don Jr.",
+      "source": "Daily Reckoning",
+      "link": "https://dailyreckoning.com/my-dinner-with-don-jr/",
+      "datetime": null
+    },
+    {
+      "ticker": "NEWSLETTER: CASE-SHILLER: NATIONAL HOUSE PRICE INDEX UP 1.5% YEAR-OVER-YEAR IN AUGUST",
+      "headline": "Newsletter: Case-Shiller: National House Price Index Up 1.5% year-over-year in August",
+      "source": "Calculated Risk",
+      "link": "http://www.calculatedriskblog.com/2025/10/newsletter-case-shiller-national-house.html",
+      "datetime": null
+    },
+    {
+      "ticker": "HERE COMES GOOGLE !?!?",
+      "headline": "Here Comes Google !?!?",
+      "source": "Howard Lindzon",
+      "link": "https://www.howardlindzon.com/p/here-comes-google",
+      "datetime": null
+    },
+    {
+      "ticker": "CASE-SHILLER: NATIONAL HOUSE PRICE INDEX UP 1.5% YEAR-OVER-YEAR IN AUGUST",
+      "headline": "Case-Shiller: National House Price Index Up 1.5% year-over-year in August",
+      "source": "Calculated Risk",
+      "link": "http://www.calculatedriskblog.com/2025/10/case-shiller-national-house-price-index.html",
+      "datetime": null
+    },
+    {
+      "ticker": "TRANSCRIPT: LIZ ANN SONDERS, CHIEF INVESTMENT STRATEGIST AT CHARLES SCHWAB",
+      "headline": "Transcript: Liz Ann Sonders, Chief Investment Strategist at Charles Schwab",
+      "source": "The Big Picture",
+      "link": "https://ritholtz.com/2025/10/transcript-liz-ann-sonders-schwab/",
       "datetime": null
     },
     {
@@ -661,38 +843,10 @@
       "datetime": null
     },
     {
-      "ticker": "FEDERAL WORKERS UNION CALLS ON DEMOCRATS TO SUPPORT GOP BILL AND END SHUTDOWN",
-      "headline": "Federal Workers Union Calls On Democrats To Support GOP Bill And End Shutdown",
-      "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/political/federal-workers-union-calls-democrats-support-gop-bill-and-end-shutdown",
-      "datetime": null
-    },
-    {
-      "ticker": "THE MOST DANGEROUS ERA IN HISTORY",
-      "headline": "The Most Dangerous Era In History",
-      "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/markets/most-dangerous-era-history",
-      "datetime": null
-    },
-    {
-      "ticker": "\"NEED TO BE LEAN\": AMAZON CUTS 14,000 CORPORATE JOBS IN MAJOR AI-ERA RESTRUCTURING",
-      "headline": "\"Need To Be Lean\": Amazon Cuts 14,000 Corporate Jobs In Major AI-Era Restructuring",
-      "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/markets/amazon-plans-axe-30000-corporate-jobs-cuts-begin-tuesday",
-      "datetime": null
-    },
-    {
-      "ticker": "PAYPAL SHARES SOAR MOST ON RECORD AFTER \"CHAT TO CHECKOUT\" DEAL WITH OPENAI",
-      "headline": "PayPal Shares Soar Most On Record After \"Chat To Checkout\" Deal With OpenAI",
-      "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/markets/paypal-shares-soar-most-record-after-chat-checkout-deal-openai",
-      "datetime": null
-    },
-    {
-      "ticker": "TRUMP PRAISES JAPAN AS KEY ALLY, SIGNS RARE-EARTHS DEAL AND U.S.\u00a0INVESTMENT BOOST",
-      "headline": "Trump Praises Japan As Key Ally, Signs Rare-Earths Deal And U.S.\u00a0Investment Boost",
-      "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/geopolitical/trump-praises-japan-key-ally-signs-rare-earths-deal-and-us-investment-boost",
+      "ticker": "RESEARCH LINKS: AN UNMISTAKABLE PATTERN",
+      "headline": "Research links: an unmistakable pattern",
+      "source": "Abnormal Returns",
+      "link": "https://abnormalreturns.com/2025/10/28/research-links-an-unmistakable-pattern/",
       "datetime": null
     },
     {
@@ -710,13 +864,6 @@
       "datetime": null
     },
     {
-      "ticker": "MILLIONS OF AMERICA'S TEENS ARE BEING SEDUCED BY AI CHATBOTS",
-      "headline": "Millions Of America's Teens Are Being Seduced By AI Chatbots",
-      "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/ai/millions-americas-teens-are-being-seduced-ai-chatbots",
-      "datetime": null
-    },
-    {
       "ticker": "MACRO BRIEFING: 28 OCTOBER 2025",
       "headline": "Macro Briefing: 28 October 2025",
       "source": "The Capital Spectator",
@@ -728,13 +875,6 @@
       "headline": "Gold Or Bitcoin: Which Is The \u2018Right\u2019 Dollar Hedge?",
       "source": "Real Investment Advice",
       "link": "https://realinvestmentadvice.com/resources/blog/gold-or-bitcoin-which-is-the-right-dollar-hedge/",
-      "datetime": null
-    },
-    {
-      "ticker": "AMERICAN AIRLINES TO RESUME ISRAEL FLIGHTS AMID GAZA CEASEFIRE, AFTER 2-YEAR ABSENCE",
-      "headline": "American Airlines To Resume Israel Flights Amid Gaza Ceasefire, After 2-Year Absence",
-      "source": "Zero Hedge",
-      "link": "https://www.zerohedge.com/markets/american-airlines-resume-israel-flights-amid-gaza-ceasefire-after-over-2-year-absence",
       "datetime": null
     },
     {
@@ -948,13 +1088,6 @@
       "datetime": null
     },
     {
-      "ticker": "FOMC PREVIEW: 25BPS RATE CUT EXPECTED",
-      "headline": "FOMC Preview: 25bps Rate Cut Expected",
-      "source": "Calculated Risk",
-      "link": "http://www.calculatedriskblog.com/2025/10/fomc-preview-25bps-rate-cut-expected.html",
-      "datetime": null
-    },
-    {
       "ticker": "WHAT TO DO WHEN YOUR TRADING BLOWS UP",
       "headline": "What To Do When Your Trading Blows Up",
       "source": "Trader Feed",
@@ -980,13 +1113,6 @@
       "headline": "Playing Around With Google\u2019s AI Shows Serious Flaws",
       "source": "Mish's Global Economic Trend Analysis",
       "link": "https://mishtalk.com/economics/playing-around-with-googles-ai-shows-serious-flaws/",
-      "datetime": null
-    },
-    {
-      "ticker": "REAL ESTATE NEWSLETTER ARTICLES THIS WEEK: EXISTING-HOME SALES INCREASED TO 4.06 MILLION SAAR IN SEPTEMBER",
-      "headline": "Real Estate Newsletter Articles this Week: Existing-Home Sales Increased to 4.06 million SAAR in September",
-      "source": "Calculated Risk",
-      "link": "http://www.calculatedriskblog.com/2025/10/real-estate-newsletter-articles-this_01827044487.html",
       "datetime": null
     },
     {
@@ -1018,13 +1144,6 @@
       "datetime": null
     },
     {
-      "ticker": "SCHEDULE FOR WEEK OF OCTOBER 26, 2025",
-      "headline": "Schedule for Week of October 26, 2025",
-      "source": "Calculated Risk",
-      "link": "http://www.calculatedriskblog.com/2025/10/schedule-for-week-of-october-26-2025.html",
-      "datetime": null
-    },
-    {
       "ticker": "BOOK BITS: 25 OCTOBER 2025",
       "headline": "Book Bits: 25 October 2025",
       "source": "The Capital Spectator",
@@ -1046,13 +1165,6 @@
       "datetime": null
     },
     {
-      "ticker": "FED MISSES ITS INFLATION TARGET IN NINE OUT OF NINE KEY MEASURES",
-      "headline": "Fed Misses Its Inflation Target in Nine Out of Nine Key Measures",
-      "source": "Mish's Global Economic Trend Analysis",
-      "link": "https://mishtalk.com/economics/fed-misses-its-inflation-target-in-nine-out-of-nine-key-measures/",
-      "datetime": null
-    },
-    {
       "ticker": "TECH DREAMS VS. RESOURCE REALITY",
       "headline": "Tech Dreams vs. Resource Reality",
       "source": "Daily Reckoning",
@@ -1067,24 +1179,10 @@
       "datetime": null
     },
     {
-      "ticker": "ICE FIRST LOOK AT SEPTEMBER MORTGAGE PERFORMANCE: \"DELINQUENCIES REMAIN WELL BELOW PRE-PANDEMIC NORMS\"",
-      "headline": "ICE First Look at September Mortgage Performance: \"Delinquencies remain well below pre-pandemic norms\"",
-      "source": "Calculated Risk",
-      "link": "http://www.calculatedriskblog.com/2025/10/ice-first-look-at-september-mortgage.html",
-      "datetime": null
-    },
-    {
       "ticker": "ON HOLDING: A BOTTOM IS IN SIGHT",
       "headline": "On Holding: A Bottom Is In Sight",
       "source": "Seeking Alpha",
       "link": "https://seekingalpha.com/article/4833273-on-holding-bottom-in-sight?source=feed_tag_editors_picks",
-      "datetime": null
-    },
-    {
-      "ticker": "CLEVELAND FED: MEDIAN CPI INCREASED 0.2% AND TRIMMED-MEAN CPI INCREASED 0.2% IN SEPTEMBER",
-      "headline": "Cleveland Fed: Median CPI increased 0.2% and Trimmed-mean CPI increased 0.2% in September",
-      "source": "Calculated Risk",
-      "link": "http://www.calculatedriskblog.com/2025/10/cleveland-fed-median-cpi-increased-02.html",
       "datetime": null
     },
     {
@@ -1099,13 +1197,6 @@
       "headline": "Friday links: the gift of failure",
       "source": "Abnormal Returns",
       "link": "https://abnormalreturns.com/2025/10/24/friday-links-the-gift-of-failure/",
-      "datetime": null
-    },
-    {
-      "ticker": "MY 2025 AI PLAYBOOK: BUBBLE OR SUPERCYCLE?",
-      "headline": "My 2025 AI Playbook: Bubble Or Supercycle?",
-      "source": "Seeking Alpha",
-      "link": "https://seekingalpha.com/article/4833134-my-2025-ai-playbook-bubble-or-supercycle?source=feed_tag_editors_picks",
       "datetime": null
     },
     {
@@ -1130,13 +1221,6 @@
       "datetime": null
     },
     {
-      "ticker": "10 FRIDAY AM READS",
-      "headline": "10 Friday AM Reads",
-      "source": "The Big Picture",
-      "link": "https://ritholtz.com/2025/10/10-friday-am-reads-472/",
-      "datetime": null
-    },
-    {
       "ticker": "MONEY SUPPLY GROWTH: A THESIS WITH A FATAL FLAW",
       "headline": "Money Supply Growth: A Thesis With A Fatal Flaw",
       "source": "Real Investment Advice",
@@ -1158,24 +1242,10 @@
       "datetime": null
     },
     {
-      "ticker": "REVISITING THE WEALTH EFFECT",
-      "headline": "Revisiting the Wealth Effect",
-      "source": "The Big Picture",
-      "link": "https://ritholtz.com/2025/10/revisiting-the-wealth-effect/",
-      "datetime": null
-    },
-    {
       "ticker": "THURSDAY LINKS: THE WEB\u2019S ORIGINAL DESIGN",
       "headline": "Thursday links: the web\u2019s original design",
       "source": "Abnormal Returns",
       "link": "https://abnormalreturns.com/2025/10/23/thursday-links-the-webs-original-design/",
-      "datetime": null
-    },
-    {
-      "ticker": "THE 50/30/20 PORTFOLIO IS A VALID STRATEGY",
-      "headline": "The 50/30/20 Portfolio Is A Valid Strategy",
-      "source": "Seeking Alpha",
-      "link": "https://seekingalpha.com/article/4832603-the-503020-portfolio-is-a-valid-strategy?source=feed_tag_editors_picks",
       "datetime": null
     },
     {
@@ -1186,80 +1256,10 @@
       "datetime": null
     },
     {
-      "ticker": "LONGFORM LINKS: THE FRICTIONLESS ONLINE WORLD",
-      "headline": "Longform links: the frictionless online world",
-      "source": "Abnormal Returns",
-      "link": "https://abnormalreturns.com/2025/10/23/longform-links-the-frictionless-online-world/",
-      "datetime": null
-    },
-    {
       "ticker": "US Q3 GDP APPEARS TO REMAIN ON GROWTH TRACK",
       "headline": "US Q3 GDP Appears To Remain On Growth Track",
       "source": "The Capital Spectator",
       "link": "https://www.capitalspectator.com/us-q3-gdp-appears-to-remain-on-growth-track/",
-      "datetime": null
-    },
-    {
-      "ticker": "BEYOND MEAT SURGES: ANOTHER MEME PONZI?",
-      "headline": "Beyond Meat Surges: Another Meme Ponzi?",
-      "source": "Real Investment Advice",
-      "link": "https://realinvestmentadvice.com/resources/blog/beyond-meat-surges-another-meme-ponzi/",
-      "datetime": null
-    },
-    {
-      "ticker": "MACRO BRIEFING: 23 OCTOBER 2025",
-      "headline": "Macro Briefing: 23 October 2025",
-      "source": "The Capital Spectator",
-      "link": "https://www.capitalspectator.com/macro-briefing-23-october-2025/",
-      "datetime": null
-    },
-    {
-      "ticker": "XIAOMI: WEAKNESS IS HERE - ACCUMULATING",
-      "headline": "Xiaomi: Weakness Is Here - Accumulating",
-      "source": "Seeking Alpha",
-      "link": "https://seekingalpha.com/article/4832241-xiaomi-weakness-is-here-accumulating?source=feed_tag_editors_picks",
-      "datetime": null
-    },
-    {
-      "ticker": "IT DIDN\u2019T START WITH TRUMP",
-      "headline": "It Didn\u2019t Start with Trump",
-      "source": "Daily Reckoning",
-      "link": "https://dailyreckoning.com/it-didnt-start-with-trump/",
-      "datetime": null
-    },
-    {
-      "ticker": "ALL-TIME HIGH RESISTANCE HOLDS FOR S&P AND NASDAQ",
-      "headline": "All-Time High Resistance Holds For S&P And Nasdaq",
-      "source": "Fallond Stock Picks",
-      "link": "https://www.markets.fallondpicks.com/2025/10/all-time-high-resistance-holds-for-s.html",
-      "datetime": null
-    },
-    {
-      "ticker": "STOCKTOBERFEST 2025 BEGINS...THE STOCKTWITS COMMUNITY COMES TO CORONADO.",
-      "headline": "Stocktoberfest 2025 Begins...The Stocktwits Community Comes To Coronado.",
-      "source": "Howard Lindzon",
-      "link": "https://www.howardlindzon.com/p/stocktoberfest-2025-begins-the-stocktwits-community-comes-to-coronado",
-      "datetime": null
-    },
-    {
-      "ticker": "WILL FRIDAY\u2019S CPI RELEASE CLARIFY OR BLUR THE INFLATION OUTLOOK?",
-      "headline": "Will Friday\u2019s CPI Release Clarify Or Blur The Inflation Outlook?",
-      "source": "The Capital Spectator",
-      "link": "https://www.capitalspectator.com/will-fridays-cpi-release-clarify-or-blur-the-inflation-outlook/",
-      "datetime": null
-    },
-    {
-      "ticker": "PERSONAL FINANCE LINKS: DRAFTING ESTATE DOCUMENTS",
-      "headline": "Personal finance links: drafting estate documents",
-      "source": "Abnormal Returns",
-      "link": "https://abnormalreturns.com/2025/10/22/personal-finance-links-drafting-estate-documents/",
-      "datetime": null
-    },
-    {
-      "ticker": "RESILIENCY AND SCALE",
-      "headline": "Resiliency and Scale",
-      "source": "Stratechery",
-      "link": "https://stratechery.com/2025/resiliency-and-scale/",
       "datetime": null
     }
   ]
