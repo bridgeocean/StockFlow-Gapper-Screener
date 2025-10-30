@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-10-30T13:02:01Z",
+  "generatedAt": "2025-10-30T13:24:01Z",
   "count": 8,
   "scores": [
     {
@@ -24,9 +24,16 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "VTEX",
+      "price": 4.42,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "WIT",
       "price": 2.67,
-      "score": 0.9947,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -41,13 +48,6 @@
       "ticker": "DSWL",
       "price": 3.47,
       "score": 0.1648,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 4.42,
-      "score": 0.0643,
       "news_hits": 0,
       "source": "ml+polygon"
     },
