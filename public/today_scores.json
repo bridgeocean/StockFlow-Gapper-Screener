@@ -1,24 +1,10 @@
 {
-  "generatedAt": "2025-11-11T13:23:04Z",
+  "generatedAt": "2025-11-11T13:49:00Z",
   "count": 9,
   "scores": [
     {
       "ticker": "DSWL",
       "price": 3.45,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "TUYA",
-      "price": 2.19,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.99,
       "score": 1.0,
       "news_hits": 0,
       "source": "ml+polygon"
@@ -55,6 +41,20 @@
       "ticker": "CRCT",
       "price": 4.7,
       "score": 0.8407,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "TUYA",
+      "price": 2.19,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.99,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
