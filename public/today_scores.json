@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-11-13T13:04:01Z",
+  "generatedAt": "2025-11-13T13:25:03Z",
   "count": 9,
   "scores": [
     {
@@ -17,13 +17,6 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "TUYA",
-      "price": 2.12,
-      "score": 0.9662,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
       "ticker": "TAIT",
       "price": 2.17,
       "score": 0.9628,
@@ -34,6 +27,13 @@
       "ticker": "WIT",
       "price": 2.7,
       "score": 0.9406,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "TUYA",
+      "price": 2.12,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
