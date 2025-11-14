@@ -1,67 +1,67 @@
 {
-  "generatedAt": "2025-11-13T15:35:00Z",
+  "generatedAt": "2025-11-14T13:02:00Z",
   "count": 9,
   "scores": [
     {
-      "ticker": "DSWL",
-      "price": 3.55,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "MNDO",
-      "price": 1.1,
-      "score": 1.0,
+      "ticker": "TAIT",
+      "price": 2.13,
+      "score": 0.9657,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "TUYA",
-      "price": 2.12,
-      "score": 0.9662,
+      "price": 2.02,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "TAIT",
-      "price": 2.17,
-      "score": 0.9628,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.7,
-      "score": 0.9406,
+      "ticker": "VTEX",
+      "price": 3.79,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "ALIT",
-      "price": 2.3,
+      "price": 2.28,
+      "score": 0.566,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "MNDO",
+      "price": 1.19,
+      "score": 0.566,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.63,
       "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "CRCT",
-      "price": 4.75,
-      "score": 0.566,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 4.05,
-      "score": 0.566,
+      "price": 4.63,
+      "score": 0.073,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "XRX",
-      "price": 2.97,
-      "score": 0.566,
+      "price": 2.81,
+      "score": 0.0144,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "DSWL",
+      "price": 3.51,
+      "score": 0.0007,
       "news_hits": 0,
       "source": "ml+polygon"
     }
