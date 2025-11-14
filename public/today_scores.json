@@ -1,11 +1,18 @@
 {
-  "generatedAt": "2025-11-14T13:47:04Z",
+  "generatedAt": "2025-11-14T15:33:06Z",
   "count": 9,
   "scores": [
     {
       "ticker": "TAIT",
       "price": 2.13,
       "score": 0.9657,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "TUYA",
+      "price": 2.02,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -19,13 +26,6 @@
     {
       "ticker": "MNDO",
       "price": 1.19,
-      "score": 0.566,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "TUYA",
-      "price": 2.02,
       "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
