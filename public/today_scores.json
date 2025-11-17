@@ -1,21 +1,7 @@
 {
-  "generatedAt": "2025-11-17T13:50:05Z",
+  "generatedAt": "2025-11-17T15:38:03Z",
   "count": 9,
   "scores": [
-    {
-      "ticker": "TUYA",
-      "price": 2.08,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.96,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
     {
       "ticker": "MNDO",
       "price": 1.16,
@@ -45,6 +31,13 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "VTEX",
+      "price": 3.96,
+      "score": 0.0015,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "TAIT",
       "price": 1.29,
       "score": 0.0001,
@@ -54,6 +47,13 @@
     {
       "ticker": "DSWL",
       "price": 3.46,
+      "score": 0.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "TUYA",
+      "price": 2.08,
       "score": 0.0,
       "news_hits": 0,
       "source": "ml+polygon"
