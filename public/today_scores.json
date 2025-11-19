@@ -1,66 +1,66 @@
 {
-  "generatedAt": "2025-11-18T15:40:02Z",
+  "generatedAt": "2025-11-19T13:03:04Z",
   "count": 9,
   "scores": [
     {
+      "ticker": "DSWL",
+      "price": 4.04,
+      "score": 0.8911,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "TUYA",
       "price": 2.08,
-      "score": 0.9987,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "MNDO",
-      "price": 1.16,
-      "score": 0.9976,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "DSWL",
-      "price": 3.46,
-      "score": 0.984,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.96,
-      "score": 0.566,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "XRX",
-      "price": 2.78,
-      "score": 0.566,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.6,
-      "score": 0.0954,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "CRCT",
-      "price": 4.55,
-      "score": 0.0039,
+      "price": 4.58,
+      "score": 0.0651,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.66,
+      "score": 0.0081,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.86,
+      "score": 0.007,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "MNDO",
+      "price": 1.17,
+      "score": 0.0044,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "ALIT",
-      "price": 2.32,
-      "score": 0.0038,
+      "price": 2.01,
+      "score": 0.0026,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "XRX",
+      "price": 2.57,
+      "score": 0.0006,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "TAIT",
-      "price": 1.29,
+      "price": 1.03,
       "score": 0.0,
       "news_hits": 0,
       "source": "ml+polygon"
