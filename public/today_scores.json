@@ -1,67 +1,67 @@
 {
-  "generatedAt": "2025-11-20T15:38:03Z",
+  "generatedAt": "2025-11-21T13:01:00Z",
   "count": 9,
   "scores": [
     {
-      "ticker": "TAIT",
-      "price": 1.28,
+      "ticker": "DSWL",
+      "price": 3.69,
       "score": 1.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "CRCT",
+      "price": 4.65,
+      "score": 0.9999,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "ALIT",
+      "price": 1.97,
+      "score": 0.999,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "TAIT",
+      "price": 1.26,
+      "score": 0.9968,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "TUYA",
+      "price": 2.04,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.79,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "WIT",
       "price": 2.69,
-      "score": 0.9996,
+      "score": 0.0986,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "TUYA",
-      "price": 2.08,
-      "score": 0.9729,
+      "ticker": "XRX",
+      "price": 2.35,
+      "score": 0.0004,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "MNDO",
       "price": 1.19,
-      "score": 0.957,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "DSWL",
-      "price": 3.71,
-      "score": 0.2016,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.83,
-      "score": 0.1883,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "XRX",
-      "price": 2.49,
-      "score": 0.0864,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "CRCT",
-      "price": 4.58,
-      "score": 0.0663,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "ALIT",
-      "price": 2.02,
-      "score": 0.0018,
+      "score": 0.0,
       "news_hits": 0,
       "source": "ml+polygon"
     }
