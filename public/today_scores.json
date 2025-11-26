@@ -1,14 +1,7 @@
 {
-  "generatedAt": "2025-11-26T13:06:00Z",
+  "generatedAt": "2025-11-26T13:28:04Z",
   "count": 9,
   "scores": [
-    {
-      "ticker": "ALIT",
-      "price": 2.27,
-      "score": 0.9985,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
     {
       "ticker": "DSWL",
       "price": 3.28,
@@ -24,15 +17,22 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "TUYA",
-      "price": 2.28,
+      "ticker": "ALIT",
+      "price": 2.27,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "finviz-fallback"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.9,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 3.9,
+      "ticker": "WIT",
+      "price": 2.72,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
@@ -52,16 +52,16 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.72,
-      "score": 0.0995,
+      "ticker": "TAIT",
+      "price": 1.18,
+      "score": 0.0048,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "TAIT",
-      "price": 1.18,
-      "score": 0.0048,
+      "ticker": "TUYA",
+      "price": 2.28,
+      "score": 0.0,
       "news_hits": 0,
       "source": "ml+polygon"
     }
