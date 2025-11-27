@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-11-27T13:50:02Z",
+  "generatedAt": "2025-11-27T15:36:11Z",
   "count": 9,
   "scores": [
     {
@@ -24,9 +24,16 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "TUYA",
+      "price": 2.21,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "VTEX",
       "price": 4.1,
-      "score": 0.566,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -48,13 +55,6 @@
       "ticker": "DSWL",
       "price": 3.66,
       "score": 0.0024,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "TUYA",
-      "price": 2.21,
-      "score": 0.0002,
       "news_hits": 0,
       "source": "ml+polygon"
     },
