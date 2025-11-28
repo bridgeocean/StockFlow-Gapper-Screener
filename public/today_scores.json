@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-11-27T15:36:11Z",
+  "generatedAt": "2025-11-28T13:02:03Z",
   "count": 9,
   "scores": [
     {
@@ -11,56 +11,56 @@
     },
     {
       "ticker": "WIT",
-      "price": 2.69,
+      "price": 2.7,
       "score": 0.939,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "XRX",
-      "price": 2.66,
+      "price": 2.7,
       "score": 0.9375,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "TUYA",
-      "price": 2.21,
+      "price": 2.2,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "VTEX",
-      "price": 4.1,
-      "score": 0.58,
+      "price": 4.13,
+      "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "CRCT",
-      "price": 4.75,
+      "price": 4.78,
       "score": 0.2476,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "MNDO",
-      "price": 1.2,
+      "price": 1.21,
       "score": 0.0055,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "DSWL",
-      "price": 3.66,
+      "price": 4.04,
       "score": 0.0024,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "TAIT",
-      "price": 1.19,
+      "price": 1.2,
       "score": 0.0,
       "news_hits": 0,
       "source": "ml+polygon"
