@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-12-03T13:28:05Z",
+  "generatedAt": "2025-12-03T13:55:00Z",
   "count": 9,
   "scores": [
     {
@@ -17,13 +17,6 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 4.16,
-      "score": 0.8667,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
       "ticker": "CRCT",
       "price": 4.86,
       "score": 0.8403,
@@ -33,6 +26,13 @@
     {
       "ticker": "TUYA",
       "price": 2.29,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 4.16,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
