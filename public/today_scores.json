@@ -1,25 +1,32 @@
 {
-  "generatedAt": "2025-12-18T15:41:06Z",
+  "generatedAt": "2025-12-19T13:26:00Z",
   "count": 8,
   "scores": [
     {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.9994,
+      "ticker": "MNDO",
+      "price": 1.24,
+      "score": 1.0,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "TUYA",
       "price": 2.3,
-      "score": 0.9648,
+      "score": 0.9999,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "CRCT",
+      "price": 4.89,
+      "score": 0.944,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "XRX",
       "price": 2.72,
-      "score": 0.9333,
+      "score": 0.939,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -31,9 +38,9 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "ALIT",
-      "price": 2.08,
-      "score": 0.566,
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -45,16 +52,9 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "CRCT",
-      "price": 4.89,
-      "score": 0.2658,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "MNDO",
-      "price": 1.24,
-      "score": 0.0,
+      "ticker": "ALIT",
+      "price": 2.08,
+      "score": 0.0532,
       "news_hits": 0,
       "source": "ml+polygon"
     }
