@@ -1,11 +1,18 @@
 {
-  "generatedAt": "2026-01-19T14:00:04Z",
+  "generatedAt": "2026-01-19T15:45:06Z",
   "count": 8,
   "scores": [
     {
       "ticker": "MNDO",
       "price": 1.24,
       "score": 0.6185,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -34,13 +41,6 @@
       "ticker": "DSWL",
       "price": 3.56,
       "score": 0.2522,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.89,
-      "score": 0.1529,
       "news_hits": 0,
       "source": "ml+polygon"
     },
