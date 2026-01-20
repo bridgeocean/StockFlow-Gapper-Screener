@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-01-20T13:38:00Z",
+  "generatedAt": "2026-01-20T14:02:54Z",
   "count": 8,
   "scores": [
     {
@@ -10,15 +10,15 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 3.89,
+      "ticker": "WIT",
+      "price": 2.86,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.86,
+      "ticker": "XRX",
+      "price": 2.72,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
@@ -38,16 +38,16 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "XRX",
-      "price": 2.72,
-      "score": 0.566,
+      "ticker": "DSWL",
+      "price": 3.56,
+      "score": 0.2522,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "DSWL",
-      "price": 3.56,
-      "score": 0.2522,
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.1529,
       "news_hits": 0,
       "source": "ml+polygon"
     },
