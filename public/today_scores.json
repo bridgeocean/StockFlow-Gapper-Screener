@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-06T14:13:27Z",
+  "generatedAt": "2026-02-06T15:59:00Z",
   "count": 8,
   "scores": [
     {
@@ -13,13 +13,6 @@
       "ticker": "TUYA",
       "price": 2.3,
       "score": 0.9712,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "XRX",
-      "price": 2.72,
-      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -41,6 +34,13 @@
       "ticker": "CRCT",
       "price": 4.89,
       "score": 0.2304,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "XRX",
+      "price": 2.72,
+      "score": 0.0663,
       "news_hits": 0,
       "source": "ml+polygon"
     },
