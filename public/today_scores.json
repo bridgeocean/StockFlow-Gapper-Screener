@@ -1,11 +1,18 @@
 {
-  "generatedAt": "2026-02-10T14:43:01Z",
+  "generatedAt": "2026-02-10T16:19:03Z",
   "count": 8,
   "scores": [
     {
       "ticker": "XRX",
       "price": 2.72,
       "score": 1.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -27,13 +34,6 @@
       "ticker": "MNDO",
       "price": 1.24,
       "score": 0.566,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.89,
-      "score": 0.135,
       "news_hits": 0,
       "source": "ml+polygon"
     },
