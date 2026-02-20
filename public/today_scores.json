@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-20T13:50:04Z",
+  "generatedAt": "2026-02-20T14:12:06Z",
   "count": 8,
   "scores": [
     {
@@ -24,6 +24,13 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "CRCT",
       "price": 4.89,
       "score": 0.566,
@@ -34,13 +41,6 @@
       "ticker": "TUYA",
       "price": 2.3,
       "score": 0.0525,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.0039,
       "news_hits": 0,
       "source": "ml+polygon"
     },
