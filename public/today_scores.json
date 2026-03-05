@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-05T13:52:07Z",
+  "generatedAt": "2026-03-05T14:13:01Z",
   "count": 8,
   "scores": [
     {
@@ -38,6 +38,13 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "TUYA",
       "price": 2.3,
       "score": 0.566,
@@ -48,13 +55,6 @@
       "ticker": "XRX",
       "price": 2.72,
       "score": 0.0252,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.0001,
       "news_hits": 0,
       "source": "ml+polygon"
     }
