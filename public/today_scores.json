@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-06T13:44:02Z",
+  "generatedAt": "2026-03-06T14:08:04Z",
   "count": 8,
   "scores": [
     {
@@ -10,15 +10,15 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.9643,
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 3.89,
+      "ticker": "WIT",
+      "price": 2.86,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
