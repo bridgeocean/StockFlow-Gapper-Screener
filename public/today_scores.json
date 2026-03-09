@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-09T14:31:03Z",
+  "generatedAt": "2026-03-09T16:16:00Z",
   "count": 8,
   "scores": [
     {
@@ -10,15 +10,15 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "MNDO",
-      "price": 1.24,
-      "score": 0.566,
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.86,
+      "ticker": "MNDO",
+      "price": 1.24,
       "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
