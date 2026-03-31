@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-31T14:48:03Z",
+  "generatedAt": "2026-03-31T16:17:03Z",
   "count": 8,
   "scores": [
     {
@@ -31,13 +31,6 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
       "ticker": "DSWL",
       "price": 3.56,
       "score": 0.1327,
@@ -55,6 +48,13 @@
       "ticker": "XRX",
       "price": 2.72,
       "score": 0.011,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.0021,
       "news_hits": 0,
       "source": "ml+polygon"
     }
