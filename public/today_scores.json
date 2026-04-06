@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-04-03T15:56:05Z",
+  "generatedAt": "2026-04-06T14:02:53Z",
   "count": 8,
   "scores": [
     {
       "ticker": "WIT",
       "price": 2.86,
-      "score": 0.9685,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 3.89,
+      "ticker": "XRX",
+      "price": 2.72,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
@@ -24,16 +24,16 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "XRX",
-      "price": 2.72,
-      "score": 0.0065,
+      "ticker": "MNDO",
+      "price": 1.24,
+      "score": 0.0038,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "MNDO",
-      "price": 1.24,
-      "score": 0.0038,
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.0003,
       "news_hits": 0,
       "source": "ml+polygon"
     },
