@@ -1,11 +1,18 @@
 {
-  "generatedAt": "2026-04-08T14:53:01Z",
+  "generatedAt": "2026-04-08T16:39:08Z",
   "count": 8,
   "scores": [
     {
       "ticker": "WIT",
       "price": 2.86,
       "score": 1.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -27,13 +34,6 @@
       "ticker": "CRCT",
       "price": 4.89,
       "score": 0.0484,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.89,
-      "score": 0.0017,
       "news_hits": 0,
       "source": "ml+polygon"
     },
