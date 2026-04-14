@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-14T15:02:41Z",
+  "generatedAt": "2026-04-14T16:37:01Z",
   "count": 8,
   "scores": [
     {
@@ -17,15 +17,15 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "XRX",
-      "price": 2.72,
-      "score": 0.58,
+      "ticker": "MNDO",
+      "price": 1.24,
+      "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "MNDO",
-      "price": 1.24,
+      "ticker": "XRX",
+      "price": 2.72,
       "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
