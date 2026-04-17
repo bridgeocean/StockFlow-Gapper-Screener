@@ -1,10 +1,17 @@
 {
-  "generatedAt": "2026-04-17T14:42:03Z",
+  "generatedAt": "2026-04-17T16:15:05Z",
   "count": 8,
   "scores": [
     {
       "ticker": "ALIT",
       "price": 2.08,
+      "score": 1.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.89,
       "score": 1.0,
       "news_hits": 0,
       "source": "ml+polygon"
@@ -20,13 +27,6 @@
       "ticker": "XRX",
       "price": 2.72,
       "score": 0.9918,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.89,
-      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
