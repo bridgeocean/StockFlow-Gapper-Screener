@@ -1,14 +1,7 @@
 {
-  "generatedAt": "2026-04-22T14:58:04Z",
+  "generatedAt": "2026-04-22T16:34:54Z",
   "count": 8,
   "scores": [
-    {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
     {
       "ticker": "DSWL",
       "price": 3.56,
@@ -24,15 +17,22 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "CRCT",
-      "price": 4.89,
-      "score": 0.566,
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "XRX",
       "price": 2.72,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "CRCT",
+      "price": 4.89,
       "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
