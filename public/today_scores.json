@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-04-29T15:33:02Z",
+  "generatedAt": "2026-04-29T16:56:06Z",
   "count": 8,
   "scores": [
     {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.9989,
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 3.89,
+      "ticker": "WIT",
+      "price": 2.86,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
