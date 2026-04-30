@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-30T15:28:08Z",
+  "generatedAt": "2026-04-30T16:50:11Z",
   "count": 8,
   "scores": [
     {
@@ -17,16 +17,16 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.58,
+      "ticker": "TUYA",
+      "price": 2.3,
+      "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "TUYA",
-      "price": 2.3,
-      "score": 0.566,
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.0466,
       "news_hits": 0,
       "source": "ml+polygon"
     },
