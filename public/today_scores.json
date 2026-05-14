@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-14T15:12:02Z",
+  "generatedAt": "2026-05-14T15:42:02Z",
   "count": 8,
   "scores": [
     {
@@ -20,6 +20,13 @@
       "ticker": "ALIT",
       "price": 2.08,
       "score": 0.7969,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -48,13 +55,6 @@
       "ticker": "CRCT",
       "price": 4.89,
       "score": 0.0118,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "VTEX",
-      "price": 3.89,
-      "score": 0.0007,
       "news_hits": 0,
       "source": "ml+polygon"
     }
