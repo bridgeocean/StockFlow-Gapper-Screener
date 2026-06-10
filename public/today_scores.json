@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-10T16:47:07Z",
+  "generatedAt": "2026-06-10T18:11:08Z",
   "count": 8,
   "scores": [
     {
@@ -54,7 +54,7 @@
     {
       "ticker": "WIT",
       "price": 2.86,
-      "score": 0.0,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     }
