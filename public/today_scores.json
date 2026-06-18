@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T16:20:11Z",
+  "generatedAt": "2026-06-18T16:45:04Z",
   "count": 8,
   "scores": [
     {
@@ -17,6 +17,13 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 1.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "TUYA",
       "price": 2.3,
       "score": 0.9992,
@@ -26,13 +33,6 @@
     {
       "ticker": "VTEX",
       "price": 3.89,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.86,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
