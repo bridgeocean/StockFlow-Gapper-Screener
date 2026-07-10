@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-10T15:57:00Z",
+  "generatedAt": "2026-07-10T17:13:12Z",
   "count": 8,
   "scores": [
     {
@@ -13,6 +13,13 @@
       "ticker": "XRX",
       "price": 2.72,
       "score": 1.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "MNDO",
+      "price": 1.24,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -47,13 +54,6 @@
     {
       "ticker": "ALIT",
       "price": 2.08,
-      "score": 0.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "MNDO",
-      "price": 1.24,
       "score": 0.0,
       "news_hits": 0,
       "source": "ml+polygon"
