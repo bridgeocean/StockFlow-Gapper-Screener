@@ -1,21 +1,7 @@
 {
-  "generatedAt": "2026-08-10T14:37:10Z",
+  "generatedAt": "2026-08-10T16:11:53Z",
   "count": 8,
   "scores": [
-    {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.9991,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "XRX",
-      "price": 2.72,
-      "score": 0.9984,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
     {
       "ticker": "TUYA",
       "price": 2.3,
@@ -31,8 +17,15 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 3.89,
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.58,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "XRX",
+      "price": 2.72,
       "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
@@ -54,6 +47,13 @@
     {
       "ticker": "MNDO",
       "price": 1.24,
+      "score": 0.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.89,
       "score": 0.0,
       "news_hits": 0,
       "source": "ml+polygon"
