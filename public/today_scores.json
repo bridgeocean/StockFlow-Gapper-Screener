@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-25T14:21:09Z",
+  "generatedAt": "2026-08-25T16:03:02Z",
   "count": 8,
   "scores": [
     {
@@ -17,20 +17,6 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "VTEX",
-      "price": 3.89,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
       "ticker": "ALIT",
       "price": 2.08,
       "score": 0.566,
@@ -40,6 +26,20 @@
     {
       "ticker": "CRCT",
       "price": 4.89,
+      "score": 0.566,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "VTEX",
+      "price": 3.89,
+      "score": 0.566,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.86,
       "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
