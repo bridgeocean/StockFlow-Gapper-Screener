@@ -1,7 +1,28 @@
 {
-  "generatedAt": "2026-09-29T20:02:12Z",
+  "generatedAt": "2026-09-30T18:10:03Z",
   "count": 8,
   "scores": [
+    {
+      "ticker": "XRX",
+      "price": 2.72,
+      "score": 1.0,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "ALIT",
+      "price": 2.08,
+      "score": 0.7193,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "DSWL",
+      "price": 3.56,
+      "score": 0.6679,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
     {
       "ticker": "VTEX",
       "price": 3.89,
@@ -10,15 +31,8 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "DSWL",
-      "price": 3.56,
+      "ticker": "MNDO",
+      "price": 1.24,
       "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
@@ -33,28 +47,14 @@
     {
       "ticker": "CRCT",
       "price": 4.89,
-      "score": 0.0167,
+      "score": 0.137,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "XRX",
-      "price": 2.72,
-      "score": 0.0031,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "ALIT",
-      "price": 2.08,
-      "score": 0.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "MNDO",
-      "price": 1.24,
-      "score": 0.0,
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.0003,
       "news_hits": 0,
       "source": "ml+polygon"
     }
