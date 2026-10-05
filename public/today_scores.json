@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T21:13:09Z",
+  "generatedAt": "2026-10-05T22:04:05Z",
   "count": 8,
   "scores": [
     {
@@ -45,15 +45,15 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.58,
+      "ticker": "DSWL",
+      "price": 3.56,
+      "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "DSWL",
-      "price": 3.56,
+      "ticker": "WIT",
+      "price": 2.86,
       "score": 0.566,
       "news_hits": 0,
       "source": "ml+polygon"
