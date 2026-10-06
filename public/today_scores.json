@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T18:40:08Z",
+  "generatedAt": "2026-10-06T19:00:01Z",
   "count": 8,
   "scores": [
     {
@@ -12,14 +12,7 @@
     {
       "ticker": "VTEX",
       "price": 3.89,
-      "score": 0.58,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.58,
+      "score": 0.9805,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -48,6 +41,13 @@
       "ticker": "MNDO",
       "price": 1.24,
       "score": 0.0018,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.0006,
       "news_hits": 0,
       "source": "ml+polygon"
     },
