@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-04T20:30:01Z",
+  "generatedAt": "2026-11-04T21:21:12Z",
   "count": 8,
   "scores": [
     {
@@ -33,7 +33,7 @@
     {
       "ticker": "VTEX",
       "price": 3.89,
-      "score": 0.8744,
+      "score": 0.58,
       "news_hits": 0,
       "source": "ml+polygon"
     },
