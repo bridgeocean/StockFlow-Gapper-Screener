@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T22:41:11Z",
+  "generatedAt": "2026-11-25T23:41:04Z",
   "count": 8,
   "scores": [
     {
@@ -24,16 +24,16 @@
       "source": "ml+polygon"
     },
     {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.58,
+      "ticker": "XRX",
+      "price": 2.72,
+      "score": 0.0639,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
-      "ticker": "XRX",
-      "price": 2.72,
-      "score": 0.0639,
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.0503,
       "news_hits": 0,
       "source": "ml+polygon"
     },
