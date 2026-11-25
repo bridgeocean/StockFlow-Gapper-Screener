@@ -1,46 +1,18 @@
 {
-  "generatedAt": "2026-11-24T23:57:00Z",
+  "generatedAt": "2026-11-25T22:01:02Z",
   "count": 8,
   "scores": [
     {
-      "ticker": "ALIT",
-      "price": 2.08,
-      "score": 1.0,
+      "ticker": "TUYA",
+      "price": 2.3,
+      "score": 0.9921,
       "news_hits": 0,
       "source": "ml+polygon"
     },
     {
       "ticker": "CRCT",
       "price": 4.89,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "TUYA",
-      "price": 2.3,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "XRX",
-      "price": 2.72,
-      "score": 1.0,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "WIT",
-      "price": 2.86,
-      "score": 0.9712,
-      "news_hits": 0,
-      "source": "ml+polygon"
-    },
-    {
-      "ticker": "DSWL",
-      "price": 3.56,
-      "score": 0.7976,
+      "score": 0.9278,
       "news_hits": 0,
       "source": "ml+polygon"
     },
@@ -52,9 +24,37 @@
       "source": "ml+polygon"
     },
     {
+      "ticker": "XRX",
+      "price": 2.72,
+      "score": 0.0639,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "WIT",
+      "price": 2.86,
+      "score": 0.0503,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "DSWL",
+      "price": 3.56,
+      "score": 0.0155,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
       "ticker": "MNDO",
       "price": 1.24,
       "score": 0.0065,
+      "news_hits": 0,
+      "source": "ml+polygon"
+    },
+    {
+      "ticker": "ALIT",
+      "price": 2.08,
+      "score": 0.0015,
       "news_hits": 0,
       "source": "ml+polygon"
     }
